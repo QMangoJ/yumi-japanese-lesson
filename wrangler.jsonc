@@ -3,5 +3,8 @@
   "compatibility_date": "2025-01-01",
   "assets": {
     "directory": "."
-  }
+  },
+  "routes": [
+    { "pattern": "yumi.ki-toko.com", "custom_domain": true }
+  ]
 }
