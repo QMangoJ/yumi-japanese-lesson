@@ -1,12 +1,37 @@
 # YUMI Japanese Lessons
 
-A one-page introduction site for Yumi N., a certified Japanese tutor
-(Preply: https://preply.com/en/tutor/7397253), modeled on the structure of
-sakurajapaneselesson.com: hero, 3 reasons, about, lesson menu, price,
-student voices, FAQ.
+A one-page introduction + booking site for Yumi N., a certified Japanese
+tutor, modeled on the structure and booking flow of
+sakurajapaneselesson.com: hero, 3 reasons, about, lesson menu, price with
+packages, on-site booking, student voices, FAQ, and booking management.
 
-Plain static site — no build step. Open `index.html` or serve the folder:
+Live at https://yumi.ki-toko.com (Cloudflare Workers, custom domain).
 
-    python3 -m http.server 8080
+## How it works
 
-Booking and payment are handled via the tutor's Preply profile.
+- `index.html`, `styles.css`, `app.js`, `images/` — the static site.
+- `worker.js` — Cloudflare Worker. Serves the static files through the
+  ASSETS binding and implements the booking API:
+  - `GET  /api/config` — courses, lesson types, prices, policy (single
+    source of truth, all marked MOCK in `CONFIG`)
+  - `GET  /api/availability?date=YYYY-MM-DD` — open slots (JST)
+  - `POST /api/bookings` — create a booking (status `pending_payment`)
+  - `POST /api/bookings/:id/pay` — MOCK payment, marks the booking `paid`
+    and issues a (mock) Google Meet link. Replace with Stripe before
+    taking real money.
+  - `GET  /api/bookings/:id?email=` — look up a booking (My Bookings)
+  - `POST /api/bookings/:id/cancel` — policy: full refund only when never
+    rescheduled and cancelled 24h+ ahead
+  - `POST /api/bookings/:id/reschedule` — 24h+ before, max 2 times, new
+    slot 72h+ ahead
+- Bookings are stored in the `yumi-bookings` KV namespace (binding
+  `BOOKINGS`).
+
+## Things still mocked (decide before real launch)
+
+Prices and weekly hours in `worker.js` `CONFIG`, the payment step
+(Stripe), the Google Meet link, and confirmation emails (not sent yet).
+
+## Local preview
+
+    python3 -m http.server 8080   # static pages only; booking API needs the Worker

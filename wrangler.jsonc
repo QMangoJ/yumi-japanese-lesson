@@ -1,9 +1,14 @@
 {
   "name": "yumi-japanese-lesson",
+  "main": "worker.js",
   "compatibility_date": "2025-01-01",
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   },
+  "kv_namespaces": [
+    { "binding": "BOOKINGS", "id": "4ecf0f685982442e91a40397d88183b9" }
+  ],
   "routes": [
     { "pattern": "yumi.ki-toko.com", "custom_domain": true }
   ]

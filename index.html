@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>YUMI Japanese Teacher | Online Japanese Lessons for Beginners</title>
-<meta name="description" content="Online Japanese lessons with Yumi — a certified Japanese tutor from Japan. Perfect for beginners, English support available, conversation practice for your Japan trip, JLPT N5–N4 and business Japanese." />
+<meta name="description" content="Online Japanese lessons with Yumi — a certified Japanese tutor from Japan. Perfect for beginners, English support available, conversation practice for your Japan trip, JLPT N5–N4 and business Japanese. Book and pay on this site." />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
 </head>
@@ -18,8 +18,9 @@
     <a href="#price">Price</a>
     <a href="#voices">Reviews</a>
     <a href="#faq">FAQ</a>
+    <a href="#my">My Bookings</a>
   </nav>
-  <a class="btn btn-small" href="https://preply.com/en/tutor/7397253" target="_blank" rel="noopener">Book a Trial</a>
+  <a class="btn btn-small" href="#book">Book a Lesson</a>
 </header>
 
 <main id="top">
@@ -35,11 +36,11 @@
         with a patient teacher who has been exactly where you are.
       </p>
       <div class="hero-cta">
-        <a class="btn" href="https://preply.com/en/tutor/7397253" target="_blank" rel="noopener">Book a trial lesson →</a>
+        <a class="btn" href="#book">Book a lesson →</a>
         <a class="btn btn-ghost" href="#lessons">See lesson menu</a>
       </div>
       <ul class="hero-stats">
-        <li><strong>★ 5.0</strong><span>tutor rating</span></li>
+        <li><strong>★ 5.0</strong><span>student rating</span></li>
         <li><strong>13 yrs</strong><span>teaching experience</span></li>
         <li><strong>22+</strong><span>lessons per student, on average</span></li>
       </ul>
@@ -138,6 +139,7 @@
         expressions Japanese people actually use — including casual phrases you
         won't usually find in textbooks — and build the confidence to speak.</p>
         <p class="lesson-for">For: learners who want to chat with Japanese friends or enjoy natural conversation on a trip.</p>
+        <button class="btn btn-small book-course" data-course="conversation">Book this course</button>
       </article>
 
       <article class="lesson">
@@ -146,6 +148,7 @@
         grammar and vocabulary with the GENKI textbook. English support is
         always available, so starting from zero is completely fine.</p>
         <p class="lesson-for">For: first-time learners who want a friendly, supportive start.</p>
+        <button class="btn btn-small book-course" data-course="beginners">Book this course</button>
       </article>
 
       <article class="lesson">
@@ -154,6 +157,7 @@
         listening, with careful review of your weak points so you can walk into
         the exam with confidence.</p>
         <p class="lesson-for">For: N5–N4 learners preparing for the test.</p>
+        <button class="btn btn-small book-course" data-course="jlpt">Book this course</button>
       </article>
 
       <article class="lesson">
@@ -162,6 +166,7 @@
         shopping, hotels, transportation, and more — customized to your own
         travel plans.</p>
         <p class="lesson-for">For: anyone planning a trip to Japan, beginners included.</p>
+        <button class="btn btn-small book-course" data-course="travel">Book this course</button>
       </article>
 
       <article class="lesson">
@@ -171,6 +176,7 @@
         years at international trade shows and experience in a Japanese
         logistics company.</p>
         <p class="lesson-for">For: people working in Japan or interviewing with Japanese companies.</p>
+        <button class="btn btn-small book-course" data-course="business">Book this course</button>
       </article>
 
     </div>
@@ -181,43 +187,149 @@
     <p class="eyebrow">03 — PRICE</p>
     <h2>Price</h2>
     <p class="section-lead">
-      Lessons are currently booked through Preply, where you can start with a
-      trial lesson and manage your schedule flexibly.
+      Fully tailor-made lessons where you can freely adjust your learning
+      schedule around your life. Book and pay right here on this site.
     </p>
     <table class="price-table">
       <thead>
-        <tr><th>Lesson</th><th>Price</th><th>Booking</th></tr>
+        <tr><th>Duration</th><th>USD ($)</th><th>Packages</th></tr>
       </thead>
       <tbody>
-        <tr>
-          <td>Regular lesson (per lesson)</td>
-          <td><strong>from $15</strong></td>
-          <td rowspan="2"><a class="btn btn-small" href="https://preply.com/en/tutor/7397253" target="_blank" rel="noopener">Book on Preply →</a></td>
-        </tr>
-        <tr>
-          <td>Trial lesson</td>
-          <td><strong>Book a trial to start</strong></td>
-        </tr>
+        <tr><td>25 min (trial)</td><td>$10</td>
+          <td rowspan="2">
+            <strong>5 × 60 min</strong> — <s>$150</s> <strong>$135</strong> · <em>10% OFF</em><br />
+            <strong>10 × 60 min</strong> — <s>$300</s> <strong>$270</strong> · <em>10% OFF</em>
+          </td></tr>
+        <tr><td>60 min</td><td>$30</td></tr>
       </tbody>
     </table>
-    <p class="note">Prices and availability are as listed on Preply. If you have a
-    specific goal or schedule in mind, message me there — lessons are tailored to you.</p>
+    <p class="note">Students using lesson packages can freely book and adjust each
+    lesson's time from this page. New bookings are taken at least 72 hours in advance.</p>
+  </section>
+
+  <!-- BOOK -->
+  <section class="section" id="book">
+    <p class="eyebrow">04 — BOOK A LESSON</p>
+    <h2>Book a Lesson</h2>
+
+    <ol class="steps" id="bk-steps">
+      <li data-step="1" class="active">Course</li>
+      <li data-step="2">Date &amp; Time</li>
+      <li data-step="3">Your Details</li>
+      <li data-step="4">Payment</li>
+      <li data-step="5">Done</li>
+    </ol>
+
+    <div class="booking-box">
+      <!-- Step 1 -->
+      <div class="bk-pane" data-pane="1">
+        <h3>1. Choose your course</h3>
+        <div class="choice-grid" id="bk-courses"></div>
+        <h3>Lesson type</h3>
+        <div class="choice-list" id="bk-types"></div>
+        <p class="msg" id="bk-msg-1"></p>
+        <div class="bk-nav"><span></span>
+          <button class="btn" id="bk-to-2">Continue →</button></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="bk-pane hidden" data-pane="2">
+        <h3>2. Pick a date &amp; time</h3>
+        <p class="note">All times are Japan time (JST). Lessons can be booked at
+        least 72 hours ahead; I'm available Tuesday to Saturday.</p>
+        <label class="field">Date
+          <input type="date" id="bk-date" /></label>
+        <div class="slot-grid" id="bk-slots"></div>
+        <p class="msg" id="bk-msg-2"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="1">← Back</button>
+          <button class="btn" id="bk-to-3">Continue →</button></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bk-pane hidden" data-pane="3">
+        <h3>3. Your details</h3>
+        <label class="field">Your name
+          <input type="text" id="bk-name" autocomplete="name" placeholder="e.g. Alex Smith" /></label>
+        <label class="field">Email (for confirmation &amp; managing your booking)
+          <input type="email" id="bk-email" autocomplete="email" placeholder="you@example.com" /></label>
+        <label class="field">Anything you'd like me to know? (goals, level, topics — optional)
+          <textarea id="bk-notes" rows="3"></textarea></label>
+        <p class="msg" id="bk-msg-3"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="2">← Back</button>
+          <button class="btn" id="bk-to-4">Review &amp; pay →</button></div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="bk-pane hidden" data-pane="4">
+        <h3>4. Review &amp; payment</h3>
+        <table class="summary" id="bk-summary"></table>
+        <div class="test-banner">TEST MODE — this checkout is a demo. No real
+        payment is taken; use any card details to try the flow.</div>
+        <label class="field">Card number
+          <input type="text" id="pay-card" inputmode="numeric" placeholder="4242 4242 4242 4242" /></label>
+        <div class="field-row">
+          <label class="field">Expiry
+            <input type="text" id="pay-exp" placeholder="12 / 34" /></label>
+          <label class="field">CVC
+            <input type="text" id="pay-cvc" inputmode="numeric" placeholder="123" /></label>
+        </div>
+        <p class="note">Payments are processed securely through Stripe.
+        Major credit and debit cards are accepted (Visa, Mastercard, American Express).</p>
+        <p class="msg" id="bk-msg-4"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="3">← Back</button>
+          <button class="btn" id="bk-pay">Pay now</button></div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="bk-pane hidden" data-pane="5">
+        <h3>🎉 You're booked!</h3>
+        <table class="summary" id="bk-done"></table>
+        <p>Lessons are held on Google Meet — your personal link is in the table
+        above. A confirmation has been sent to your email.</p>
+        <p class="note">Keep your booking reference safe: together with your email
+        you can reschedule or cancel anytime in
+        <a href="#my">My Bookings</a> (up to 24 hours before the lesson,
+        max. 2 reschedules).</p>
+        <div class="bk-nav"><span></span>
+          <a class="btn" href="#my">Go to My Bookings</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MY BOOKINGS -->
+  <section class="section section-alt" id="my">
+    <p class="eyebrow">05 — MY BOOKINGS</p>
+    <h2>My Bookings</h2>
+    <p class="section-lead">Enter the email and booking reference from your
+    confirmation to view, reschedule or cancel your lesson.</p>
+    <div class="lookup-box">
+      <label class="field">Email
+        <input type="email" id="my-email" autocomplete="email" /></label>
+      <label class="field">Booking reference
+        <input type="text" id="my-ref" placeholder="YM-XXXXXX" /></label>
+      <button class="btn" id="my-find">Find my booking</button>
+      <p class="msg" id="my-msg"></p>
+      <div id="my-result"></div>
+    </div>
   </section>
 
   <!-- VOICES -->
   <section class="section" id="voices">
-    <p class="eyebrow">04 — STUDENT VOICES</p>
+    <p class="eyebrow">06 — STUDENT VOICES</p>
     <h2>What My Students Say</h2>
 
     <div class="rating-summary">
-      <div class="rating-big"><strong>5.0</strong><span>★★★★★</span><small>overall tutor rating</small></div>
+      <div class="rating-big"><strong>5.0</strong><span>★★★★★</span><small>overall student rating</small></div>
       <ul class="rating-bars">
         <li><span>Support</span><strong>5.0</strong></li>
         <li><span>Clarity</span><strong>4.9</strong></li>
         <li><span>Progress</span><strong>5.0</strong></li>
         <li><span>Preparation</span><strong>4.9</strong></li>
       </ul>
-      <p class="rating-note">Based on verified student reviews on Preply.
+      <p class="rating-note">Based on verified student reviews.
       Students tend to stay — most take 22 or more lessons.</p>
     </div>
 
@@ -227,66 +339,89 @@
         grateful for how she encourages and challenges you throughout the
         learning process, introducing new topics at just the right pace.
         Highly recommended.”</p>
-        <footer>— Preply student</footer>
+        <footer>— Verified student</footer>
       </blockquote>
       <blockquote>
         <p>“Yumi is a great tutor. She is patient and friendly, and gives clear
         answers to any question I ask. She teaches not only the language but
         also the culture. Overall a very pleasant learning experience.”</p>
-        <footer>— Preply student</footer>
+        <footer>— Verified student</footer>
       </blockquote>
       <blockquote>
         <p>“I've lived in Japan for two and a half years and I'm now changing
         jobs here. Yumi is helping me prepare for interviews and presentations
         at a larger, more international company — lessons 100% tailored to my
         goals. I study with her four times a week. Highly recommended.”</p>
-        <footer>— Preply student, business Japanese</footer>
+        <footer>— Verified student, business Japanese</footer>
       </blockquote>
       <blockquote>
         <p>“An excellent tutor. I started with almost no knowledge and she knew
         exactly where to begin. Very patient, answers all my questions, and
         goes at a pace that fits me. I recommend her to anyone starting
         Japanese from zero.”</p>
-        <footer>— Preply student, beginner</footer>
+        <footer>— Verified student, beginner</footer>
       </blockquote>
     </div>
   </section>
 
   <!-- FAQ -->
   <section class="section section-alt" id="faq">
-    <p class="eyebrow">05 — FAQ</p>
+    <p class="eyebrow">07 — FAQ</p>
     <h2>Frequently Asked Questions</h2>
     <div class="faq">
       <details>
         <summary>Is it okay if I am a complete beginner?</summary>
-        <p>Absolutely! Beginners are my specialty. We'll start with hiragana
-        and katakana and build up step by step with the GENKI textbook — at
-        your pace, with English support whenever you need it.</p>
+        <p>Absolutely! Everyone is more than welcome. Let's start with a relaxed
+        feeling, just like catching up with a friend — we'll begin with hiragana
+        and katakana and build up with the GENKI textbook.</p>
       </details>
       <details>
-        <summary>Can you support me in English?</summary>
-        <p>Yes. I speak English (and some Spanish, Khmer, and French), and I
-        spent 13 years teaching English, so explaining Japanese in English is
-        something I do every day.</p>
+        <summary>Can I learn specific phrases or Japanese from my favorite anime?</summary>
+        <p>Yes! I will fully customize the material so you can learn the exact,
+        real-life Japanese you want to use right now.</p>
       </details>
       <details>
-        <summary>What kind of lessons can I take?</summary>
-        <p>Conversation practice, beginner foundations, JLPT N5–N4 preparation,
-        travel Japanese, and business Japanese — every plan is customized to
-        your goals. See the <a href="#lessons">lesson menu</a>.</p>
+        <summary>How do we schedule our lesson times?</summary>
+        <p>Book any open slot on this page at least 72 hours in advance.
+        Students using lesson packages can freely book and adjust their lesson
+        duration from 30 minutes up to 2 hours to fit their weekly schedule —
+        just mention it in the booking notes.</p>
       </details>
       <details>
-        <summary>How do I book, reschedule, or cancel?</summary>
-        <p>All booking is handled through Preply: pick a time that suits you on
-        my <a href="https://preply.com/en/tutor/7397253" target="_blank" rel="noopener">Preply profile</a>,
-        and reschedule or cancel from your account there according to
-        Preply's policy.</p>
+        <summary>Am I allowed to ask questions in English?</summary>
+        <p>Yes, definitely! I will use English to support you and make sure you
+        gain a crystal-clear, deep understanding of the language.</p>
       </details>
       <details>
-        <summary>Do I need to prepare anything before my lesson?</summary>
-        <p>Nothing special. If there are topics you'd like to talk about or
-        phrases you've wondered about, jotting them down beforehand helps us
-        get started smoothly.</p>
+        <summary>When can I cancel or reschedule a lesson?</summary>
+        <p>You can cancel a confirmed lesson from
+        <a href="#my">My Bookings</a> at any time, and reschedule it up to
+        24 hours before it starts, with up to two reschedules per booking.
+        You get a refund when you have not rescheduled the lesson and you cancel
+        at least 24 hours before it starts — the amount paid goes back to your
+        original payment method. If you cancel within 24 hours, or cancel a
+        lesson you have already rescheduled, the lesson is still cancelled but
+        it counts as used and nothing is returned. New bookings and new
+        rescheduled times must be selected at least 72 hours in advance.</p>
+      </details>
+      <details>
+        <summary>What payment methods do you accept?</summary>
+        <p>Payments are processed securely through Stripe. You can use major
+        credit or debit cards available at checkout, including Visa,
+        Mastercard, and American Express.</p>
+      </details>
+      <details>
+        <summary>What tool do you use for lessons? Do I need to prepare anything in advance?</summary>
+        <p>Lessons are held on Google Meet. You do not need to install a special
+        app — simply click the link in your booking confirmation to join from
+        your browser.</p>
+      </details>
+      <details>
+        <summary>Do I need to bring or prepare anything before my lesson?</summary>
+        <p>No special textbook or materials are required. If you have topics you
+        would like to discuss or Japanese phrases you have wondered about in
+        daily life or while traveling, making a quick note beforehand will help
+        us get started smoothly.</p>
       </details>
     </div>
   </section>
@@ -294,16 +429,17 @@
   <!-- CTA -->
   <section class="cta">
     <h2>Ready to say “I can speak Japanese!”?</h2>
-    <p>Book a trial lesson and let's talk about your goals.</p>
-    <a class="btn btn-light" href="https://preply.com/en/tutor/7397253" target="_blank" rel="noopener">Book a trial lesson on Preply →</a>
+    <p>Book your first lesson and let's talk about your goals.</p>
+    <a class="btn btn-light" href="#book">Book a lesson →</a>
   </section>
 
 </main>
 
 <footer class="site-footer">
   <p>🌸 YUMI Japanese Lessons — Online Japanese lessons with Yumi N., certified Japanese tutor in Chiba, Japan.</p>
-  <p><small>Booking and payment are handled securely via Preply. This site is an introduction page; lesson details and prices are confirmed on Preply.</small></p>
+  <p><small>Lessons are held on Google Meet. Booking and payment are handled securely on this site.</small></p>
 </footer>
 
+<script src="app.js"></script>
 </body>
 </html>
