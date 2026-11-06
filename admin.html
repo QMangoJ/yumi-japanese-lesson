@@ -346,9 +346,41 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .tl-what{flex:1;color:var(--muted)}
 
 /* ---------- prices card ---------- */
-.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+/* Named adm-* on purpose: the public stylesheet's own .price-grid
+   (the homepage price TABLE — border + 18px radius + overflow:
+   hidden + margin-top) used to leak into this grid and draw a box
+   whose top border crossed the four field labels. Renaming ends
+   the collision for good; the fields now sit in the panel with
+   plain spacing, like every other Settings group. */
+.adm-price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
 .price-input{display:flex;align-items:center;gap:6px}
 .price-input input{flex:1;min-width:0}
+
+/* ---------- loading states ----------
+   One system for the whole admin: shimmer skeleton blocks where a
+   card or list is waiting for data, and a small spinner for inline
+   "Loading…" spots (table bodies, the unlock message). All of it
+   is presentation only — the render functions overwrite these
+   placeholders with real content when their data arrives, and a
+   failed first load settles them back to quiet dashes (settleSkl). */
+@keyframes adm-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.skl{display:block;border-radius:6px;
+  background:linear-gradient(100deg,#ede9e6 40%,#f9f6f4 50%,#ede9e6 60%);
+  background-size:200% 100%;animation:adm-shimmer 1.25s linear infinite}
+.skl-num{width:56px;height:31px;border-radius:7px;margin:6px 0 4px}
+.skl-line{height:11px;margin:7px 0}
+.skl-row{height:14px;margin:14px 0}
+.skl-row:first-child{margin-top:4px}
+.skl-card{border:1px solid var(--adm-line);border-radius:12px;padding:16px;background:#fff}
+.skl-top{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.skl-avatar{width:38px;height:38px;border-radius:50%;flex:0 0 38px}
+.skl-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.skl-cell{height:54px;border-radius:10px}
+.skl-caltitle{width:38%;height:14px;margin:8px auto 16px}
+@keyframes adm-spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:13px;height:13px;border-radius:50%;
+  border:2px solid var(--accent-soft);border-top-color:var(--accent);
+  animation:adm-spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
 </style>
 </head>
 <body>
@@ -425,28 +457,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <div class="stat-grid">
           <div class="stat-card">
             <div class="stat-label">今日课程 · Lessons today</div>
-            <div class="stat-num" id="dash-today-count">–</div>
-            <div class="stat-sub" id="dash-today-sub">—</div>
+            <div class="stat-num" id="dash-today-count"><span class="skl skl-num"></span></div>
+            <div class="stat-sub" id="dash-today-sub"><span class="skl skl-line" style="width:54%"></span></div>
           </div>
           <div class="stat-card">
             <div class="stat-label">待上预约 · Upcoming bookings</div>
-            <div class="stat-num" id="dash-upcoming-count">–</div>
+            <div class="stat-num" id="dash-upcoming-count"><span class="skl skl-num"></span></div>
             <div class="stat-sub">未来 90 天 · next 90 days</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">进行中课时包 · Active packages</div>
-            <div class="stat-num" id="dash-subs-count">–</div>
-            <div class="stat-sub" id="dash-subs-sub">—</div>
+            <div class="stat-num" id="dash-subs-count"><span class="skl skl-num"></span></div>
+            <div class="stat-sub" id="dash-subs-sub"><span class="skl skl-line" style="width:54%"></span></div>
           </div>
         </div>
         <div class="dash-grid">
           <div class="panel">
             <h2>Today's lessons · 今天的课</h2>
-            <div id="dash-today-list"><p class="note">Loading…</p></div>
+            <div id="dash-today-list"><div aria-hidden="true"><span class="skl skl-row" style="width:94%"></span><span class="skl skl-row" style="width:80%"></span><span class="skl skl-row" style="width:87%"></span></div></div>
           </div>
           <div class="panel">
             <h2>Next upcoming · 接下来的预约</h2>
-            <div id="dash-next-list"><p class="note">Loading…</p></div>
+            <div id="dash-next-list"><div aria-hidden="true"><span class="skl skl-row" style="width:94%"></span><span class="skl skl-row" style="width:80%"></span><span class="skl skl-row" style="width:87%"></span></div></div>
           </div>
         </div>
         <p class="msg" id="dash-msg"></p>
@@ -455,10 +487,10 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <!-- ===== Students ===== -->
       <section class="view hidden" data-view="students">
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-num" id="stu-stat-total">–</div><div class="stat-label">学生总数 · Students</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-upcoming">–</div><div class="stat-label">有待上课程 · With upcoming</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-package">–</div><div class="stat-label">有活跃课时包 · With package</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-new">–</div><div class="stat-label">本月新学生 · New this month</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-total"><span class="skl skl-num"></span></div><div class="stat-label">学生总数 · Students</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-upcoming"><span class="skl skl-num"></span></div><div class="stat-label">有待上课程 · With upcoming</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-package"><span class="skl skl-num"></span></div><div class="stat-label">有活跃课时包 · With package</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-new"><span class="skl skl-num"></span></div><div class="stat-label">本月新学生 · New this month</div></div>
         </div>
         <div class="panel">
           <div class="stu-controls">
@@ -478,7 +510,11 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
               </select></label>
           </div>
           <p class="note" id="stu-msg"></p>
-          <div class="stu-grid" id="stu-grid"></div>
+          <div class="stu-grid" id="stu-grid">
+            <div class="skl-card" aria-hidden="true"><div class="skl-top"><span class="skl skl-avatar"></span><span class="skl skl-line" style="width:45%"></span></div><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:82%"></span></div>
+            <div class="skl-card" aria-hidden="true"><div class="skl-top"><span class="skl skl-avatar"></span><span class="skl skl-line" style="width:45%"></span></div><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:82%"></span></div>
+            <div class="skl-card" aria-hidden="true"><div class="skl-top"><span class="skl skl-avatar"></span><span class="skl skl-line" style="width:45%"></span></div><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:82%"></span></div>
+          </div>
           <p class="note hidden" id="stu-empty">还没有学生记录。</p>
         </div>
       </section>
@@ -518,8 +554,8 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <p class="note">这个月已经订好的课。点任意一天看当天的课程和老师备注；
         要改可约时间，去「Availability · 可约时间」。</p>
         <div class="sch-grid">
-          <div class="adm-cal sch-cal" id="sch-cal"></div>
-          <div class="day-editor sch-panel" id="sch-day-panel"></div>
+          <div class="adm-cal sch-cal" id="sch-cal"><div aria-hidden="true"><span class="skl skl-caltitle"></span><div class="skl-cal"><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i></div></div></div>
+          <div class="day-editor sch-panel" id="sch-day-panel"><div aria-hidden="true"><span class="skl skl-line" style="width:52%"></span><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:81%"></span></div></div>
         </div>
       </div>
 
@@ -540,7 +576,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <p class="note">点任意一天来单独调整：这天休息、特殊时段，或者屏蔽
             某几个开始时间。日历上看到的就是学生能约到的安排。</p>
             <div class="avail-grid">
-              <div class="adm-cal" id="adm-cal"></div>
+              <div class="adm-cal" id="adm-cal"><div aria-hidden="true"><span class="skl skl-caltitle"></span><div class="skl-cal"><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i></div></div></div>
               <div class="day-editor hidden" id="adm-day-editor"></div>
             </div>
             <div class="vac-row">
@@ -571,7 +607,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <p class="note">每种时长的单节课价格（美元）。保存后立即对
             <strong>新</strong>预约和<strong>新</strong>课时包生效；已经订好的
             预约/课时包保持原价不变。</p>
-            <div class="price-grid">
+            <div class="adm-price-grid">
               <label class="field">30 min
                 <span class="price-input"><span>$</span><input type="number" id="adm-price-30" min="0" step="0.5" inputmode="decimal"></span></label>
               <label class="field">50 min
@@ -1404,7 +1440,7 @@ async function loadBookings() {
   if (q) params.set("q", q);
   if (date) params.set("date", date);
   const tbody = $("#adm-bk-table").querySelector("tbody");
-  tbody.innerHTML = `<tr><td colspan="6" class="table-loading">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="table-loading"><span class="spin"></span>Loading…</td></tr>`;
   const data = await api(`/api/admin/bookings?${params}`);
   allBookings = data.bookings || [];
   $("#adm-bk-msg").textContent = `${data.total} booking(s)`;
@@ -1455,10 +1491,11 @@ $("#adm-bk-q").addEventListener("keydown", (e) => {
 /* ---------- subscriptions （课时包） ---------- */
 
 async function loadSubs() {
+  const tbody = $("#adm-subs-table").querySelector("tbody");
+  tbody.innerHTML = `<tr><td colspan="6" class="table-loading"><span class="spin"></span>Loading…</td></tr>`;
   const data = await api("/api/admin/subscriptions");
   const subs = data.subscriptions || [];
   $("#adm-subs-msg").textContent = subs.length ? `${subs.length} package(s)` : "暂无订阅。";
-  const tbody = $("#adm-subs-table").querySelector("tbody");
   tbody.innerHTML = subs.map((s) => {
     const slots = (s.slots || []).map((sl) =>
       `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
@@ -1495,6 +1532,15 @@ async function loadSubs() {
 }
 
 /* ---------- dashboard （概览，全部派生自现有 admin API) ---------- */
+
+/** Presentation only: if a load fails before any data arrived,
+ *  settle that element's shimmer placeholders back to quiet
+ *  content instead of leaving them shimmering forever. Elements
+ *  already holding real data (no .skl inside) are left untouched,
+ *  so a failed refresh never blanks good data. */
+function settleSkl(el, html) {
+  if (el && el.querySelector(".skl")) el.innerHTML = html;
+}
 
 function jstTodayStr() {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
@@ -1549,6 +1595,13 @@ async function loadDashboard(force) {
     $("#dash-msg").textContent = "";
   } catch (e) {
     dashLoadedAt = 0;
+    settleSkl($("#dash-today-count"), "–");
+    settleSkl($("#dash-upcoming-count"), "–");
+    settleSkl($("#dash-subs-count"), "–");
+    settleSkl($("#dash-today-sub"), "—");
+    settleSkl($("#dash-subs-sub"), "—");
+    settleSkl($("#dash-today-list"), `<p class="note">—</p>`);
+    settleSkl($("#dash-next-list"), `<p class="note">—</p>`);
     $("#dash-msg").textContent = e.message;
   }
 }
@@ -1586,6 +1639,9 @@ async function loadStudents(force) {
     $("#stu-stat-new").textContent = data.summary.newThisMonth;
     renderStudents();
   } catch (e) {
+    ["#stu-stat-total", "#stu-stat-upcoming", "#stu-stat-package", "#stu-stat-new"]
+      .forEach((s) => settleSkl($(s), "–"));
+    settleSkl($("#stu-grid"), "");
     $("#stu-msg").textContent = e.message;
   }
 }
@@ -1799,7 +1855,7 @@ async function enterAdmin(settings) {
 async function loadAll() {
   adminKey = $("#adm-key").value.trim();
   if (!adminKey) { $("#adm-msg").textContent = "Paste the admin key first."; return; }
-  $("#adm-msg").textContent = "Loading…";
+  $("#adm-msg").innerHTML = `<span class="spin"></span>Loading…`;
   try {
     const data = await api("/api/admin/settings");
     authVia = "key";
@@ -1818,16 +1874,18 @@ async function loadAll() {
  *  visitor's own) in the topbar note. On any failure we stay on the
  *  key unlock form, exactly as before. */
 async function trySessionEntry() {
+  const msg = $("#adm-msg");
+  msg.innerHTML = `<span class="spin"></span>Loading…`;
   try {
     const meRes = await fetch("/api/auth/me");
-    if (!meRes.ok) return false;
+    if (!meRes.ok) { msg.textContent = ""; return false; }
     const me = await meRes.json();
     const data = await api("/api/admin/settings");
     authVia = "session";
     sessionEmail = (me.user && me.user.email) || "";
     await enterAdmin(data.settings);
     return true;
-  } catch { return false; }
+  } catch { msg.textContent = ""; return false; }
 }
 $("#adm-load").addEventListener("click", loadAll);
 $("#adm-key").addEventListener("keydown", (e) => {
