@@ -281,7 +281,9 @@ a { color: var(--accent); }
 .rating-bars li { display: flex; gap: 12px; justify-content: space-between; min-width: 170px; }
 .rating-note { flex-basis: 100%; margin: 0; color: var(--sub); font-size: 14.5px; }
 
-.voices { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+/* Desktop pager shows 6 reviews per page as 3 columns × 2 rows —
+ * never a 3-row arrangement at any width ≥861px. */
+.voices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .voices blockquote {
   margin: 0;
   background: var(--card);
