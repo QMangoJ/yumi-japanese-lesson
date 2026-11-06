@@ -617,6 +617,21 @@ button { font-family: inherit; }
   .cards-3, .voices, .about-grid { grid-template-columns: 1fr; }
   .site-header nav { display: none; }
   .hero-stats { gap: 22px; flex-wrap: wrap; }
+  /* Mobile header: brand on ONE line (smaller type, no truncation)
+   * and the Book button as a single-line pill that never shrinks or
+   * wraps — at 360px the two fit side by side with room to spare.
+   * (The nav, incl. the Admin shortcut, is hidden at this width and
+   * the account avatar lives in My Bookings, so nothing else in the
+   * header can overflow.) */
+  .site-header { gap: 10px; padding: 10px 12px; align-items: center; }
+  .brand { font-size: 15px; white-space: nowrap; }
+  .brand span { font-size: 12px; }
+  .site-header .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 13px;
+    font-size: 13px;
+  }
 }
 
 /* ---------- Booking flow ---------- */
