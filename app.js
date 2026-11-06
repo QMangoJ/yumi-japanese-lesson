@@ -89,6 +89,12 @@ function localRange(dateStr, timeStr, minutes) {
 function jstDateOfMs(ms) {
   return new Date(ms + 9 * 3600_000).toISOString().slice(0, 10);
 }
+/** Visitor-local "YYYY-MM-DD" of an instant (browser timezone, DST-aware
+ * via the platform tz database — getFullYear/Month/Date are local). */
+function localDateOfMs(ms) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 async function api(path, options) {
   const res = await fetch(path, {
@@ -428,7 +434,11 @@ function createPicker({ getMinutes, onPick }) {
         const lr = localRange(date, s.time, minutes);
         // Show the local date too when it differs from the JST calendar day
         // (e.g. an 08:00 JST Monday slot is Sunday evening in the Americas).
-        const dayPrefix = jstDateOfMs(lr.start) !== date ? `${fmtLocalDate(lr.start)} · ` : "";
+        // NB: compare against the visitor-LOCAL date — comparing the
+        // JST date of the instant with `date` is a tautology (the
+        // instant was built from `date`), which silently suppressed
+        // this prefix until the 2026-11-07 DST audit caught it.
+        const dayPrefix = localDateOfMs(lr.start) !== date ? `${fmtLocalDate(lr.start)} · ` : "";
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = "time-chip";
