@@ -301,6 +301,28 @@ a { color: var(--accent); }
 /* Reviewer name in the card footer stands out from the muted footer text. */
 .voices footer strong { color: var(--ink); font-weight: 700; }
 
+/* Reviewer row: round avatar (or an initial circle for reviewers
+   without a photo) left of the stacked name + date. */
+.voices footer.reviewer { display: flex; align-items: center; gap: 12px; }
+.reviewer-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.reviewer-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 19px;
+}
+.reviewer-meta { display: flex; flex-direction: column; line-height: 1.35; }
+.reviewer-meta small { color: var(--sub); }
+
 .faq details {
   background: var(--card);
   border: 1px solid var(--line);
