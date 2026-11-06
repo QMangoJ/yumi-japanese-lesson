@@ -221,6 +221,20 @@ button { font-family: inherit; }
 .hero-photo-caption { font-size: 17px; margin: 18px 0 0; position: relative; }
 .hero-photo-caption small { color: var(--sub); }
 
+/* The language chips live in the photo column now (moved out of the
+ * text column): stacked under the caption, centred, completing the
+ * photo + caption + chips unit that the hero grid centres vertically
+ * against the text column. The chips' own pill styling is untouched;
+ * the long English chip may wrap inside its pill rather than
+ * overflow the narrower column. */
+.hero-photo .hero-langs {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-top: 20px;
+}
+.hero-photo .hero-langs li { max-width: 100%; text-align: center; }
+
 .section {
   max-width: 1080px;
   margin: 0 auto;
@@ -634,8 +648,23 @@ button { font-family: inherit; }
 }
 
 @media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; padding-top: 44px; }
-  .hero-photo { order: -1; }
+  .hero { grid-template-columns: 1fr; padding-top: 44px; gap: 0; }
+  /* Stacked hero: the two column wrappers dissolve (display:
+   * contents) so every piece joins the hero grid directly and can
+   * be ordered — the visual sequence stays exactly what it was
+   * (photo, caption, eyebrow, headline, lead, CTAs, language chips
+   * right under the CTAs, stats), even though the chips now live
+   * inside the photo unit in the DOM for the desktop layout.
+   * Spacing comes from the pieces' own margins, as before. */
+  .hero-text, .hero-photo { display: contents; }
+  .hero-photo-frame { order: 1; justify-self: center; }
+  .hero-photo-caption { order: 2; }
+  .hero .eyebrow { order: 3; margin-top: 32px; }
+  .hero h1 { order: 4; }
+  .hero .lead { order: 5; }
+  .hero-cta { order: 6; }
+  .hero-langs { order: 7; }
+  .hero-stats { order: 8; }
   .cards-3, .voices, .about-grid { grid-template-columns: 1fr; }
   .site-header nav { display: none; }
   .hero-stats { gap: 22px; flex-wrap: wrap; }
