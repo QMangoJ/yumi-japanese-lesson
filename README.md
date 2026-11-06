@@ -2,8 +2,10 @@
 
 A one-page introduction + booking site for Yumi N., a certified Japanese
 tutor, modeled on the structure and booking flow of
-sakurajapaneselesson.com: hero, 3 reasons, about, lesson menu, price with
-packages, on-site booking, student voices, FAQ, and booking management.
+sakurajapaneselesson.com: hero, 3 reasons, about, lesson menu, price,
+on-site booking (Sakura-style single pane: month calendar + start-time
+dropdown + duration + live total), student voices, FAQ, and booking
+management.
 
 Live at https://yumi.ki-toko.com (Cloudflare Workers, custom domain).
 
@@ -12,9 +14,10 @@ Live at https://yumi.ki-toko.com (Cloudflare Workers, custom domain).
 - `index.html`, `styles.css`, `app.js`, `images/` — the static site.
 - `worker.js` — Cloudflare Worker. Serves the static files through the
   ASSETS binding and implements the booking API:
-  - `GET  /api/config` — courses, lesson types, prices, policy (single
-    source of truth, all marked MOCK in `CONFIG`)
-  - `GET  /api/availability?date=YYYY-MM-DD` — open slots (JST)
+  - `GET  /api/config` — courses, lesson durations (30 / 50 / 120 min),
+    prices, policy (single source of truth, all marked MOCK in `CONFIG`)
+  - `GET  /api/availability?date=YYYY-MM-DD&duration=50` — start times whose
+    whole lesson fits the day and doesn't overlap another booking (JST)
   - `POST /api/bookings` — create a booking (status `pending_payment`)
   - `POST /api/bookings/:id/pay` — MOCK payment, marks the booking `paid`
     and issues a (mock) Google Meet link. Replace with Stripe before

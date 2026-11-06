@@ -195,16 +195,20 @@
         <tr><th>Duration</th><th>USD ($)</th><th>Packages</th></tr>
       </thead>
       <tbody>
-        <tr><td>25 min (trial)</td><td>$10</td>
-          <td rowspan="2">
-            <strong>5 × 60 min</strong> — <s>$150</s> <strong>$135</strong> · <em>10% OFF</em><br />
-            <strong>10 × 60 min</strong> — <s>$300</s> <strong>$270</strong> · <em>10% OFF</em>
+        <tr><td>30 min</td><td>$15</td>
+          <td rowspan="3">
+            <strong>5 lessons</strong> — <em>10% OFF</em> the total<br />
+            <strong>10 lessons</strong> — <em>10% OFF</em> the total<br />
+            <small>Package students can freely adjust each lesson's
+            duration from 30 minutes up to 2 hours.</small>
           </td></tr>
-        <tr><td>60 min</td><td>$30</td></tr>
+        <tr><td>50 min</td><td>$25</td></tr>
+        <tr><td>120 min</td><td>$60</td></tr>
       </tbody>
     </table>
-    <p class="note">Students using lesson packages can freely book and adjust each
-    lesson's time from this page. New bookings are taken at least 72 hours in advance.</p>
+    <p class="note">Every course is available at every duration — just pick
+    30, 50 or 120 minutes when you book. New bookings are taken at least
+    72 hours in advance.</p>
   </section>
 
   <!-- BOOK -->
@@ -213,57 +217,58 @@
     <h2>Book a Lesson</h2>
 
     <ol class="steps" id="bk-steps">
-      <li data-step="1" class="active">Course</li>
-      <li data-step="2">Date &amp; Time</li>
-      <li data-step="3">Your Details</li>
-      <li data-step="4">Payment</li>
-      <li data-step="5">Done</li>
+      <li data-step="1" class="active">Lesson</li>
+      <li data-step="2">Your Details</li>
+      <li data-step="3">Payment</li>
+      <li data-step="4">Done</li>
     </ol>
 
     <div class="booking-box">
-      <!-- Step 1 -->
+      <!-- Step 1: course, duration, date & time (one pane, like Sakura's booking modal) -->
       <div class="bk-pane" data-pane="1">
-        <h3>1. Choose your course</h3>
+        <h3>Book your lesson</h3>
+        <p class="note">Choose a course and a lesson at least 72 hours in
+        advance. Times are shown in Japan time (JST).</p>
+        <h4 class="bk-sub">Course</h4>
         <div class="choice-grid" id="bk-courses"></div>
-        <h3>Lesson type</h3>
-        <div class="choice-list" id="bk-types"></div>
+        <div class="bk-cols">
+          <div class="bk-col">
+            <h4 class="bk-sub">01 · Choose a date</h4>
+            <div id="bk-cal"></div>
+            <p class="note">Closed Sundays &amp; Mondays.</p>
+          </div>
+          <div class="bk-col">
+            <h4 class="bk-sub">02 · Choose a start time</h4>
+            <label class="field">Lesson duration
+              <select id="bk-duration"></select></label>
+            <div id="bk-times"></div>
+            <div class="bk-selected" id="bk-selected">Selected: choose a date and a time</div>
+            <div class="bk-total" id="bk-total"></div>
+          </div>
+        </div>
         <p class="msg" id="bk-msg-1"></p>
         <div class="bk-nav"><span></span>
-          <button class="btn" id="bk-to-2">Continue →</button></div>
+          <button class="btn" id="bk-to-2" disabled>Continue →</button></div>
       </div>
 
       <!-- Step 2 -->
       <div class="bk-pane hidden" data-pane="2">
-        <h3>2. Pick a date &amp; time</h3>
-        <p class="note">All times are Japan time (JST). Lessons can be booked at
-        least 72 hours ahead; I'm available Tuesday to Saturday.</p>
-        <label class="field">Date
-          <input type="date" id="bk-date" /></label>
-        <div class="slot-grid" id="bk-slots"></div>
-        <p class="msg" id="bk-msg-2"></p>
-        <div class="bk-nav">
-          <button class="btn btn-ghost" data-back="1">← Back</button>
-          <button class="btn" id="bk-to-3">Continue →</button></div>
-      </div>
-
-      <!-- Step 3 -->
-      <div class="bk-pane hidden" data-pane="3">
-        <h3>3. Your details</h3>
+        <h3>2. Your details</h3>
         <label class="field">Your name
           <input type="text" id="bk-name" autocomplete="name" placeholder="e.g. Alex Smith" /></label>
         <label class="field">Email (for confirmation &amp; managing your booking)
           <input type="email" id="bk-email" autocomplete="email" placeholder="you@example.com" /></label>
         <label class="field">Anything you'd like me to know? (goals, level, topics — optional)
           <textarea id="bk-notes" rows="3"></textarea></label>
-        <p class="msg" id="bk-msg-3"></p>
+        <p class="msg" id="bk-msg-2"></p>
         <div class="bk-nav">
-          <button class="btn btn-ghost" data-back="2">← Back</button>
-          <button class="btn" id="bk-to-4">Review &amp; pay →</button></div>
+          <button class="btn btn-ghost" data-back="1">← Back</button>
+          <button class="btn" id="bk-to-3">Review &amp; pay →</button></div>
       </div>
 
-      <!-- Step 4 -->
-      <div class="bk-pane hidden" data-pane="4">
-        <h3>4. Review &amp; payment</h3>
+      <!-- Step 3 -->
+      <div class="bk-pane hidden" data-pane="3">
+        <h3>3. Review &amp; payment</h3>
         <table class="summary" id="bk-summary"></table>
         <div class="test-banner">TEST MODE — this checkout is a demo. No real
         payment is taken; use any card details to try the flow.</div>
@@ -277,14 +282,14 @@
         </div>
         <p class="note">Payments are processed securely through Stripe.
         Major credit and debit cards are accepted (Visa, Mastercard, American Express).</p>
-        <p class="msg" id="bk-msg-4"></p>
+        <p class="msg" id="bk-msg-3"></p>
         <div class="bk-nav">
-          <button class="btn btn-ghost" data-back="3">← Back</button>
+          <button class="btn btn-ghost" data-back="2">← Back</button>
           <button class="btn" id="bk-pay">Pay now</button></div>
       </div>
 
-      <!-- Step 5 -->
-      <div class="bk-pane hidden" data-pane="5">
+      <!-- Step 4 -->
+      <div class="bk-pane hidden" data-pane="4">
         <h3>🎉 You're booked!</h3>
         <table class="summary" id="bk-done"></table>
         <p>Lessons are held on Google Meet — your personal link is in the table

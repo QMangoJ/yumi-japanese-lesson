@@ -1,4 +1,10 @@
-/* YUMI Japanese Lessons — booking flow + My Bookings */
+/* YUMI Japanese Lessons — booking flow + My Bookings
+ *
+ * Booking pane modeled on sakurajapaneselesson.com: one pane with a month
+ * calendar (01 Choose a date), a start-time dropdown (02 Choose a start
+ * time), a duration dropdown (30 / 50 / 120 min — the only choice besides
+ * the course), and a live summary + checkout total that update as you pick.
+ */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
@@ -6,15 +12,45 @@ const $ = (sel) => document.querySelector(sel);
 const state = {
   config: null,
   courseId: null,
-  lessonTypeId: null,
+  durationId: null,
   date: null,
   time: null,
   booking: null,
 };
 
-function jstTodayPlus(days) {
-  const now = new Date(Date.now() + 9 * 3600_000 + days * 86400_000);
-  return now.toISOString().slice(0, 10);
+/* ---------- date / time helpers (all JST, dates as "YYYY-MM-DD") ---------- */
+
+function jstToday() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+}
+function addDays(ds, n) {
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+function weekdayOf(ds) {
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+function dateLong(ds) {
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US",
+    { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+function toMin(time) {
+  const [h, m] = String(time).split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+function minToHHMM(min) {
+  return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+function minTo12(min) {
+  let h = Math.floor(min / 60);
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${String(min % 60).padStart(2, "0")} ${ap}`;
+}
+function rangeText(startMin, minutes) {
+  return `${minTo12(startMin)}–${minTo12(startMin + minutes)}`;
 }
 
 async function api(path, options) {
@@ -29,6 +65,7 @@ async function api(path, options) {
 
 function setMsg(id, text, ok) {
   const el = $(id);
+  if (!el) return;
   el.textContent = text || "";
   el.className = "msg" + (text ? (ok ? " msg-ok" : " msg-err") : "");
 }
@@ -45,87 +82,160 @@ function showPane(n) {
 }
 
 function courseName(id) {
-  return state.config.courses.find((c) => c.id === id)?.name || id;
+  return state.config?.courses.find((c) => c.id === id)?.name || id;
 }
-function typeName(id) {
-  return state.config.lessonTypes.find((t) => t.id === id)?.name || id;
+function durationOf(id) {
+  return state.config?.durations.find((d) => d.id === id) || null;
+}
+function legacyName(id) {
+  return state.config?.legacyLessonTypes.find((t) => t.id === id)?.name || id;
+}
+function minutesOfBooking(b) {
+  if (b.durationMinutes) return b.durationMinutes;
+  const legacy = state.config?.legacyLessonTypes.find((t) => t.id === b.lessonTypeId);
+  return legacy ? legacy.minutes : 60;
 }
 function money(n) {
   return `$${n}`;
 }
 
-/* ---------- Step 1: course & lesson type ---------- */
+/* ---------- Date + start-time picker (Sakura-style) ----------
+ * Builds a month calendar element and an "Available times" dropdown element;
+ * the caller places them. onPick(date, time) fires whenever either changes.
+ */
+function createPicker({ getMinutes, onPick }) {
+  const todayStr = jstToday();
+  let view = { y: Number(todayStr.slice(0, 4)), m: Number(todayStr.slice(5, 7)) };
+  let date = null;
+  let time = null;
+  let loadToken = 0;
 
-function renderChoices() {
-  const cg = $("#bk-courses");
-  cg.innerHTML = "";
-  for (const c of state.config.courses) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "choice" + (state.courseId === c.id ? " selected" : "");
-    b.textContent = c.name;
-    b.onclick = () => { state.courseId = c.id; renderChoices(); };
-    cg.appendChild(b);
-  }
-  const tg = $("#bk-types");
-  tg.innerHTML = "";
-  for (const t of state.config.lessonTypes) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "choice choice-row" + (state.lessonTypeId === t.id ? " selected" : "");
-    b.innerHTML = `<span>${t.name}</span><strong>${money(t.price)}</strong>`;
-    b.onclick = () => { state.lessonTypeId = t.id; renderChoices(); };
-    tg.appendChild(b);
-  }
-}
+  const calEl = document.createElement("div");
+  calEl.className = "cal";
+  const timesEl = document.createElement("div");
+  timesEl.innerHTML = `
+    <label class="field">Available times
+      <select disabled><option>Choose a date first</option></select></label>
+    <p class="note picker-note"></p>`;
+  const select = timesEl.querySelector("select");
+  const note = timesEl.querySelector(".picker-note");
 
-/* ---------- Step 2: date & slots ---------- */
+  const minDate = () => addDays(jstToday(), 3); // 72-hour rule, at date level
+  const maxMonth = () => {
+    const t = jstToday();
+    const idx = Number(t.slice(0, 4)) * 12 + Number(t.slice(5, 7)) - 1 + 3;
+    return { y: Math.floor(idx / 12), m: (idx % 12) + 1 };
+  };
 
-async function loadSlots() {
-  const grid = $("#bk-slots");
-  const date = $("#bk-date").value;
-  state.date = date || null;
-  state.time = null;
-  grid.innerHTML = "";
-  if (!date) return;
-  grid.innerHTML = "<p class='note'>Loading times…</p>";
-  try {
-    const data = await api(`/api/availability?date=${date}`);
-    grid.innerHTML = "";
-    if (data.closed) {
-      grid.innerHTML = "<p class='note'>Closed on this day — I teach Tuesday to Saturday.</p>";
-      return;
+  function renderCal() {
+    const { y, m } = view;
+    const title = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US",
+      { month: "long", year: "numeric", timeZone: "UTC" });
+    const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+    const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const today = jstToday();
+    const min = minDate();
+    const max = maxMonth();
+    const prevOff = y * 12 + m <= Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7));
+    const nextOff = y * 12 + m >= max.y * 12 + max.m;
+    let cells = "";
+    for (let i = 0; i < first; i++) cells += "<span></span>";
+    for (let d = 1; d <= days; d++) {
+      const ds = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const off = ds < min || !state.config.openDays.includes(weekdayOf(ds));
+      cells += `<button type="button" class="cal-day${ds === date ? " selected" : ""}${ds === today ? " today" : ""}"
+        data-date="${ds}" ${off ? "disabled" : ""} aria-label="${dateLong(ds)}">${d}</button>`;
     }
-    for (const s of data.slots) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "slot" + (s.available ? "" : " off");
-      b.textContent = s.time;
-      b.disabled = !s.available;
+    calEl.innerHTML = `
+      <div class="cal-head">
+        <button type="button" class="cal-nav" data-nav="-1" ${prevOff ? "disabled" : ""} aria-label="Previous month">‹</button>
+        <span class="cal-title">${title}</span>
+        <button type="button" class="cal-nav" data-nav="1" ${nextOff ? "disabled" : ""} aria-label="Next month">›</button>
+      </div>
+      <div class="cal-grid cal-week"><span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span></div>
+      <div class="cal-grid">${cells}</div>`;
+    calEl.querySelectorAll(".cal-nav").forEach((b) => {
       b.onclick = () => {
-        state.time = s.time;
-        grid.querySelectorAll(".slot").forEach((x) => x.classList.remove("selected"));
-        b.classList.add("selected");
+        const idx = view.y * 12 + (view.m - 1) + Number(b.dataset.nav);
+        view = { y: Math.floor(idx / 12), m: (idx % 12) + 1 };
+        renderCal();
       };
-      grid.appendChild(b);
-    }
-  } catch (e) {
-    grid.innerHTML = `<p class='msg msg-err'>${e.message}</p>`;
+    });
+    calEl.querySelectorAll(".cal-day").forEach((b) => {
+      b.onclick = () => pickDate(b.dataset.date);
+    });
   }
+
+  async function loadTimes() {
+    const token = ++loadToken;
+    time = null;
+    onPick(date, time);
+    select.innerHTML = "<option>Checking availability…</option>";
+    select.disabled = true;
+    note.textContent = "Checking availability…";
+    try {
+      const data = await api(`/api/availability?date=${date}&duration=${getMinutes()}`);
+      if (token !== loadToken) return;
+      if (data.closed) {
+        select.innerHTML = "<option>Closed on this day</option>";
+        note.textContent = "Closed on this day — I teach Tuesday to Saturday.";
+        return;
+      }
+      const open = data.slots.filter((s) => s.available);
+      if (!open.length) {
+        select.innerHTML = "<option>No times available</option>";
+        note.textContent = "No times are available on this date.";
+        return;
+      }
+      const minutes = getMinutes();
+      select.innerHTML = open.map((s) =>
+        `<option value="${s.time}">${rangeText(toMin(s.time), minutes)} · JST ${s.time}</option>`).join("");
+      select.disabled = false;
+      time = open[0].time; // Sakura pre-selects the first available start time
+      select.value = time;
+      note.textContent = `${open.length} start time${open.length === 1 ? "" : "s"} available`;
+      onPick(date, time);
+    } catch (e) {
+      if (token !== loadToken) return;
+      select.innerHTML = "<option>Could not load times</option>";
+      note.textContent = e.message;
+    }
+  }
+
+  function pickDate(ds) {
+    date = ds;
+    renderCal();
+    loadTimes();
+  }
+
+  select.addEventListener("change", () => {
+    time = select.value || null;
+    onPick(date, time);
+  });
+
+  renderCal();
+  return {
+    calEl, timesEl,
+    setMinutes() { if (date) loadTimes(); },
+    get date() { return date; },
+    get time() { return time; },
+  };
 }
 
 /* ---------- Summary ---------- */
 
 function summaryRows(b) {
-  const rows = [
-    ["Course", courseName(b.courseId)],
-    ["Lesson type", typeName(b.lessonTypeId)],
+  const minutes = minutesOfBooking(b);
+  const rows = [["Course", courseName(b.courseId)]];
+  if (b.lessonTypeId && !b.durationId) rows.push(["Lesson type", legacyName(b.lessonTypeId)]);
+  rows.push(
+    ["Duration", `${minutes} min`],
     ["Date", `${b.date} (JST)`],
-    ["Time", `${b.time} JST`],
+    ["Time", `${rangeText(toMin(b.time), minutes)} JST (${b.time}–${minToHHMM(toMin(b.time) + minutes)})`],
     ["Name", b.name],
     ["Email", b.email],
     ["Total", money(b.amount)],
-  ];
+  );
   if (b.id) rows.unshift(["Booking reference", b.id]);
   if (b.status) rows.push(["Status", b.status.replace("_", " ")]);
   if (b.meetLink) rows.push(["Google Meet", `<a href="${b.meetLink}" target="_blank" rel="noopener">${b.meetLink}</a>`]);
@@ -141,16 +251,70 @@ document.addEventListener("DOMContentLoaded", async () => {
     setMsg("#bk-msg-1", "Could not load booking options. Please refresh the page.", false);
     return;
   }
-  renderChoices();
 
-  const dateInput = $("#bk-date");
-  dateInput.min = jstTodayPlus(3); // 72-hour rule
-  dateInput.addEventListener("change", loadSlots);
+  /* Step 1: course + duration + picker */
+  const picker = createPicker({
+    getMinutes: () => durationOf(state.durationId)?.minutes || 50,
+    onPick: (date, time) => {
+      state.date = date;
+      state.time = time;
+      refreshSummary();
+    },
+  });
+  $("#bk-cal").appendChild(picker.calEl);
+  $("#bk-times").appendChild(picker.timesEl);
+
+  function renderCourses() {
+    const cg = $("#bk-courses");
+    cg.innerHTML = "";
+    for (const c of state.config.courses) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "choice" + (state.courseId === c.id ? " selected" : "");
+      b.textContent = c.name;
+      b.onclick = () => { state.courseId = c.id; renderCourses(); refreshSummary(); };
+      cg.appendChild(b);
+    }
+  }
+
+  function renderDurations() {
+    const sel = $("#bk-duration");
+    sel.innerHTML = state.config.durations.map((d) =>
+      `<option value="${d.id}"${d.id === state.durationId ? " selected" : ""}>${d.minutes} min lesson</option>`).join("");
+  }
+
+  function refreshSummary() {
+    const dur = durationOf(state.durationId);
+    const sel = $("#bk-selected");
+    if (state.date && state.time && dur) {
+      sel.textContent = `Selected: ${dateLong(state.date)}, ${rangeText(toMin(state.time), dur.minutes)} (Asia/Tokyo) · ${state.date} ${state.time} JST`;
+    } else {
+      sel.textContent = "Selected: choose a date and a time";
+    }
+    $("#bk-total").innerHTML = dur ? `
+      <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
+      <div class="bk-total-row"><span>${dur.minutes} min lesson</span><span>${money(dur.price)}</span></div>
+      <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(dur.price)}</span></div>
+      <p class="note">Lessons are online: your Google Meet link is sent after booking and payment.</p>` : "";
+    $("#bk-to-2").disabled = !(state.courseId && state.date && state.time);
+  }
+
+  state.durationId = state.config.durations.find((d) => d.minutes === 50)?.id || state.config.durations[0].id;
+  renderCourses();
+  renderDurations();
+  refreshSummary();
+
+  $("#bk-duration").addEventListener("change", (e) => {
+    state.durationId = e.target.value;
+    picker.setMinutes();
+    refreshSummary();
+  });
 
   document.querySelectorAll(".book-course").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.courseId = btn.dataset.course;
-      renderChoices();
+      renderCourses();
+      refreshSummary();
       showPane(1);
     });
   });
@@ -161,57 +325,51 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("#bk-to-2").onclick = () => {
     if (!state.courseId) return setMsg("#bk-msg-1", "Please choose a course.", false);
-    if (!state.lessonTypeId) return setMsg("#bk-msg-1", "Please choose a lesson type.", false);
+    if (!state.date || !state.time) return setMsg("#bk-msg-1", "Please pick a date and a time.", false);
     setMsg("#bk-msg-1", "");
     showPane(2);
   };
 
-  $("#bk-to-3").onclick = () => {
-    if (!state.date || !state.time) {
-      return setMsg("#bk-msg-2", "Please pick a date and a time.", false);
-    }
-    setMsg("#bk-msg-2", "");
-    showPane(3);
-  };
-
-  $("#bk-to-4").onclick = async () => {
+  /* Step 2: details -> create booking */
+  $("#bk-to-3").onclick = async () => {
     const name = $("#bk-name").value.trim();
     const email = $("#bk-email").value.trim();
     const notes = $("#bk-notes").value.trim();
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return setMsg("#bk-msg-3", "Please enter your name and a valid email.", false);
+      return setMsg("#bk-msg-2", "Please enter your name and a valid email.", false);
     }
-    setMsg("#bk-msg-3", "Creating your booking…", true);
+    setMsg("#bk-msg-2", "Creating your booking…", true);
     try {
       const { booking } = await api("/api/bookings", {
         method: "POST",
         body: JSON.stringify({
-          courseId: state.courseId, lessonTypeId: state.lessonTypeId,
+          courseId: state.courseId, durationId: state.durationId,
           date: state.date, time: state.time, name, email, notes,
         }),
       });
       state.booking = booking;
       $("#bk-summary").innerHTML = summaryRows(booking);
       $("#bk-pay").textContent = `Pay ${money(booking.amount)}`;
-      setMsg("#bk-msg-3", "");
-      showPane(4);
+      setMsg("#bk-msg-2", "");
+      showPane(3);
     } catch (e) {
-      setMsg("#bk-msg-3", e.message, false);
+      setMsg("#bk-msg-2", e.message, false);
     }
   };
 
+  /* Step 3: mock payment */
   $("#bk-pay").onclick = async () => {
     if (!state.booking) return;
-    setMsg("#bk-msg-4", "Processing (mock)…", true);
+    setMsg("#bk-msg-3", "Processing (mock)…", true);
     try {
       const { booking } = await api(`/api/bookings/${state.booking.id}/pay`, {
         method: "POST", body: "{}",
       });
       state.booking = booking;
       $("#bk-done").innerHTML = summaryRows(booking);
-      showPane(5);
+      showPane(4);
     } catch (e) {
-      setMsg("#bk-msg-4", e.message, false);
+      setMsg("#bk-msg-3", e.message, false);
     }
   };
 
@@ -246,8 +404,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-resched">Reschedule</button>` : ""}
       </div>
       <div id="my-resched-box" class="hidden">
-        <label class="field">New date <input type="date" id="my-date" /></label>
-        <div class="slot-grid" id="my-slots"></div>
+        <h4 class="bk-sub">Pick a new date &amp; time (${minutesOfBooking(b)} min lesson)</h4>
+        <div id="my-picker"></div>
         <button class="btn" id="my-resched-go" disabled>Confirm new time</button>
       </div>` : ""}`;
 
@@ -259,42 +417,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
           method: "POST", body: JSON.stringify({ email }),
         });
+        renderMyBooking(data.booking, email);
         setMsg("#my-action-msg",
           `Booking cancelled. Refund: ${data.booking.refund}.`, true);
-        renderMyBooking(data.booking, email);
       } catch (e) { setMsg("#my-action-msg", e.message, false); }
     };
 
     const reschedBtn = $("#my-resched");
     if (reschedBtn) {
-      let newDate = null, newTime = null;
-      reschedBtn.onclick = () => $("#my-resched-box").classList.toggle("hidden");
-      const dateEl = $("#my-date");
-      dateEl.min = jstTodayPlus(3);
-      dateEl.onchange = async () => {
-        newDate = dateEl.value; newTime = null;
-        $("#my-resched-go").disabled = true;
-        const grid = $("#my-slots");
-        grid.innerHTML = "<p class='note'>Loading times…</p>";
-        try {
-          const data = await api(`/api/availability?date=${newDate}`);
-          grid.innerHTML = data.closed
-            ? "<p class='note'>Closed on this day (Tue–Sat only).</p>" : "";
-          for (const s of data.slots || []) {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "slot" + (s.available ? "" : " off");
-            btn.textContent = s.time;
-            btn.disabled = !s.available;
-            btn.onclick = () => {
-              newTime = s.time;
-              grid.querySelectorAll(".slot").forEach((x) => x.classList.remove("selected"));
-              btn.classList.add("selected");
-              $("#my-resched-go").disabled = false;
-            };
-            grid.appendChild(btn);
-          }
-        } catch (e) { grid.innerHTML = `<p class='msg msg-err'>${e.message}</p>`; }
+      let newDate = null, newTime = null, picker = null;
+      reschedBtn.onclick = () => {
+        $("#my-resched-box").classList.toggle("hidden");
+        if (!picker) {
+          picker = createPicker({
+            getMinutes: () => minutesOfBooking(b),
+            onPick: (date, time) => {
+              newDate = date; newTime = time;
+              $("#my-resched-go").disabled = !(newDate && newTime);
+            },
+          });
+          const mount = $("#my-picker");
+          mount.appendChild(picker.calEl);
+          mount.appendChild(picker.timesEl);
+        }
       };
       $("#my-resched-go").onclick = async () => {
         try {
@@ -302,8 +447,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             method: "POST",
             body: JSON.stringify({ email, date: newDate, time: newTime }),
           });
-          setMsg("#my-action-msg", "Rescheduled. See you then!", true);
           renderMyBooking(booking, email);
+          setMsg("#my-action-msg", "Rescheduled. See you then!", true);
         } catch (e) { setMsg("#my-action-msg", e.message, false); }
       };
     }
