@@ -269,21 +269,10 @@
       <thead>
         <tr><th>Duration</th><th>USD ($)</th><th>Packages</th></tr>
       </thead>
-      <tbody>
-        <tr><td>30 min</td><td>$15</td>
-          <td rowspan="4">
-            <strong>5 lessons</strong> — <em>10% OFF</em> the total<br />
-            <strong>10 lessons</strong> — <em>10% OFF</em> the total<br />
-            <small>Package students can freely adjust each lesson's
-            duration from 30 minutes up to 2 hours.</small>
-          </td></tr>
-        <tr><td>50 min</td><td>$25</td></tr>
-        <tr><td>80 min</td><td>$40</td></tr>
-        <tr><td>120 min</td><td>$60</td></tr>
-      </tbody>
+      <tbody id="price-rows"><!-- rendered from /api/config by app.js --></tbody>
     </table>
     <p class="note">Every course is available at every duration — just pick
-    30, 50, 80 or 120 minutes when you book. New bookings are taken at least
+    <span id="price-note-durations">a duration</span> when you book. New bookings are taken at least
     72 hours in advance.</p>
     <p><a class="btn open-booking" href="#book">Book a Lesson</a></p>
   </section>

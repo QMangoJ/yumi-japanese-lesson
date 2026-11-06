@@ -90,6 +90,11 @@ const DEFAULT_SETTINGS = {
   // behaving identically. Once the admin saves from the grid editor,
   // all seven weekdays are present and this is the source of truth.
   weeklyHours: {},
+  // Admin-configurable per-lesson prices (USD), keyed by duration
+  // minutes as strings. Defaults reproduce the CONFIG rates; bookings
+  // and subscriptions snapshot the price at creation, so edits here
+  // only affect new purchases.
+  pricing: { "30": 15, "50": 25, "80": 40, "120": 60 },
   blockedDates: [],
   meeting: { type: "fixed", url: "" },
   // Daniel's decision: sending is via Resend, sender
@@ -217,6 +222,15 @@ function normalizeSettings(raw) {
       )].sort((a, b) => a - b);
     }
   }
+  if (raw.pricing && typeof raw.pricing === "object") {
+    for (const d of CONFIG.durations) {
+      const v = raw.pricing[String(d.minutes)];
+      const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+      if (typeof n === "number" && Number.isFinite(n) && n > 0) {
+        s.pricing[String(d.minutes)] = Math.round(n * 100) / 100;
+      }
+    }
+  }
   if (Array.isArray(raw.blockedDates)) {
     s.blockedDates = [...new Set(raw.blockedDates.filter((x) => DATE_RE.test(x || "")))].sort();
   }
@@ -276,6 +290,7 @@ function publicSettings(s) {
   return {
     weekly: s.weekly,
     weeklyHours: s.weeklyHours,
+    pricing: s.pricing,
     blockedDates: s.blockedDates,
     meeting: s.meeting,
     resend: { from: s.resend.from, apiKeySet: !!s.resend.apiKey },
@@ -286,6 +301,37 @@ function publicSettings(s) {
     blockedHours: s.blockedHours,
     adminEmails: s.adminEmails,
   };
+}
+
+/** The current price for a duration: the admin-configured settings
+ *  value wins; CONFIG holds the factory default. Amounts are
+ *  snapshotted onto bookings/subscriptions at creation time, so a
+ *  price change never rewrites an existing record. */
+function priceFor(settings, minutes) {
+  const v = settings && settings.pricing
+    ? settings.pricing[String(minutes)] : undefined;
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+  const d = CONFIG.durations.find((x) => x.minutes === minutes);
+  return d ? d.price : 0;
+}
+
+/** Reject a settings.pricing payload that is not clean: every key a
+ *  known duration, every value a positive finite number. Returns an
+ *  error string or null. */
+function validatePricing(p) {
+  if (!p || typeof p !== "object" || Array.isArray(p)) {
+    return "Prices must be an object keyed by duration";
+  }
+  for (const [k, v] of Object.entries(p)) {
+    if (!CONFIG.durations.some((d) => String(d.minutes) === k)) {
+      return `Unknown duration in prices: ${k}`;
+    }
+    const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+    if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) {
+      return `Price for ${k} min must be a positive number`;
+    }
+  }
+  return null;
 }
 
 /** Is this email on the admin whitelist (settings.adminEmails)?
@@ -615,10 +661,10 @@ function validateSlot(settings, dateStr, time, minutes) {
 }
 
 /** Resolve what a create-booking request is buying: a duration, or (old clients) a legacy lesson type. */
-function resolvePurchase(body) {
+function resolvePurchase(body, settings) {
   const dur = CONFIG.durations.find((d) => d.id === body.durationId) ||
     CONFIG.durations.find((d) => d.minutes === Number(body.durationMinutes));
-  if (dur) return { durationId: dur.id, minutes: dur.minutes, price: dur.price, lessons: 1, lessonTypeId: null };
+  if (dur) return { durationId: dur.id, minutes: dur.minutes, price: priceFor(settings, dur.minutes), lessons: 1, lessonTypeId: null };
   const legacy = CONFIG.legacyLessonTypes.find((t) => t.id === body.lessonTypeId);
   if (legacy) return { durationId: null, minutes: legacy.minutes, price: legacy.price, lessons: legacy.lessons, lessonTypeId: legacy.id };
   return null;
@@ -1135,6 +1181,10 @@ export default {
         let body;
         try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
         const incoming = (body && body.settings) || body || {};
+        if (incoming.pricing !== undefined) {
+          const perr = validatePricing(incoming.pricing);
+          if (perr) return json({ error: perr }, 400);
+        }
         const current = await getSettings(env);
         // An empty apiKey in the form means "keep the saved one".
         if (incoming.resend && !incoming.resend.apiKey) {
@@ -1385,7 +1435,8 @@ export default {
         email, name,
         courseId: course.id, durationId: dur.id, durationMinutes: dur.minutes,
         slots, totalLessons: size,
-        pricePerLesson: dur.price, totalPrice: dur.price * size,
+        pricePerLesson: priceFor(settings, dur.minutes),
+        totalPrice: priceFor(settings, dur.minutes) * size,
         status: "pending_payment",
         endingReminderSent: false, lastSkippedDates: [],
         createdAt: new Date().toISOString(),
@@ -1538,7 +1589,9 @@ export default {
       const settings = await getSettings(env);
       const openDays = [0, 1, 2, 3, 4, 5, 6].filter(
         (d) => weeklyHoursFor(settings, d).length > 0);
-      return json({ courses: CONFIG.courses, durations: CONFIG.durations,
+      const durations = CONFIG.durations.map(
+        (d) => ({ ...d, price: priceFor(settings, d.minutes) }));
+      return json({ courses: CONFIG.courses, durations,
         legacyLessonTypes: CONFIG.legacyLessonTypes,
         currency: CONFIG.currency, policy: CONFIG.policy,
         openDays });
@@ -1609,12 +1662,12 @@ export default {
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
       const { courseId, date, time, name, email, notes } = body || {};
       const course = CONFIG.courses.find((c) => c.id === courseId);
-      const purchase = resolvePurchase(body || {});
+      const settings = await getSettings(env);
+      const purchase = resolvePurchase(body || {}, settings);
       if (!course || !purchase) return json({ error: "Unknown course or duration" }, 400);
       if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "")) {
         return json({ error: "Name and a valid email are required" }, 400);
       }
-      const settings = await getSettings(env);
       const err = validateSlot(settings, date, time, purchase.minutes);
       if (err) return json({ error: err }, 400);
       const taken = await bookingsOn(env, date);

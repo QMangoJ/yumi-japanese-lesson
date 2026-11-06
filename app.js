@@ -172,6 +172,29 @@ function courseName(id) {
 function durationOf(id) {
   return state.config?.durations.find((d) => d.id === id) || null;
 }
+/* Homepage price table: rendered from the same /api/config the
+ * booking modal uses, so admin-edited prices show up everywhere
+ * with no hardcoded numbers in the HTML. */
+function renderPrices() {
+  const tb = $("#price-rows");
+  if (!tb || !state.config) return;
+  const ds = state.config.durations;
+  tb.innerHTML = ds.map((d, i) => `
+    <tr><td>${d.minutes} min</td><td>$${d.price}</td>${i === 0 ? `
+      <td rowspan="${ds.length}">
+        <strong>5 lessons</strong> — <em>10% OFF</em> the total<br />
+        <strong>10 lessons</strong> — <em>10% OFF</em> the total<br />
+        <small>Package students can freely adjust each lesson's
+        duration from 30 minutes up to 2 hours.</small>
+      </td>` : ""}</tr>`).join("");
+  const note = $("#price-note-durations");
+  if (note && ds.length) {
+    const mins = ds.map((d) => d.minutes);
+    note.textContent = mins.length > 1
+      ? `${mins.slice(0, -1).join(", ")} or ${mins[mins.length - 1]} minutes`
+      : `${mins[0]} minutes`;
+  }
+}
 function legacyName(id) {
   return state.config?.legacyLessonTypes.find((t) => t.id === id)?.name || id;
 }
@@ -404,6 +427,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     state.config = await api("/api/config");
+    renderPrices();
   } catch {
     setMsg("#bk-msg-1", "Could not load booking options. Please refresh the page.", false);
     return;
