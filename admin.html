@@ -104,7 +104,8 @@
     background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--adm-line); padding: 12px 26px; }
   .topbar h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
-  .topbar-env { margin-left: auto; color: var(--sub); font-size: 12.5px; }
+  .topbar-auth { margin-left: auto; color: var(--sub); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-env { color: var(--sub); font-size: 12.5px; }
   .burger { display: none; border: 1px solid var(--adm-line-strong); background: #fff; border-radius: 8px;
     width: 38px; height: 38px; font-size: 17px; cursor: pointer; color: var(--ink); }
   .content { flex: 1; padding: 26px 28px 44px; max-width: 1240px; width: 100%; margin: 0 auto; }
@@ -364,8 +365,10 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
     <button class="btn login-btn" id="adm-load" type="button">Unlock · 进入后台</button>
     <p class="msg" id="adm-msg"></p>
     <p class="note login-note">Booking settings for yumi.ki-toko.com. Changes
-    take effect immediately — no redeploy needed. This page only works with
-    the admin key; without it, nothing here can read or change anything.</p>
+    take effect immediately — no redeploy needed. If you are signed in on
+    the site with a whitelisted Google account, this page opens
+    automatically — no key needed. Otherwise use the admin key; without
+    one of those, nothing here can read or change anything.</p>
   </div>
 </div>
 
@@ -411,6 +414,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
     <header class="topbar">
       <button class="burger" id="adm-burger" type="button" aria-label="Toggle menu">☰</button>
       <h1 id="adm-view-title">Dashboard · 概览</h1>
+      <span class="topbar-auth" id="adm-auth-note"></span>
       <span class="topbar-env">yumi.ki-toko.com</span>
     </header>
 
@@ -707,6 +711,8 @@ const DAY_CN = ["日", "一", "二", "三", "四", "五", "六"];
 const money = (n) => `$${Number(n || 0).toFixed(2).replace(/\.00$/, "")}`;
 
 let adminKey = "";
+let authVia = null;        // how this page got in: "key" | "session"
+let sessionEmail = "";     // the signed-in email when authVia === "session"
 let draft = null;          // settings draft (dateOverrides/blockedHours live here)
 let savedSnapshot = "";    // canonical JSON of the last saved form state
 let monthBookings = [];    // bookings of the visible calendar month
@@ -1748,14 +1754,47 @@ $("#adm-burger").addEventListener("click", () => {
   $("#adm-backdrop").classList.toggle("hidden", !open);
 });
 $("#adm-backdrop").addEventListener("click", closeSidebar);
-$("#adm-lock").addEventListener("click", () => {
+$("#adm-lock").addEventListener("click", async () => {
   sessionStorage.removeItem("yumiAdminKey");
   adminKey = "";
+  if (authVia === "session") {
+    // Entered via the site session: locking has to sign that session
+    // out, otherwise the silent session entry would bounce straight
+    // back in after the reload.
+    try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
+  }
   location.hash = "";
   location.reload();
 });
 
 /* ---------- load + save ---------- */
+
+/** Shared post-auth bootstrap: whichever channel let us in (admin
+ *  key or a whitelisted site session), the shell and data loads are
+ *  identical from here on. `settings` is the already-fetched payload
+ *  of GET /api/admin/settings — the call that proved authorization. */
+async function enterAdmin(settings) {
+  fillForm(settings);
+  $("#adm-login").classList.add("hidden");
+  $("#adm-shell").classList.remove("hidden");
+  $("#adm-msg").textContent = "";
+  $("#adm-auth-note").textContent = authVia === "session"
+    ? `Google 登录 · ${sessionEmail}` : "Admin key 登录";
+  const now = new Date(Date.now() + 9 * 3600_000);
+  calCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
+  schCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
+  selectedDate = now.toISOString().slice(0, 10);
+  schSelected = selectedDate;
+  if (!location.hash) history.replaceState(null, "", "#/dashboard");
+  applyRoute();
+  renderCalendar();
+  renderSummary();
+  await loadMonthBookings();
+  await loadScheduleMonth();
+  await loadBookings();
+  await loadSubs();
+  await loadDashboard(true);
+}
 
 async function loadAll() {
   adminKey = $("#adm-key").value.trim();
@@ -1763,28 +1802,32 @@ async function loadAll() {
   $("#adm-msg").textContent = "Loading…";
   try {
     const data = await api("/api/admin/settings");
+    authVia = "key";
     sessionStorage.setItem("yumiAdminKey", adminKey);
-    fillForm(data.settings);
-    $("#adm-login").classList.add("hidden");
-    $("#adm-shell").classList.remove("hidden");
-    $("#adm-msg").textContent = "";
-    const now = new Date(Date.now() + 9 * 3600_000);
-    calCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
-    schCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
-    selectedDate = now.toISOString().slice(0, 10);
-    schSelected = selectedDate;
-    if (!location.hash) history.replaceState(null, "", "#/dashboard");
-    applyRoute();
-    renderCalendar();
-    renderSummary();
-    await loadMonthBookings();
-    await loadScheduleMonth();
-    await loadBookings();
-    await loadSubs();
-    await loadDashboard(true);
+    await enterAdmin(data.settings);
   } catch (e) {
     $("#adm-msg").textContent = e.message;
   }
+}
+
+/** Silent session entry: if the visitor is signed in on the site,
+ *  ask the server whether this session may use the admin APIs by
+ *  simply trying the lightest proof call (GET /api/admin/settings
+ *  with no key). The whitelist decision is made only server-side;
+ *  /api/auth/me is used solely to show the signed-in email (the
+ *  visitor's own) in the topbar note. On any failure we stay on the
+ *  key unlock form, exactly as before. */
+async function trySessionEntry() {
+  try {
+    const meRes = await fetch("/api/auth/me");
+    if (!meRes.ok) return false;
+    const me = await meRes.json();
+    const data = await api("/api/admin/settings");
+    authVia = "session";
+    sessionEmail = (me.user && me.user.email) || "";
+    await enterAdmin(data.settings);
+    return true;
+  } catch { return false; }
 }
 $("#adm-load").addEventListener("click", loadAll);
 $("#adm-key").addEventListener("keydown", (e) => {
@@ -1842,6 +1885,7 @@ fetch("/api/config").then((r) => r.json()).then((cfg) => {
 }).catch(() => {});
 const savedKey = sessionStorage.getItem("yumiAdminKey");
 if (savedKey) { $("#adm-key").value = savedKey; loadAll(); }
+else { trySessionEntry(); }
 </script>
 </body>
 </html>
