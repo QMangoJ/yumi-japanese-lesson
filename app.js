@@ -465,6 +465,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   const goMy = document.querySelector('.bk-pane[data-pane="4"] .bk-nav a[href="#my"]');
   if (goMy) goMy.addEventListener("click", closeBooking);
 
+  /* Contact form — MOCK handler (Daniel: 先mock). Front-end only:
+   * validates name / email / message and shows the success state
+   * locally. It makes NO network call, writes NO KV record and sends
+   * NO email; replace with a real endpoint before relying on it. */
+  const contactForm = $("#contact-form");
+  if (contactForm) {
+    contactForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = $("#contact-name").value.trim();
+      const email = $("#contact-email").value.trim();
+      const message = $("#contact-message").value.trim();
+      if (!name) return setMsg("#contact-msg", "Please enter your name.", false);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return setMsg("#contact-msg", "Please enter a valid email address.", false);
+      }
+      if (!message) return setMsg("#contact-msg", "Please write a message.", false);
+      setMsg("#contact-msg", "");
+      const btn = $("#contact-submit");
+      btn.textContent = "Message sent ✓";
+      btn.disabled = true;
+      $("#contact-success").classList.remove("hidden");
+      contactForm.querySelectorAll("input, textarea").forEach((el) => { el.value = ""; });
+    });
+  }
+
   try {
     state.config = await api("/api/config");
     renderPrices();
