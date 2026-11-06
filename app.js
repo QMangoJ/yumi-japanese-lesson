@@ -16,6 +16,9 @@ const state = {
   date: null,
   time: null,
   booking: null,
+  mode: "single",   // "single" | "package" (课时包)
+  pkgOrder: null,   // pending package record while checking out
+  pkgBuyer: null,   // {name, email} from pane 2 for a package purchase
 };
 
 /* ---------- date / time helpers (all JST, dates as "YYYY-MM-DD") ---------- */
@@ -123,10 +126,14 @@ function showPane(n) {
  * Only a completed booking resets: the next open starts fresh at pane 1.
  */
 function openBooking() {
-  if (state.booking && flowDone) {
+  if ((state.booking || state.pkgOrder) && flowDone) {
     state.booking = null;
+    state.pkgOrder = null;
+    const extra = document.querySelector("#bk-done-extra");
+    if (extra) extra.innerHTML = "";
     showPane(1);
   }
+  applyAuthToForm();
   $("#book-modal").classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -134,6 +141,29 @@ function openBooking() {
 function closeBooking() {
   $("#book-modal").classList.add("hidden");
   document.body.style.overflow = "";
+}
+
+/* ---------- student account (drives My Bookings) ---------- */
+let authUser = null; // {name, email} once /api/auth/me resolves
+
+/** Prefill + lock the booking form's identity fields while logged in. */
+function applyAuthToForm() {
+  const nameEl = document.getElementById("bk-name");
+  const emailEl = document.getElementById("bk-email");
+  if (!nameEl || !emailEl) return;
+  if (authUser) {
+    nameEl.value = authUser.name;
+    emailEl.value = authUser.email;
+    emailEl.readOnly = true;
+  } else {
+    emailEl.readOnly = false;
+  }
+}
+
+function escHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
 }
 
 function courseName(id) {
@@ -359,18 +389,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       b.type = "button";
       b.className = "choice" + (state.courseId === c.id ? " selected" : "");
       b.textContent = c.name;
-      b.onclick = () => { state.courseId = c.id; renderCourses(); refreshSummary(); };
+      b.onclick = () => { state.courseId = c.id; renderCourses(); refreshSummary();
+        if (state.mode === "package") renderPkgSummary(); };
       cg.appendChild(b);
     }
   }
 
   function renderDurations() {
-    const sel = $("#bk-duration");
-    sel.innerHTML = state.config.durations.map((d) =>
+    const opts = state.config.durations.map((d) =>
       `<option value="${d.id}"${d.id === state.durationId ? " selected" : ""}>${d.minutes} min lesson</option>`).join("");
+    $("#bk-duration").innerHTML = opts;
+    $("#bk-pkg-duration").innerHTML = opts;
   }
 
   function refreshSummary() {
+    if (state.mode === "package") {
+      renderPkgSummary();
+      $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+      return;
+    }
     const dur = durationOf(state.durationId);
     const sel = $("#bk-selected");
     if (state.date && state.time && dur) {
@@ -387,14 +424,198 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("#bk-to-2").disabled = !(state.courseId && state.date && state.time);
   }
 
+
+  /* ---------- Lesson packages (课时包 · 每周固定时间) ----------
+   * Pane 1 in package mode: package size (6/10/20), 1–3 fixed weekly
+   * slots (weekday + start time, duration-aware via the availability
+   * API), and a plan summary. Checkout creates a pending package via
+   * POST /api/packages and pays it via POST /api/subscriptions/:id/pay,
+   * which materializes every lesson at once. */
+  const pkg = { size: 10, freq: 1, slots: [{ weekday: "", time: "" }] };
+  const pkgTimeCache = {};
+  const WEEKDAY_LABELS = ["Sunday 周日", "Monday 周一", "Tuesday 周二",
+    "Wednesday 周三", "Thursday 周四", "Friday 周五", "Saturday 周六"];
+  const WEEKDAY_CN = ["日", "一", "二", "三", "四", "五", "六"];
+
+  function pkgComplete() {
+    if (pkg.slots.length !== pkg.freq) return false;
+    const keys = pkg.slots.map((s) => `${s.weekday}|${s.time}`);
+    return pkg.slots.every((s) => s.weekday !== "" && s.time) &&
+      new Set(keys).size === keys.length;
+  }
+
+  function pkgFirstDate(weekday, time) {
+    const minMs = Date.now() + 72 * 3600_000;
+    for (let i = 0; i < 21; i++) {
+      const d = addDays(jstToday(), i);
+      if (weekdayOf(d) === weekday && jstInstantMs(d, time) >= minMs) return d;
+    }
+    return addDays(jstToday(), 21);
+  }
+
+  /** Planned lesson dates ignoring conflicts (materialization skips
+   *  and extends taken dates, so the real last lesson may be later). */
+  function pkgPlanDates() {
+    if (!pkg.slots.every((s) => s.weekday !== "" && s.time)) return null;
+    const cursors = pkg.slots.map((s) => pkgFirstDate(Number(s.weekday), s.time));
+    const dates = [];
+    let guard = 0;
+    while (dates.length < pkg.size && guard++ < 120) {
+      let idx = 0;
+      for (let i = 1; i < cursors.length; i++) if (cursors[i] < cursors[idx]) idx = i;
+      dates.push(cursors[idx]);
+      cursors[idx] = addDays(cursors[idx], 7);
+    }
+    return dates;
+  }
+
+  async function pkgSlotTimes(weekday, minutes) {
+    const cacheKey = `${weekday}|${minutes}`;
+    if (pkgTimeCache[cacheKey]) return pkgTimeCache[cacheKey];
+    const p = (async () => {
+      let d = addDays(jstToday(), 3);
+      while (weekdayOf(d) !== weekday) d = addDays(d, 1);
+      for (let tries = 0; tries < 4; tries++) {
+        try {
+          const data = await api(`/api/availability?date=${d}&duration=${minutes}`);
+          const times = (data.slots || []).filter((s) => s.available).map((s) => s.time);
+          if (times.length) return times;
+        } catch { /* try the next week */ }
+        d = addDays(d, 7);
+      }
+      return [];
+    })();
+    pkgTimeCache[cacheKey] = p;
+    return p;
+  }
+
+  function renderPkgSizes() {
+    const dur = durationOf(state.durationId);
+    $("#bk-pkg-sizes").innerHTML = "";
+    for (const size of [6, 10, 20]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "choice" + (pkg.size === size ? " selected" : "");
+      b.innerHTML = `${size} 节课 · ${size} lessons` +
+        (dur ? `<span class="choice-price">${money(size * dur.price)}</span>` : "");
+      b.onclick = () => { pkg.size = size; renderPkgSizes(); renderPkgSummary(); };
+      $("#bk-pkg-sizes").appendChild(b);
+    }
+  }
+
+  function renderPkgFreq() {
+    $("#bk-pkg-freq").innerHTML = "";
+    for (const f of [1, 2, 3]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "choice" + (pkg.freq === f ? " selected" : "");
+      b.textContent = `一周${f}节 · ${f}× / week`;
+      b.onclick = () => {
+        pkg.freq = f;
+        while (pkg.slots.length < f) pkg.slots.push({ weekday: "", time: "" });
+        pkg.slots.length = f;
+        renderPkgFreq(); renderPkgSlots(); renderPkgSummary();
+        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+      };
+      $("#bk-pkg-freq").appendChild(b);
+    }
+  }
+
+  function renderPkgSlots() {
+    const box = $("#bk-pkg-slots");
+    box.innerHTML = "";
+    pkg.slots.forEach((slot, i) => {
+      const row = document.createElement("div");
+      row.className = "pkg-slot";
+      row.innerHTML = `
+        <span class="pkg-slot-title">固定时间 ${i + 1} · Weekly slot ${i + 1}</span>
+        <label class="field">星期 · Weekday
+          <select class="pkg-weekday">
+            <option value="">选择星期…</option>
+            ${WEEKDAY_LABELS.map((label, wd) =>
+              `<option value="${wd}"${String(wd) === String(slot.weekday) ? " selected" : ""}>${label}</option>`).join("")}
+          </select></label>
+        <label class="field">开始时间 (JST) · Start time
+          <select class="pkg-time"><option value="">先选星期…</option></select></label>`;
+      box.appendChild(row);
+      const wdSel = row.querySelector(".pkg-weekday");
+      const timeSel = row.querySelector(".pkg-time");
+      const fillTimes = async () => {
+        if (slot.weekday === "") { timeSel.innerHTML = `<option value="">先选星期…</option>`; return; }
+        timeSel.innerHTML = `<option value="">加载中…</option>`;
+        const minutes = durationOf(state.durationId)?.minutes || 50;
+        const times = await pkgSlotTimes(Number(slot.weekday), minutes);
+        timeSel.innerHTML = times.length
+          ? `<option value="">选择时间…</option>` + times.map((t) =>
+              `<option value="${t}"${t === slot.time ? " selected" : ""}>${t} JST</option>`).join("")
+          : `<option value="">这一天暂时没有可约时间</option>`;
+        if (slot.time && !times.includes(slot.time)) slot.time = "";
+        renderPkgSummary();
+        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+      };
+      wdSel.onchange = () => { slot.weekday = wdSel.value; slot.time = ""; fillTimes(); };
+      timeSel.onchange = () => {
+        slot.time = timeSel.value;
+        renderPkgSummary();
+        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+      };
+      if (slot.weekday !== "") fillTimes();
+    });
+  }
+
+  function renderPkgSummary() {
+    const dur = durationOf(state.durationId);
+    const dates = pkgPlanDates();
+    const summary = $("#bk-pkg-summary");
+    if (!dur) { summary.textContent = "请选择每周固定的上课时间"; return; }
+    if (dates && pkgComplete()) {
+      summary.textContent =
+        `每周 ${pkg.freq} 节 · 共 ${pkg.size} 节 · 预计从 ${dates[0]} 上到 ${dates[dates.length - 1]} · 合计 ${money(pkg.size * dur.price)}`;
+    } else if (dates) {
+      summary.textContent = "两个固定时间不能完全相同，请调整其中一个。";
+    } else {
+      summary.textContent = "请选择每周固定的上课时间（先选星期，再选开始时间）";
+    }
+    $("#bk-pkg-total").innerHTML = `
+      <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
+      <div class="bk-total-row"><span>课时包 ${pkg.size} 节 × ${dur.minutes} min</span><span>${money(pkg.size * dur.price)}</span></div>
+      <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(pkg.size * dur.price)}</span></div>
+      <p class="note">支付后系统会一次性排好全部 ${pkg.size} 节课；个别日期被占用时会自动顺延一周。</p>`;
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    document.querySelectorAll(".bk-mode-btn").forEach((b) =>
+      b.classList.toggle("selected", b.dataset.mode === mode));
+    $("#bk-single").classList.toggle("hidden", mode !== "single");
+    $("#bk-package").classList.toggle("hidden", mode !== "package");
+    refreshSummary();
+  }
+  document.querySelectorAll(".bk-mode-btn").forEach((b) => {
+    b.addEventListener("click", () => setMode(b.dataset.mode));
+  });
+  $("#bk-pkg-duration").addEventListener("change", (e) => {
+    state.durationId = e.target.value;
+    $("#bk-duration").value = state.durationId;
+    renderPkgSizes();
+    renderPkgSlots();
+    renderPkgSummary();
+  });
+
   state.durationId = state.config.durations.find((d) => d.minutes === 50)?.id || state.config.durations[0].id;
   renderCourses();
   renderDurations();
+  renderPkgSizes();
+  renderPkgFreq();
+  renderPkgSlots();
   refreshSummary();
 
   $("#bk-duration").addEventListener("change", (e) => {
     state.durationId = e.target.value;
+    $("#bk-pkg-duration").value = state.durationId;
     picker.setMinutes();
+    renderPkgSizes();
+    renderPkgSlots();
     refreshSummary();
   });
 
@@ -414,6 +635,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("#bk-to-2").onclick = () => {
     if (!state.courseId) return setMsg("#bk-msg-1", "Please choose a course.", false);
+    if (state.mode === "package") {
+      if (!pkgComplete()) {
+        return setMsg("#bk-msg-1", "请选择课时包，并为每一节固定课选好星期和开始时间。", false);
+      }
+      setMsg("#bk-msg-1", "");
+      showPane(2);
+      return;
+    }
     if (!state.date || !state.time) return setMsg("#bk-msg-1", "Please pick a date and a time.", false);
     setMsg("#bk-msg-1", "");
     showPane(2);
@@ -428,6 +657,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       return setMsg("#bk-msg-2", "Please enter your name and a valid email.", false);
     }
     setMsg("#bk-msg-2", "Creating your booking…", true);
+    if (state.mode === "package") {
+      try {
+        const { subscription } = await api("/api/packages", {
+          method: "POST",
+          body: JSON.stringify({
+            name, email,
+            courseId: state.courseId, durationId: state.durationId,
+            packageSize: pkg.size,
+            slots: pkg.slots.map((s) => ({ weekday: Number(s.weekday), time: s.time })),
+          }),
+        });
+        state.pkgOrder = subscription;
+        state.pkgBuyer = { name, email };
+        const dur = durationOf(state.durationId);
+        const dates = pkgPlanDates() || [];
+        const slotsText = subscription.slots.map((sl) =>
+          `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+        const rows = [
+          ["Course", courseName(subscription.courseId)],
+          ["课时包 Package", `${subscription.totalLessons} 节 · ${dur.minutes} min each`],
+          ["每周固定时间 Weekly", `${slotsText} (JST)`],
+          ["预计安排 Planned", dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : ""],
+          ["Name", name],
+          ["Email", email],
+          ["Total", money(subscription.totalPrice)],
+        ];
+        $("#bk-summary").innerHTML =
+          rows.map(([k, v]) => `<tr><th>${k}</th><td>${escHtml(v)}</td></tr>`).join("");
+        $("#bk-pay").textContent = `Pay ${money(subscription.totalPrice)}`;
+        setMsg("#bk-msg-2", "");
+        showPane(3);
+      } catch (e) {
+        setMsg("#bk-msg-2", e.message, false);
+      }
+      return;
+    }
     try {
       const { booking } = await api("/api/bookings", {
         method: "POST",
@@ -448,8 +713,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* Step 3: mock payment */
   $("#bk-pay").onclick = async () => {
-    if (!state.booking) return;
     setMsg("#bk-msg-3", "Processing (mock)…", true);
+    if (state.pkgOrder) {
+      try {
+        const data = await api(`/api/subscriptions/${state.pkgOrder.id}/pay`, {
+          method: "POST",
+          body: JSON.stringify({ email: state.pkgBuyer?.email || "" }),
+        });
+        const sub = data.subscription;
+        const dur = durationOf(state.durationId);
+        const slotsText = sub.slots.map((sl) =>
+          `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+        const rows = [
+          ["Booking reference", sub.id],
+          ["Course", courseName(sub.courseId)],
+          ["课时包 Package", `${sub.totalLessons} 节 · ${dur.minutes} min each`],
+          ["每周固定时间 Weekly", `${slotsText} (JST)`],
+          ["Name", sub.name],
+          ["Email", sub.email],
+          ["Total", money(sub.totalPrice)],
+          ["Status", "active"],
+        ];
+        $("#bk-done").innerHTML =
+          rows.map(([k, v]) => `<tr><th>${k}</th><td>${escHtml(v)}</td></tr>`).join("");
+        const lessons = data.lessons || [];
+        $("#bk-done-extra").innerHTML = `
+          <h4 class="bk-sub">你的课程安排 · Your ${lessons.length} lessons</h4>
+          <ul class="done-lessons">${lessons.map((l) =>
+            `<li>${dateLong(l.date)} · ${l.time} JST</li>`).join("")}</ul>
+          ${(data.skippedDates || []).length
+            ? `<p class="note">这些日期已被占用或老师休息，对应课程已自动顺延一周：${data.skippedDates.join(", ")}</p>` : ""}`;
+        state.pkgOrder = null;
+        showPane(4);
+        if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
+      } catch (e) {
+        setMsg("#bk-msg-3", e.message, false);
+      }
+      return;
+    }
+    if (!state.booking) return;
     try {
       const { booking } = await api(`/api/bookings/${state.booking.id}/pay`, {
         method: "POST", body: "{}",
@@ -457,38 +759,183 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.booking = booking;
       $("#bk-done").innerHTML = summaryRows(booking);
       showPane(4);
+      if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
     } catch (e) {
       setMsg("#bk-msg-3", e.message, false);
     }
   };
 
-  /* ---------- My Bookings ----------
-   * One valid email + booking reference unlocks all of the student's own
-   * bookings, split into "Upcoming lessons" (manageable) and "Lesson
-   * history" (completed + cancelled, read-only, newest first). */
+  /* ---------- My Bookings (account-based) ----------
+   * Students log in with email + password; bookings are matched to the
+   * account by email and split into "Upcoming lessons" (manageable) and
+   * "Lesson history" (completed + cancelled, read-only, newest first).
+   * Lessons booked as a guest appear automatically once the student
+   * creates an account with the same email. */
 
-  let myCreds = null; // {email, ref} of the last successful lookup
   let myActionMsg = "";
 
-  $("#my-find").onclick = async () => {
-    const email = $("#my-email").value.trim();
-    const ref = $("#my-ref").value.trim().toUpperCase();
-    if (!email || !ref) return setMsg("#my-msg", "Enter your email and booking reference.", false);
-    myCreds = { email, ref };
-    myActionMsg = "";
-    await loadMyBookings();
-  };
+  function renderAuthForms(mode) {
+    const box = $("#my-auth");
+    if (mode === "register") {
+      box.innerHTML = `
+      <div class="lookup-box">
+        <label class="field">Your name
+          <input type="text" id="auth-name" autocomplete="name" /></label>
+        <label class="field">Email
+          <input type="email" id="auth-email" autocomplete="email" /></label>
+        <label class="field">Password (at least 8 characters)
+          <input type="password" id="auth-password" autocomplete="new-password" /></label>
+        <button class="btn" id="auth-submit">Create account</button>
+        <p class="msg" id="auth-msg"></p>
+        <p class="note">Already have an account?
+          <a href="#my" id="auth-switch">Log in</a></p>
+      </div>`;
+      $("#auth-switch").onclick = (e) => { e.preventDefault(); renderAuthForms("login"); };
+      $("#auth-submit").onclick = () => submitAuth("register");
+    } else {
+      box.innerHTML = `
+      <div class="lookup-box">
+        <label class="field">Email
+          <input type="email" id="auth-email" autocomplete="email" /></label>
+        <label class="field">Password
+          <input type="password" id="auth-password" autocomplete="current-password" /></label>
+        <button class="btn" id="auth-submit">Log in</button>
+        <p class="msg" id="auth-msg"></p>
+        <p class="note">New here? You can book a lesson first and create
+          the account afterwards with the same email — your bookings will
+          show up here automatically.
+          <a href="#my" id="auth-switch">Create an account</a></p>
+      </div>`;
+      $("#auth-switch").onclick = (e) => { e.preventDefault(); renderAuthForms("register"); };
+      $("#auth-submit").onclick = () => submitAuth("login");
+    }
+  }
+
+  async function submitAuth(kind) {
+    const email = $("#auth-email").value.trim();
+    const password = $("#auth-password").value;
+    const payload = { email, password };
+    if (kind === "register") payload.name = $("#auth-name").value.trim();
+    setMsg("#auth-msg", kind === "register" ? "Creating your account…" : "Logging in…", true);
+    try {
+      const data = await api(`/api/auth/${kind}`, {
+        method: "POST", body: JSON.stringify(payload),
+      });
+      authUser = data.user;
+      applyAuthToForm();
+      myActionMsg = kind === "register" ? "Account created — welcome! 🌸" : "";
+      renderAccountBar();
+      await loadMyBookings();
+      await loadMySubscriptions();
+    } catch (e) {
+      setMsg("#auth-msg", e.message, false);
+    }
+  }
+
+  function renderAccountBar() {
+    const box = $("#my-auth");
+    if (!authUser) { renderAuthForms("login"); return; }
+    box.innerHTML = `
+      <p class="note">Logged in as <strong>${escHtml(authUser.name)}</strong>
+      (${escHtml(authUser.email)}) ·
+      <a href="#my" id="auth-logout">Log out</a></p>`;
+    $("#auth-logout").onclick = async (e) => {
+      e.preventDefault();
+      await api("/api/auth/logout", { method: "POST", body: "{}" }).catch(() => {});
+      authUser = null;
+      applyAuthToForm();
+      $("#my-result").innerHTML = "";
+      $("#my-subs").innerHTML = "";
+      renderAccountBar();
+    };
+  }
+
+  /* ---------- My lesson packages (课时包) ---------- */
+  async function loadMySubscriptions() {
+    const box = $("#my-subs");
+    if (!box) return;
+    if (!authUser) { box.innerHTML = ""; return; }
+    try {
+      const data = await api("/api/my/subscriptions");
+      renderMySubscriptions(data.subscriptions || []);
+    } catch { box.innerHTML = ""; }
+  }
+
+  function renderMySubscriptions(subs) {
+    const box = $("#my-subs");
+    const visible = subs.filter((s) => s.status !== "pending_payment");
+    if (!visible.length) { box.innerHTML = ""; return; }
+    box.innerHTML = `
+      <h3 class="my-section-title">我的课时包 · My lesson packages</h3>
+      ${visible.map(subCard).join("")}`;
+    visible.forEach(wireSubCard);
+  }
+
+  function subCard(s) {
+    const slotsText = (s.slots || []).map((sl) =>
+      `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+    const stopped = s.status === "stopped";
+    return `
+    <div class="my-card">
+      <table class="summary">
+        <tr><th>课时包 Package</th><td>${s.totalLessons} 节 · ${escHtml(courseName(s.courseId))} · ${s.durationMinutes} min</td></tr>
+        <tr><th>每周固定时间</th><td>${escHtml(slotsText)} (JST)</td></tr>
+        <tr><th>状态 Status</th><td>${stopped ? "已停止 Stopped" : "进行中 Active"}</td></tr>
+        ${!stopped ? `<tr><th>还剩 Remaining</th><td>${s.remainingLessons} 节</td></tr>` : ""}
+        ${!stopped && s.nextLesson ? `<tr><th>下一节 Next lesson</th><td>${s.nextLesson.date} · ${s.nextLesson.time} JST</td></tr>` : ""}
+      </table>
+      ${(s.lastSkippedDates || []).length
+        ? `<p class="note">这些日期已被占用或老师休息，对应课程已自动顺延一周：${s.lastSkippedDates.join(", ")}</p>` : ""}
+      ${!stopped ? `
+      <p class="msg" id="sub-msg-${s.id}"></p>
+      <div class="my-actions">
+        <button class="btn btn-ghost" id="sub-buy-${s.id}">续购课时包</button>
+        <button class="btn btn-ghost" id="sub-stop-${s.id}">退掉剩余课时并退款</button>
+      </div>` : ""}
+    </div>`;
+  }
+
+  function wireSubCard(s) {
+    const buyBtn = document.getElementById(`sub-buy-${s.id}`);
+    if (buyBtn) {
+      buyBtn.onclick = () => {
+        openBooking();
+        state.courseId = s.courseId;
+        state.durationId = s.durationId;
+        renderCourses();
+        renderDurations();
+        setMode("package");
+        showPane(1);
+      };
+    }
+    const stopBtn = document.getElementById(`sub-stop-${s.id}`);
+    if (stopBtn) {
+      stopBtn.onclick = async () => {
+        const inside = s.insideWindowLessons || 0;
+        const text = `退掉剩余课时并退款？\n将取消剩余 ${s.remainingLessons} 节课，` +
+          `退款 ${money(s.refundableTotal || 0)}（mock）` +
+          (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") +
+          `。已上过的课不受影响，停止后不能恢复。`;
+        if (!confirm(text)) return;
+        try {
+          const data = await api(`/api/subscriptions/${s.id}/stop`, {
+            method: "POST", body: "{}",
+          });
+          myActionMsg = `课时包已停止，共退款 ${money(data.refundTotal || 0)}（mock）。`;
+          await loadMyBookings();
+          await loadMySubscriptions();
+        } catch (e) { setMsg(`#sub-msg-${s.id}`, e.message, false); }
+      };
+    }
+  }
 
   async function loadMyBookings() {
     const box = $("#my-result");
     try {
-      const data = await api(
-        `/api/my-bookings?email=${encodeURIComponent(myCreds.email)}&ref=${encodeURIComponent(myCreds.ref)}`);
-      setMsg("#my-msg", "");
+      const data = await api("/api/my/bookings");
       renderMyBookings(data);
     } catch (e) {
-      box.innerHTML = "";
-      setMsg("#my-msg", e.message, false);
+      box.innerHTML = `<p class="msg msg-err">${escHtml(e.message)}</p>`;
     }
   }
 
@@ -513,12 +960,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     <div class="my-card">
       <table class="summary">${summaryRows(b)}</table>
       ${b.status === "paid" && b.effectiveStatus === "upcoming"
-        ? `<p class="note">Reschedules used: ${b.reschedules} / 2</p>` : ""}
+        ? `<p class="note">Reschedules used: ${b.reschedules} / 2 ·
+          开课前 12 小时以上取消可全额退款；12 小时内取消不退款。</p>` : ""}
+      ${b.status === "cancelled" && b.refundAmount > 0
+        ? `<p class="note">已退款 · Refunded ${money(b.refundAmount)} (mock)</p>` : ""}
+      ${b.status === "cancelled" && !(b.refundAmount > 0) &&
+        String(b.refund || "").includes("12-hour")
+        ? `<p class="note">已取消（未退款）· Cancelled inside the 12-hour window — no refund</p>` : ""}
       ${canManage ? `
       <p class="msg" id="my-msg-${b.id}"></p>
       <div class="my-actions">
         <button class="btn btn-ghost" id="my-cancel-${b.id}">Cancel this booking</button>
-        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-resched-${b.id}">Reschedule</button>` : ""}
+        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-refund-${b.id}">申请退款</button>
+        <button class="btn btn-ghost" id="my-resched-${b.id}">Reschedule</button>` : ""}
       </div>
       <div id="my-resched-box-${b.id}" class="hidden">
         <h4 class="bk-sub">Pick a new date &amp; time (${minutesOfBooking(b)} min lesson)</h4>
@@ -529,19 +983,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function wireMyCard(b) {
-    const email = myCreds.email;
     const cancelBtn = document.getElementById(`my-cancel-${b.id}`);
     if (!cancelBtn) return;
     cancelBtn.onclick = async () => {
-      if (!confirm("Cancel this booking? The policy in the FAQ applies.")) return;
+      if (!confirm("Cancel this booking? 开课前 12 小时以上取消可全额退款；12 小时内取消不退款。")) return;
       try {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
-          method: "POST", body: JSON.stringify({ email }),
+          method: "POST", body: "{}",
         });
         myActionMsg = `Booking ${b.id} cancelled. Refund: ${data.booking.refund}.`;
         await loadMyBookings();
+        await loadMySubscriptions();
       } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }
     };
+
+    const refundBtn = document.getElementById(`my-refund-${b.id}`);
+    if (refundBtn) {
+      refundBtn.onclick = async () => {
+        const msLeft = jstInstantMs(b.date, b.time) - Date.now();
+        const ok = msLeft >= 12 * 3600_000
+          ? confirm(`取消这节课并全额退款 ${money(b.amount)}？`)
+          : confirm("这节课距开课不足 12 小时，取消后不退款，确定取消吗？");
+        if (!ok) return;
+        try {
+          const data = await api(`/api/bookings/${b.id}/cancel`, {
+            method: "POST", body: "{}",
+          });
+          myActionMsg = data.booking.refundAmount > 0
+            ? `已取消并退款 ${money(data.booking.refundAmount)}（mock）。Booking ${b.id} cancelled and refunded.`
+            : `已取消（未退款）。Booking ${b.id} cancelled without a refund.`;
+          await loadMyBookings();
+          await loadMySubscriptions();
+        } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }
+      };
+    }
 
     const reschedBtn = document.getElementById(`my-resched-${b.id}`);
     if (reschedBtn) {
@@ -565,12 +1040,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
           await api(`/api/bookings/${b.id}/reschedule`, {
             method: "POST",
-            body: JSON.stringify({ email, date: newDate, time: newTime }),
+            body: JSON.stringify({ date: newDate, time: newTime }),
           });
           myActionMsg = `Booking ${b.id} rescheduled. See you then!`;
           await loadMyBookings();
+          await loadMySubscriptions();
         } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }
       };
     }
   }
+
+  /* Session restore: if the student is already logged in, show their
+   * bookings right away; otherwise show the login form. */
+  try {
+    const data = await api("/api/auth/me");
+    authUser = data.user;
+    applyAuthToForm();
+  } catch { authUser = null; }
+  renderAccountBar();
+  if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
 });

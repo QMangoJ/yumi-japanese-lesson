@@ -333,6 +333,22 @@ a { color: var(--accent); }
   gap: 12px;
   margin-bottom: 24px;
 }
+/* Booking-mode switch + lesson-package picker (Feature F) */
+.bk-mode { display: flex; border: 1.5px solid var(--line); border-radius: 999px;
+  overflow: hidden; margin: 4px 0 16px; }
+.bk-mode-btn { flex: 1; border: none; background: #fff; font: inherit;
+  font-size: 14.5px; padding: 10px 4px; cursor: pointer; color: var(--sub);
+  min-height: 44px; }
+.bk-mode-btn + .bk-mode-btn { border-left: 1.5px solid var(--line); }
+.bk-mode-btn.selected { background: var(--accent); color: #fff; font-weight: 700; }
+.pkg-slot { display: flex; gap: 10px; flex-wrap: wrap; align-items: end;
+  border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px;
+  margin-bottom: 10px; }
+.pkg-slot .field { margin-bottom: 0; flex: 1; min-width: 130px; }
+.pkg-slot-title { width: 100%; font-weight: 700; font-size: 14px; }
+.done-lessons { margin: 6px 0 10px; padding-left: 20px; line-height: 1.7; }
+.choice .choice-price { display: block; font-weight: 700; color: var(--accent);
+  font-size: 17px; margin-top: 2px; }
 .choice-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 .choice {
   text-align: left;

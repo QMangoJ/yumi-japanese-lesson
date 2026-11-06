@@ -20,7 +20,102 @@
   .day-row .closed-note { color: var(--sub); font-size: 13px; }
   textarea.blocked { width: 100%; min-height: 90px; }
   .key-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
-  .key-row .field { flex: 1; min-width: 240px; }
+  .key-row .field { flex: 1; min-width: 200px; }
+
+  /* --- availability calendar (Feature D) --- */
+  .adm-cal { max-width: 560px; margin: 0 auto; }
+  .adm-cal .cal-day {
+    aspect-ratio: auto; height: 56px; border-radius: 12px; width: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; padding: 4px 1px; position: relative; border: 1.5px solid transparent;
+  }
+  .adm-cal .cal-day .d-num { font-size: 15px; font-weight: 600; line-height: 1.1; }
+  .adm-cal .cal-day .d-sub { font-size: 10.5px; color: var(--sub); line-height: 1.1; white-space: nowrap; }
+  .adm-cal .cal-day.is-closed { opacity: .45; }
+  .adm-cal .cal-day.is-special { border-color: var(--accent); background: var(--accent-soft); }
+  .adm-cal .cal-day.is-special .d-sub { color: var(--accent); font-weight: 700; }
+  .adm-cal .cal-day.selected { background: var(--accent); color: #fff; }
+  .adm-cal .cal-day.selected .d-sub { color: #ffe3ec; }
+  .adm-cal .cal-day .d-dots { display: flex; gap: 3px; height: 5px; }
+  .adm-cal .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; display: block; }
+  .dot-special { background: var(--accent); }
+  .dot-blocked { background: #b8a49c; }
+  .adm-cal .cal-day.selected .dot-special { background: #fff; }
+  .adm-cal .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--line); }
+  .adm-cal .cal-day.today::after { display: none; }
+
+  .day-editor { border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 16px; margin-top: 16px; background: #fff; }
+  .day-editor h3 { margin: 0 0 12px; font-size: 16.5px; }
+  .seg { display: flex; border: 1.5px solid var(--line); border-radius: 999px;
+    overflow: hidden; margin-bottom: 14px; }
+  .seg button { flex: 1; border: none; background: #fff; font: inherit;
+    font-size: 14px; padding: 9px 2px; cursor: pointer; color: var(--sub);
+    min-height: 42px; }
+  .seg button + button { border-left: 1.5px solid var(--line); }
+  .seg button.active { background: var(--accent); color: #fff; font-weight: 700; }
+  .de-special { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 6px; }
+  .de-special .field { margin-bottom: 6px; }
+  .de-special select { min-width: 110px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+  .hour-chip { border: 1.5px solid var(--accent); background: var(--accent);
+    color: #fff; border-radius: 999px; padding: 8px 14px; font: inherit;
+    font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
+  .hour-chip.blocked { background: #fff; color: var(--sub);
+    border-color: var(--line); text-decoration: line-through; font-weight: 400; }
+  .vac-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 18px;
+    border-top: 1px dashed var(--line); padding-top: 16px; }
+  .vac-row .field { margin-bottom: 0; }
+  .summary-line { font-size: 14px; margin-top: 16px; line-height: 2; }
+  .sum-chip { display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); border-radius: 999px; padding: 3px 6px 3px 12px;
+    margin: 2px 4px 2px 0; font-size: 13.5px; white-space: nowrap; }
+  .sum-chip button { border: none; background: #fff; color: var(--accent);
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+    font-size: 13px; line-height: 1; padding: 0; }
+
+  /* --- save button dirty state --- */
+  #adm-save.dirty { background: var(--accent); color: #fff;
+    box-shadow: 0 0 0 4px var(--accent-soft); }
+  #adm-save.saved-flash { background: #2e7d32; color: #fff; }
+
+  /* --- bookings table --- */
+  .bk-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .bk-table th, .bk-table td { text-align: left; padding: 8px 8px;
+    border-bottom: 1px solid var(--line); vertical-align: top; }
+  .bk-table th { color: var(--sub); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  @media (max-width: 560px) {
+    .adm-cal .cal-day { height: 50px; }
+    .bk-table th:nth-child(2), .bk-table td:nth-child(2) { display: none; }
+  }
+
+  /* --- calendar lesson mini-rows + day-panel lessons + remarks (Feature E) --- */
+  .adm-cal .cal-day { height: auto; min-height: 58px; justify-content: flex-start; }
+  .d-lessons { display: flex; flex-direction: column; width: 100%; margin-top: 1px; }
+  .d-lesson { font-size: 9.5px; line-height: 1.3; color: var(--accent);
+    font-weight: 700; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 100%; }
+  .d-lesson.done { color: var(--sub); font-weight: 400; }
+  .d-more { font-size: 9.5px; color: var(--sub); line-height: 1.3; }
+  .adm-cal .cal-day.selected .d-lesson { color: #fff; }
+  .adm-cal .cal-day.selected .d-lesson.done,
+  .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
+  .lesson-row { border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 10px; background: #fff; }
+  .lesson-row.is-cancelled { opacity: .55; }
+  .lesson-row .lr-head { font-weight: 700; font-size: 14.5px; }
+  .lesson-row .lr-sub { color: var(--sub); font-size: 13px; margin-top: 2px;
+    word-break: break-all; }
+  .remark-box { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .remark-box label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  .remark-box label .default-tag { color: var(--sub); font-weight: 400; }
+  .remark-box textarea { width: 100%; min-height: 52px; font: inherit; font-size: 14px; }
+  .remark-box .btn { margin-top: 6px; padding: 6px 14px; min-height: 36px; }
+  .remark-row td { background: #fffafc; }
+  .sub-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sub-table th, .sub-table td { text-align: left; padding: 8px;
+    border-bottom: 1px solid var(--line); vertical-align: top; }
+  .sub-table th { color: var(--sub); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
 </style>
 </head>
 <body>
@@ -45,14 +140,34 @@
     <div class="admin-card">
       <h2>Weekly hours (Japan time)</h2>
       <p class="note">Lessons start on the hour. A lesson must end by the
-      day's closing time. Untick a day to close it.</p>
+      day's closing time. Untick a day to close it. Specific dates can be
+      adjusted in the availability calendar below.</p>
       <div id="adm-weekly"></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Availability calendar · 可约日历</h2>
+      <p class="note">点任意一天来单独调整：这天休息、特殊时段，或者屏蔽
+      某几个开始时间。日历上看到的就是学生能约到的安排。</p>
+      <div class="adm-cal" id="adm-cal"></div>
+      <div class="day-editor hidden" id="adm-day-editor"></div>
+      <div class="vac-row">
+        <label class="field">连续休息 · 从
+          <input type="date" id="vac-start" /></label>
+        <label class="field">到
+          <input type="date" id="vac-end" /></label>
+        <button class="btn btn-ghost" id="vac-apply" type="button">Apply 整段休息</button>
+      </div>
+      <p class="note" id="vac-msg"></p>
+      <div class="summary-line" id="adm-summary"></div>
     </div>
 
     <div class="admin-card">
       <h2>Blocked dates</h2>
       <p class="note">Holidays and days off — no lessons can be booked on
-      these dates. One date per line, as YYYY-MM-DD.</p>
+      these dates. One date per line, as YYYY-MM-DD. (The calendar above
+      can do the same per day; this list still works and is overridden by
+      a "特殊时段" day in the calendar.)</p>
       <textarea class="blocked" id="adm-blocked" spellcheck="false"
         placeholder="2026-12-31&#10;2027-01-01"></textarea>
     </div>
@@ -88,116 +203,680 @@
       API key are set.</p>
     </div>
 
-    <button class="btn" type="submit">Save settings</button>
+    <div class="admin-card">
+      <h2>Teacher's Google Calendar</h2>
+      <p class="note">Lessons feed (ICS) — give this URL to Yumi once; she
+      adds it in Google Calendar under <em>Settings → Add calendar →
+      From URL</em>, and every paid lesson then appears in her calendar
+      automatically (cancellations drop out on their own). Anyone with
+      the URL can see booking names — keep it private, and regenerate
+      the key to revoke access.</p>
+      <label class="field">Calendar feed key
+        <input type="text" id="adm-calendar-key" autocomplete="off"
+          placeholder="Leave empty to disable the feed" /></label>
+      <div class="key-row">
+        <button class="btn btn-ghost" id="adm-gen-key" type="button">Generate calendar key</button>
+        <button class="btn btn-ghost" id="adm-copy-feed" type="button">Copy feed URL</button>
+      </div>
+      <p class="note" id="adm-feed-url"></p>
+    </div>
+
+    <button class="btn" id="adm-save" type="submit">Save settings</button>
     <p class="msg" id="adm-save-msg"></p>
   </form>
+
+  <div class="admin-card hidden" id="adm-bookings-card">
+    <h2>Bookings</h2>
+    <div class="key-row">
+      <label class="field">Status
+        <select id="adm-bk-status">
+          <option value="">All</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="pending_payment">Pending payment</option>
+          <option value="paid">Paid (all)</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select></label>
+      <label class="field">Search (name, email, reference)
+        <input type="text" id="adm-bk-q" /></label>
+      <label class="field">Date
+        <input type="date" id="adm-bk-date" /></label>
+      <button class="btn" id="adm-bk-refresh" type="button">Refresh</button>
+    </div>
+    <p class="msg" id="adm-bk-msg"></p>
+    <div style="overflow-x:auto">
+      <table class="bk-table" id="adm-bk-table">
+        <thead><tr><th>Date &amp; time (JST)</th><th>Course</th><th>Student</th>
+          <th>Status</th><th>Amount</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="admin-card hidden" id="adm-subs-card">
+    <h2>订阅 · 每周固定课</h2>
+    <p class="note">学生的每周固定课订阅（每期 4 节）。这里只能停止订阅——
+    停止后，未来的课程会全部取消并退款（演示），已上过的课不受影响。</p>
+    <p class="msg" id="adm-subs-msg"></p>
+    <div style="overflow-x:auto">
+      <table class="sub-table" id="adm-subs-table">
+        <thead><tr><th>学生</th><th>固定时间</th><th>课程</th>
+          <th>状态</th><th>下一节</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-let loaded = null;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = (n) => String(n).padStart(2, "0");
+const fmtD = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+const fromMin = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_CN = ["日", "一", "二", "三", "四", "五", "六"];
+const money = (n) => `$${Number(n || 0).toFixed(2).replace(/\.00$/, "")}`;
 
-function setMsg(id, text, ok) {
-  const el = $(id);
-  el.textContent = text || "";
-  el.className = "msg" + (text ? (ok ? " msg-ok" : " msg-err") : "");
-}
-function key() { return $("#adm-key").value.trim(); }
+let adminKey = "";
+let draft = null;          // settings draft (dateOverrides/blockedHours live here)
+let savedSnapshot = "";    // canonical JSON of the last saved form state
+let monthBookings = [];    // bookings of the visible calendar month
+let allBookings = [];      // bookings table rows (latest load)
+let calCursor = null;      // {y, m} visible month
+let selectedDate = null;   // selected day in the availability calendar
+let courseNames = {};
+let legacyNames = {};
 
-async function api(method, body) {
-  const res = await fetch("/api/admin/settings", {
-    method,
-    headers: { "Content-Type": "application/json", "X-Admin-Key": key() },
-    body: body ? JSON.stringify(body) : undefined,
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey, ...(opts.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data.settings;
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
 }
 
-function renderWeekly(weekly) {
+/* ---------- settings form <-> draft ---------- */
+
+function buildWeekly() {
   const box = $("#adm-weekly");
   box.innerHTML = "";
-  for (let d = 0; d <= 6; d++) {
-    const h = weekly[d];
+  for (const d of [1, 2, 3, 4, 5, 6, 0]) {
     const row = document.createElement("div");
     row.className = "day-row";
+    row.dataset.day = d;
     row.innerHTML = `
-      <span class="day-name">${DAYS[d]}</span>
-      <label><input type="checkbox" data-open="${d}" ${h ? "checked" : ""} /> Open</label>
-      <input type="time" data-start="${d}" value="${h ? h.start : "08:00"}" />
-      <span>to</span>
-      <input type="time" data-end="${d}" value="${h ? h.end : "22:00"}" />
-      <span class="closed-note" data-note="${d}">${h ? "" : "closed"}</span>`;
+      <span class="day-name">${DAY_NAMES[d]}</span>
+      <label><input type="checkbox" class="wk-open" /> Open</label>
+      <input type="time" class="wk-start" step="3600" />
+      <span>–</span>
+      <input type="time" class="wk-end" step="3600" />
+      <span class="closed-note"></span>`;
     box.appendChild(row);
+    const sync = () => {
+      const open = row.querySelector(".wk-open").checked;
+      row.querySelector(".wk-start").disabled = !open;
+      row.querySelector(".wk-end").disabled = !open;
+      row.querySelector(".closed-note").textContent = open ? "" : "Closed";
+    };
+    row.querySelector(".wk-open").addEventListener("change", () => { sync(); afterChange(true); });
+    row.querySelectorAll("input[type=time]").forEach((i) =>
+      i.addEventListener("change", () => afterChange(true)));
+    row._sync = sync;
   }
-  box.querySelectorAll("[data-open]").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const d = cb.dataset.open;
-      box.querySelector(`[data-note="${d}"]`).textContent = cb.checked ? "" : "closed";
-    });
-  });
 }
 
-function fill(s) {
-  loaded = s;
-  renderWeekly(s.weekly);
+function fillForm(s) {
+  draft = JSON.parse(JSON.stringify({
+    dateOverrides: s.dateOverrides || {},
+    blockedHours: s.blockedHours || {},
+  }));
+  document.querySelectorAll("#adm-weekly .day-row").forEach((row) => {
+    const w = s.weekly[String(row.dataset.day)];
+    row.querySelector(".wk-open").checked = !!w;
+    row.querySelector(".wk-start").value = w ? w.start : "08:00";
+    row.querySelector(".wk-end").value = w ? w.end : "22:00";
+    row._sync();
+  });
   $("#adm-blocked").value = (s.blockedDates || []).join("\n");
   $("#adm-meeting").value = s.meeting?.url || "";
   $("#adm-resend-from").value = s.resend?.from || "";
   $("#adm-resend-key").value = "";
   $("#adm-resend-state").textContent = s.resend?.apiKeySet
-    ? "A Resend API key is saved. Leave the field blank to keep it, or type a new one to replace it."
-    : "No Resend API key saved yet.";
+    ? "A Resend API key is saved — emails send for real."
+    : "No Resend API key saved yet — emails only queue in the outbox.";
   $("#adm-teacher").value = s.teacherEmail || "";
   $("#adm-replyto").value = s.replyTo || "";
-  $("#adm-form").classList.remove("hidden");
+  $("#adm-calendar-key").value = s.calendarKey || "";
+  updateFeedUrl();
+  savedSnapshot = snapshot();
+  refreshDirty();
 }
 
-$("#adm-load").onclick = async () => {
-  if (!key()) return setMsg("#adm-msg", "Enter the admin key first.", false);
-  setMsg("#adm-msg", "Loading…", true);
+function collect() {
+  const weekly = {};
+  document.querySelectorAll("#adm-weekly .day-row").forEach((row) => {
+    const open = row.querySelector(".wk-open").checked;
+    weekly[row.dataset.day] = open
+      ? { start: row.querySelector(".wk-start").value || "08:00",
+          end: row.querySelector(".wk-end").value || "22:00" }
+      : null;
+  });
+  const blockedDates = [...new Set(
+    $("#adm-blocked").value.split(/\s+/).map((x) => x.trim())
+      .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)))].sort();
+  return {
+    weekly, blockedDates,
+    meeting: { type: "fixed", url: $("#adm-meeting").value.trim() },
+    resend: { from: $("#adm-resend-from").value.trim(), apiKey: $("#adm-resend-key").value },
+    teacherEmail: $("#adm-teacher").value.trim(),
+    replyTo: $("#adm-replyto").value.trim(),
+    calendarKey: $("#adm-calendar-key").value.trim(),
+    dateOverrides: draft ? draft.dateOverrides : {},
+    blockedHours: draft ? draft.blockedHours : {},
+  };
+}
+
+function snapshot() {
+  const c = collect();
+  // The API key input is blank when unchanged — normalize for comparison.
+  return JSON.stringify({ ...c, resend: { from: c.resend.from, apiKey: c.resend.apiKey ? "•" : "" } });
+}
+
+function refreshDirty() {
+  const dirty = !!draft && snapshot() !== savedSnapshot;
+  const btn = $("#adm-save");
+  btn.classList.toggle("dirty", dirty);
+  btn.textContent = dirty ? "Save settings · 有未保存的修改" : "Save settings";
+}
+
+function afterChange(availabilityToo) {
+  refreshDirty();
+  if (availabilityToo) { renderCalendar(); renderDayEditor(); renderSummary(); }
+}
+
+/* ---------- availability logic (mirror of worker.js) ---------- */
+
+function effectiveHours(s, dateStr) {
+  if (Object.prototype.hasOwnProperty.call(s.dateOverrides, dateStr)) {
+    return s.dateOverrides[dateStr]; // null = closed, or {start, end}
+  }
+  if (s.blockedDates.includes(dateStr)) return null;
+  const wd = new Date(dateStr + "T00:00:00Z").getUTCDay();
+  return s.weekly[String(wd)] || null;
+}
+
+function compactHours(range) {
+  const f = (t) => t.endsWith(":00") ? t.slice(0, -3) : t;
+  return `${f(range.start)}–${f(range.end)}`;
+}
+
+/* ---------- availability calendar + schedule board ---------- */
+
+function monthRange() {
+  const { y, m } = calCursor;
+  return { from: fmtD(y, m, 1), to: fmtD(y, m, new Date(Date.UTC(y, m + 1, 0)).getUTCDate()) };
+}
+
+async function loadMonthBookings() {
+  const { from, to } = monthRange();
   try {
-    fill(await api("GET"));
-    sessionStorage.setItem("yumiAdminKey", key());
-    setMsg("#adm-msg", "Settings loaded.", true);
-  } catch (e) { setMsg("#adm-msg", e.message, false); }
-};
+    const data = await api(`/api/admin/bookings?from=${from}&to=${to}`);
+    monthBookings = data.bookings || [];
+  } catch { monthBookings = []; }
+  renderCalendar();
+  renderDayEditor();
+}
+
+function lessonsOn(dateStr) {
+  return monthBookings.filter((b) => b.date === dateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function renderCalendar() {
+  const cal = $("#adm-cal");
+  if (!draft || !calCursor) { cal.innerHTML = ""; return; }
+  const s = collect();
+  const { y, m } = calCursor;
+  const firstDow = new Date(Date.UTC(y, m, 1)).getUTCDay();
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const title = new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-US",
+    { month: "long", year: "numeric", timeZone: "UTC" });
+  let cells = "";
+  for (let i = 0; i < firstDow; i++) cells += `<span></span>`;
+  for (let d = 1; d <= days; d++) {
+    const ds = fmtD(y, m, d);
+    const hours = effectiveHours(s, ds);
+    const isOverride = Object.prototype.hasOwnProperty.call(s.dateOverrides, ds);
+    const special = isOverride && hours !== null;
+    const blocked = (s.blockedHours[ds] || []).length > 0;
+    const lessons = lessonsOn(ds).filter((b) => b.effectiveStatus !== "cancelled");
+    const cls = ["cal-day"];
+    if (!hours) cls.push("is-closed");
+    if (special) cls.push("is-special");
+    if (ds === selectedDate) cls.push("selected");
+    if (ds === today) cls.push("today");
+    const sub = !hours ? "休" : compactHours(hours);
+    const miniRows = lessons.slice(0, 2).map((b) => {
+      const done = b.effectiveStatus === "completed";
+      const tip = `${b.time} ${b.name} — ${courseNames[b.courseId] || b.courseId || ""}` +
+        (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
+      return `<span class="d-lesson${done ? " done" : ""}" title="${esc(tip)}">${b.time} ${esc(b.name)}</span>`;
+    }).join("");
+    const more = lessons.length > 2 ? `<span class="d-more">+${lessons.length - 2} 节</span>` : "";
+    const dots = (special || blocked)
+      ? `<span class="d-dots">${special ? `<span class="dot dot-special"></span>` : ""}${blocked ? `<span class="dot dot-blocked"></span>` : ""}</span>`
+      : `<span class="d-dots"></span>`;
+    cells += `<button type="button" class="${cls.join(" ")}" data-date="${ds}">
+      <span class="d-num">${d}</span><span class="d-sub">${sub}</span>
+      ${miniRows ? `<span class="d-lessons">${miniRows}${more}</span>` : dots}
+    </button>`;
+  }
+  cal.innerHTML = `
+    <div class="cal-head">
+      <button type="button" class="cal-nav" id="adm-cal-prev" aria-label="Previous month">‹</button>
+      <span class="cal-title">${title}</span>
+      <button type="button" class="cal-nav" id="adm-cal-next" aria-label="Next month">›</button>
+    </div>
+    <div class="cal-grid cal-week"><span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span></div>
+    <div class="cal-grid">${cells}</div>`;
+  $("#adm-cal-prev").onclick = () => shiftMonth(-1);
+  $("#adm-cal-next").onclick = () => shiftMonth(1);
+  cal.querySelectorAll(".cal-day").forEach((b) => {
+    b.onclick = () => { selectedDate = b.dataset.date; renderCalendar(); renderDayEditor(); };
+  });
+}
+
+function shiftMonth(delta) {
+  const nm = calCursor.m + delta;
+  calCursor = { y: calCursor.y + Math.floor(nm / 12), m: ((nm % 12) + 12) % 12 };
+  loadMonthBookings();
+}
+
+function renderSummary() {
+  const el = $("#adm-summary");
+  if (!draft) { el.innerHTML = ""; return; }
+  const chips = [];
+  const dates = [...new Set([
+    ...Object.keys(draft.dateOverrides), ...Object.keys(draft.blockedHours)])].sort();
+  for (const ds of dates) {
+    const [, mm, dd] = ds.split("-");
+    const label = `${Number(mm)}/${Number(dd)}`;
+    if (Object.prototype.hasOwnProperty.call(draft.dateOverrides, ds)) {
+      const o = draft.dateOverrides[ds];
+      chips.push({ ds, kind: "override",
+        text: o === null ? `${label} 休息` : `${label} 特殊时段 ${o.start}–${o.end}` });
+    }
+    const bh = draft.blockedHours[ds] || [];
+    if (bh.length) chips.push({ ds, kind: "hours", text: `${label} 屏蔽 ${bh.join(", ")}` });
+  }
+  el.innerHTML = chips.length
+    ? `特殊安排：` + chips.map((c, i) =>
+        `<span class="sum-chip">${esc(c.text)}<button type="button" data-chip="${i}" aria-label="Remove">×</button></span>`).join("")
+    : `特殊安排：无（全部跟随每周安排）`;
+  el.querySelectorAll("[data-chip]").forEach((btn) => {
+    btn.onclick = () => {
+      const c = chips[Number(btn.dataset.chip)];
+      if (c.kind === "override") delete draft.dateOverrides[c.ds];
+      else delete draft.blockedHours[c.ds];
+      afterChange(true);
+    };
+  });
+}
+
+/* ---------- day editor （这天的课程 + availability) ---------- */
+
+function hourOptions(selected) {
+  let out = "";
+  for (let h = 0; h <= 23; h++) {
+    const t = `${pad(h)}:00`;
+    out += `<option value="${t}"${t === selected ? " selected" : ""}>${t}</option>`;
+  }
+  return out;
+}
+
+function remarkBoxHtml(email, remark, isDefault) {
+  return `
+  <div class="remark-box">
+    <label>老师备注 · Teacher's note about this student
+      ${isDefault ? `<span class="default-tag">（学生首次预约时填写）</span>` : ""}</label>
+    <textarea class="remark-text" data-email="${esc(email)}"
+      placeholder="例如：想重点练口语 / 怕生，节奏放慢一点…">${esc(remark || "")}</textarea>
+    <button type="button" class="btn btn-ghost remark-save">保存备注</button>
+  </div>`;
+}
+
+function wireRemarkBoxes(root) {
+  root.querySelectorAll(".remark-box").forEach((box) => {
+    const btn = box.querySelector(".remark-save");
+    btn.onclick = async () => {
+      const ta = box.querySelector(".remark-text");
+      const email = ta.dataset.email;
+      btn.disabled = true;
+      try {
+        await api("/api/admin/student-note", {
+          method: "POST", body: JSON.stringify({ email, note: ta.value }),
+        });
+        for (const b of [...monthBookings, ...allBookings]) {
+          if (b.email.toLowerCase() === email.toLowerCase()) {
+            b.studentRemark = ta.value; b.remarkIsDefault = false;
+          }
+        }
+        btn.textContent = "已保存 ✓";
+        setTimeout(() => { btn.textContent = "保存备注"; btn.disabled = false; }, 1600);
+        renderCalendar();
+      } catch (e) {
+        btn.textContent = "保存失败，重试";
+        btn.disabled = false;
+        alert(e.message);
+      }
+    };
+  });
+}
+
+function renderDayEditor() {
+  const ed = $("#adm-day-editor");
+  if (!draft || !selectedDate) { ed.classList.add("hidden"); ed.innerHTML = ""; return; }
+  const s = collect();
+  const ds = selectedDate;
+  const wd = new Date(ds + "T00:00:00Z").getUTCDay();
+  const hasOverride = Object.prototype.hasOwnProperty.call(s.dateOverrides, ds);
+  const override = hasOverride ? s.dateOverrides[ds] : undefined;
+  const mode = !hasOverride ? "follow" : (override === null ? "closed" : "special");
+  const hours = effectiveHours(s, ds);
+  const weekly = s.weekly[String(wd)];
+  const lessons = lessonsOn(ds);
+
+  const lessonsHtml = lessons.length ? lessons.map((b) => {
+    const end = fromMin(toMin(b.time) + (b.durationMinutes || 60));
+    const statusLabel = { upcoming: "Upcoming", completed: "Completed",
+      cancelled: "Cancelled", pending_payment: "Pending payment" }[b.effectiveStatus] || b.effectiveStatus;
+    const tip = `${b.name} — ${courseNames[b.courseId] || ""}` +
+      (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
+    return `
+    <div class="lesson-row${b.effectiveStatus === "cancelled" ? " is-cancelled" : ""}" title="${esc(tip)}">
+      <div class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</div>
+      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · 已退款 ${money(b.refundAmount)}` : ""}</div>
+      ${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}
+    </div>`;
+  }).join("") : `<p class="note">这天还没有课程。</p>`;
+
+  // start-hour chips (60-min granularity, like the worker's blockedHours)
+  let chipsHtml = "";
+  if (hours) {
+    const blocked = s.blockedHours[ds] || [];
+    const starts = [];
+    for (let t = toMin(hours.start); t + 60 <= toMin(hours.end); t += 60) starts.push(fromMin(t));
+    chipsHtml = `
+      <h4 class="bk-sub">屏蔽单个时间 · Block single hours</h4>
+      <p class="note">点一下某个时间就能屏蔽它（比如临时有事）；再点一次恢复。</p>
+      <div class="chip-row">${starts.map((t) =>
+        `<button type="button" class="hour-chip${blocked.includes(t) ? " blocked" : ""}" data-hour="${t}">${t}</button>`).join("")}</div>`;
+  }
+
+  ed.innerHTML = `
+    <h3>${ds} · 周${DAY_CN[wd]} ${DAY_NAMES[wd]}</h3>
+    <h4 class="bk-sub">这天的课程 · Lessons this day</h4>
+    ${lessonsHtml}
+    <h4 class="bk-sub">这天的可约安排 · Availability</h4>
+    <div class="seg">
+      <button type="button" data-mode="follow" class="${mode === "follow" ? "active" : ""}">跟随每周安排</button>
+      <button type="button" data-mode="closed" class="${mode === "closed" ? "active" : ""}">这天休息</button>
+      <button type="button" data-mode="special" class="${mode === "special" ? "active" : ""}">特殊时段</button>
+    </div>
+    ${mode === "follow" ? `<p class="note">每周安排：${weekly ? `${weekly.start}–${weekly.end}` : "这天休息（每周模板里就是关的）"}</p>` : ""}
+    ${mode === "special" ? `
+    <div class="de-special">
+      <label class="field">Start <select id="de-start">${hourOptions(override.start)}</select></label>
+      <label class="field">End <select id="de-end">${hourOptions(override.end)}</select></label>
+    </div>` : ""}
+    ${chipsHtml}`;
+  ed.classList.remove("hidden");
+  wireRemarkBoxes(ed);
+
+  ed.querySelectorAll(".seg button").forEach((b) => {
+    b.onclick = () => {
+      const m2 = b.dataset.mode;
+      if (m2 === "follow") delete draft.dateOverrides[ds];
+      else if (m2 === "closed") draft.dateOverrides[ds] = null;
+      else draft.dateOverrides[ds] = hours ? { start: hours.start, end: hours.end } : { start: "10:00", end: "14:00" };
+      afterChange(true);
+    };
+  });
+  const startSel = ed.querySelector("#de-start");
+  const endSel = ed.querySelector("#de-end");
+  if (startSel && endSel) {
+    const apply = () => {
+      let st = startSel.value, en = endSel.value;
+      if (toMin(en) <= toMin(st)) en = fromMin(Math.min(toMin(st) + 60, 23 * 60 + 59));
+      draft.dateOverrides[ds] = { start: st, end: en };
+      afterChange(true);
+    };
+    startSel.onchange = apply;
+    endSel.onchange = apply;
+  }
+  ed.querySelectorAll(".hour-chip").forEach((chip) => {
+    chip.onclick = () => {
+      const t = chip.dataset.hour;
+      const arr = [...(draft.blockedHours[ds] || [])];
+      const i = arr.indexOf(t);
+      if (i >= 0) arr.splice(i, 1); else arr.push(t);
+      if (arr.length) draft.blockedHours[ds] = arr.sort();
+      else delete draft.blockedHours[ds];
+      afterChange(true);
+    };
+  });
+}
+
+/* ---------- vacation （连续休息） ---------- */
+
+$("#vac-apply").addEventListener("click", () => {
+  const start = $("#vac-start").value, end = $("#vac-end").value;
+  const msg = $("#vac-msg");
+  if (!draft) return;
+  if (!start || !end || end < start) {
+    msg.textContent = "请选择正确的起止日期。"; msg.className = "note msg-err"; return;
+  }
+  let d = start, count = 0;
+  while (d <= end && count <= 92) {
+    draft.dateOverrides[d] = null;
+    count++;
+    const [y, m, dd] = d.split("-").map(Number);
+    d = new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10);
+  }
+  msg.textContent = `已标记 ${count} 天休息（还没保存，点 Save 生效）。点某一天可以单独重新打开。`;
+  msg.className = "note";
+  afterChange(true);
+});
+
+/* ---------- calendar feed key ---------- */
+
+function updateFeedUrl() {
+  const key = $("#adm-calendar-key").value.trim();
+  $("#adm-feed-url").textContent = key
+    ? `Feed URL: ${location.origin}/api/calendar.ics?key=${key}`
+    : "The feed is disabled while the key is empty.";
+}
+$("#adm-calendar-key").addEventListener("input", () => { updateFeedUrl(); refreshDirty(); });
+$("#adm-gen-key").addEventListener("click", () => {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const buf = new Uint8Array(24);
+  crypto.getRandomValues(buf);
+  $("#adm-calendar-key").value = [...buf].map((b) => chars[b % chars.length]).join("");
+  updateFeedUrl();
+  refreshDirty();
+});
+$("#adm-copy-feed").addEventListener("click", async () => {
+  const key = $("#adm-calendar-key").value.trim();
+  if (!key) return;
+  try {
+    await navigator.clipboard.writeText(`${location.origin}/api/calendar.ics?key=${key}`);
+    $("#adm-feed-url").textContent = "Copied! 把这个链接发给 Yumi，她在 Google Calendar 里用 From URL 添加。";
+  } catch { /* clipboard unavailable — the URL is shown above */ }
+});
+
+/* ---------- bookings table (Feature B + remarks) ---------- */
+
+const STATUS_LABEL = { upcoming: "Upcoming", completed: "Completed",
+  cancelled: "Cancelled", pending_payment: "Pending payment" };
+
+async function loadBookings() {
+  const params = new URLSearchParams();
+  const st = $("#adm-bk-status").value;
+  const q = $("#adm-bk-q").value.trim();
+  const date = $("#adm-bk-date").value;
+  if (st) params.set("status", st);
+  if (q) params.set("q", q);
+  if (date) params.set("date", date);
+  const data = await api(`/api/admin/bookings?${params}`);
+  allBookings = data.bookings || [];
+  $("#adm-bk-msg").textContent = `${data.total} booking(s)`;
+  const tbody = $("#adm-bk-table").querySelector("tbody");
+  tbody.innerHTML = allBookings.map((b) => {
+    const cancellable = (b.status === "paid" || b.status === "pending_payment") &&
+      b.effectiveStatus !== "completed";
+    return `
+    <tr>
+      <td>${b.date}<br>${b.time} JST</td>
+      <td>${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "—")}<br>${b.durationMinutes || ""} min</td>
+      <td>${esc(b.name)}<br>${esc(b.email)}</td>
+      <td>${STATUS_LABEL[b.effectiveStatus] || b.effectiveStatus}${b.refundAmount > 0 ? `<br><span title="${esc(b.refundedAt || "")}">已退款 ${money(b.refundAmount)}</span>` : ""}</td>
+      <td>${money(b.amount)}</td>
+      <td>${cancellable ? `<button type="button" class="btn btn-ghost" data-cancel="${b.id}">Cancel</button>` : ""}</td>
+    </tr>
+    <tr class="remark-row"><td colspan="6">${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}</td></tr>`;
+  }).join("") || `<tr><td colspan="6">No bookings match.</td></tr>`;
+  wireRemarkBoxes(tbody);
+  tbody.querySelectorAll("[data-cancel]").forEach((btn) => {
+    btn.onclick = async () => {
+      const b = allBookings.find((x) => x.id === btn.dataset.cancel);
+      if (!confirm(`Cancel ${b.id} (${b.date} ${b.time}, ${b.name})? A paid lesson is refunded in full.`)) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/admin/bookings/${b.id}/cancel`, { method: "POST", body: "{}" });
+        await loadBookings();
+        await loadMonthBookings();
+      } catch (e) { alert(e.message); btn.disabled = false; }
+    };
+  });
+}
+$("#adm-bk-refresh").addEventListener("click", () => loadBookings().catch((e) => alert(e.message)));
+$("#adm-bk-status").addEventListener("change", () => loadBookings().catch(() => {}));
+$("#adm-bk-date").addEventListener("change", () => loadBookings().catch(() => {}));
+
+/* ---------- subscriptions （课时包） ---------- */
+
+async function loadSubs() {
+  const data = await api("/api/admin/subscriptions");
+  const subs = data.subscriptions || [];
+  $("#adm-subs-msg").textContent = subs.length ? `${subs.length} package(s)` : "暂无订阅。";
+  const tbody = $("#adm-subs-table").querySelector("tbody");
+  tbody.innerHTML = subs.map((s) => {
+    const slots = (s.slots || []).map((sl) =>
+      `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+    return `
+    <tr>
+      <td>${esc(s.name)}<br>${esc(s.email)}</td>
+      <td>${esc(slots)}<br>${s.durationMinutes} min</td>
+      <td>${esc(courseNames[s.courseId] || s.courseId || "")}<br>${s.totalLessons} 节</td>
+      <td>${s.status === "active" ? "进行中" : s.status === "stopped" ? "已停止" : esc(s.status)}</td>
+      <td>${s.status === "active" ? `${s.remainingLessons ?? "—"} 节` +
+        (s.nextLesson ? `<br>下一节 ${s.nextLesson.date}` : "") : "—"}</td>
+      <td>${s.status === "active" ? `<button type="button" class="btn btn-ghost" data-stop="${s.id}">停止</button>` : ""}</td>
+    </tr>`;
+  }).join("");
+  tbody.querySelectorAll("[data-stop]").forEach((btn) => {
+    btn.onclick = async () => {
+      const s = subs.find((x) => x.id === btn.dataset.stop);
+      const inside = s.insideWindowLessons || 0;
+      const text = `停止 ${s.name} 的课时包？将取消剩余 ${s.remainingLessons} 节，` +
+        `退款 ${money(s.refundableTotal || 0)}` +
+        (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") + `。`;
+      if (!confirm(text)) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/admin/subscriptions/${s.id}/stop`, { method: "POST", body: "{}" });
+        await loadSubs();
+        await loadMonthBookings();
+      } catch (e) { alert(e.message); btn.disabled = false; }
+    };
+  });
+}
+
+/* ---------- load + save ---------- */
+
+async function loadAll() {
+  adminKey = $("#adm-key").value.trim();
+  if (!adminKey) { $("#adm-msg").textContent = "Paste the admin key first."; return; }
+  $("#adm-msg").textContent = "Loading…";
+  try {
+    const data = await api("/api/admin/settings");
+    sessionStorage.setItem("yumiAdminKey", adminKey);
+    fillForm(data.settings);
+    $("#adm-form").classList.remove("hidden");
+    $("#adm-bookings-card").classList.remove("hidden");
+    $("#adm-subs-card").classList.remove("hidden");
+    $("#adm-msg").textContent = "";
+    const now = new Date(Date.now() + 9 * 3600_000);
+    calCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
+    selectedDate = now.toISOString().slice(0, 10);
+    renderCalendar();
+    renderSummary();
+    await loadMonthBookings();
+    await loadBookings();
+    await loadSubs();
+  } catch (e) {
+    $("#adm-msg").textContent = e.message;
+  }
+}
+$("#adm-load").addEventListener("click", loadAll);
 
 $("#adm-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const weekly = {};
-  for (let d = 0; d <= 6; d++) {
-    const open = document.querySelector(`[data-open="${d}"]`).checked;
-    weekly[d] = open ? {
-      start: document.querySelector(`[data-start="${d}"]`).value || "08:00",
-      end: document.querySelector(`[data-end="${d}"]`).value || "22:00",
-    } : null;
-  }
-  const blockedDates = $("#adm-blocked").value.split(/\s+/)
-    .map((x) => x.trim()).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x));
-  const settings = {
-    weekly,
-    blockedDates,
-    meeting: { type: "fixed", url: $("#adm-meeting").value.trim() },
-    resend: {
-      from: $("#adm-resend-from").value.trim(),
-      apiKey: $("#adm-resend-key").value.trim(),
-    },
-    teacherEmail: $("#adm-teacher").value.trim(),
-    replyTo: $("#adm-replyto").value.trim(),
-  };
-  setMsg("#adm-save-msg", "Saving…", true);
+  const btn = $("#adm-save");
+  btn.disabled = true;
   try {
-    fill(await api("PUT", { settings }));
-    setMsg("#adm-save-msg", "Saved. The booking pages use the new settings now.", true);
-  } catch (err) { setMsg("#adm-save-msg", err.message, false); }
+    const payload = collect();
+    const data = await api("/api/admin/settings", {
+      method: "PUT", body: JSON.stringify({ settings: payload }),
+    });
+    $("#adm-resend-key").value = "";
+    fillForm(data.settings);
+    savedSnapshot = snapshot();
+    btn.classList.remove("dirty");
+    btn.classList.add("saved-flash");
+    btn.textContent = "已保存 ✓ Saved";
+    $("#adm-save-msg").textContent = "";
+    setTimeout(() => { btn.classList.remove("saved-flash"); refreshDirty(); }, 1800);
+    await loadMonthBookings();
+  } catch (err) {
+    $("#adm-save-msg").textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
-const saved = sessionStorage.getItem("yumiAdminKey");
-if (saved) { $("#adm-key").value = saved; $("#adm-load").click(); }
+// Text-ish inputs only affect the dirty state; the blocked-dates list
+// also changes the calendar, so it re-renders availability too.
+$("#adm-form").addEventListener("input", (e) => {
+  if (e.target.id === "adm-blocked") afterChange(true);
+  else refreshDirty();
+});
+
+/* ---------- init ---------- */
+buildWeekly();
+fetch("/api/config").then((r) => r.json()).then((cfg) => {
+  for (const c of cfg.courses || []) courseNames[c.id] = c.name;
+  for (const t of cfg.legacyLessonTypes || []) legacyNames[t.id] = t.name;
+}).catch(() => {});
+const savedKey = sessionStorage.getItem("yumiAdminKey");
+if (savedKey) { $("#adm-key").value = savedKey; loadAll(); }
 </script>
 </body>
 </html>
