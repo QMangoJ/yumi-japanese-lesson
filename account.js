@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const firstName = String(user.name || "").trim().split(/\s+/)[0] ||
     String(user.email || "").split("@")[0];
-  $("#acct-greeting").textContent = `Hello, ${firstName}.`;
+  $("#acct-greeting").textContent = L3(`Hello, ${firstName}.`, `你好，${firstName}。`, `Bonjour, ${firstName}.`);
   $("#acct-avatar").innerHTML = user.picture
     ? `<img class="acct-avatar-img" src="${escHtml(user.picture)}" alt="" referrerpolicy="no-referrer" />`
     : `<span class="acct-avatar-initial" aria-hidden="true">${escHtml(firstName.charAt(0).toUpperCase())}</span>`;

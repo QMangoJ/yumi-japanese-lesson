@@ -36,7 +36,7 @@ function weekdayOf(ds) {
 }
 function dateLong(ds) {
   const [y, m, d] = ds.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US",
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale(),
     { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 function toMin(time) {
@@ -67,15 +67,15 @@ function jstInstantMs(dateStr, timeStr) {
   return Date.UTC(y, m - 1, d) - 9 * 3600_000 + toMin(timeStr) * 60000;
 }
 function fmtLocalTime(ms) {
-  return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return new Date(ms).toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit" });
 }
 function fmtLocalDate(ms, long) {
-  return new Date(ms).toLocaleDateString("en-US", long
+  return new Date(ms).toLocaleDateString(locale(), long
     ? { weekday: "long", month: "long", day: "numeric", year: "numeric" }
     : { weekday: "short", month: "short", day: "numeric" });
 }
 function tzAbbr(ms) {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+  const parts = new Intl.DateTimeFormat(locale(), { timeZoneName: "short" })
     .formatToParts(new Date(ms));
   return parts.find((p) => p.type === "timeZoneName")?.value || localTZName;
 }
@@ -95,6 +95,131 @@ function localDateOfMs(ms) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+
+/* ---------- i18n: en / zh / fr, ONE language at a time ----------
+ * Dictionaries live in i18n.js (window.YUMI_I18N), keyed by the
+ * current source string. The engine walks visible text nodes and
+ * swaps each for the active language; a MutationObserver re-applies
+ * it to dynamically rendered content. Review bodies (#voices-grid)
+ * are real Preply reviews and are never translated. Dates/times are
+ * formatted with the active locale via Intl — the JST anchoring and
+ * timezone conversion logic itself is untouched. */
+const I18N_LOCALES = { en: "en-US", zh: "zh-CN", fr: "fr-FR" };
+const LANG_NAMES = { en: "English", zh: "中文", fr: "Français" };
+let LANG = (() => { try { const s = localStorage.getItem("yumi_lang"); return ["en", "zh", "fr"].includes(s) ? s : "en"; } catch { return "en"; } })();
+function locale() { return I18N_LOCALES[LANG]; }
+function L3(en, zh, fr) { return LANG === "zh" ? zh : LANG === "fr" ? fr : en; }
+const _i18nNorm = (s) => s.replace(/\s+/g, " ").trim();
+const I18N_PATTERNS = [
+  { re: /^(\d+) start times? available$/,
+    en: (m) => `${m[1]} start time${m[1] === "1" ? "" : "s"} available`,
+    zh: (m) => `有 ${m[1]} 个可选开始时间`,
+    fr: (m) => `${m[1]} horaire${m[1] === "1" ? "" : "s"} disponible${m[1] === "1" ? "" : "s"}` },
+  { re: /^Pay (.+)$/,
+    en: (m) => `Pay ${m[1]}`, zh: (m) => `支付 ${m[1]}`, fr: (m) => `Payer ${m[1]}` },
+  { re: /^Pick a new date & time \((\d+) min lesson\)$/,
+    en: (m) => `Pick a new date & time (${m[1]} min lesson)`,
+    zh: (m) => `选择新的日期和时间（${m[1]} 分钟课程）`,
+    fr: (m) => `Choisir une nouvelle date et heure (cours de ${m[1]} min)` },
+  { re: /^Reschedules used: (\d+) \/ 2 · .+$/,
+    en: (m) => `Reschedules used: ${m[1]} / 2 · Cancel 12+ hours ahead for a full refund; inside 12 hours there is no refund.`,
+    zh: (m) => `已改期：${m[1]} / 2 · 开课前 12 小时以上取消可全额退款；12 小时内取消不退款。`,
+    fr: (m) => `Déplacements utilisés : ${m[1]} / 2 · Annulez 12 h ou plus à l'avance pour un remboursement intégral ; à moins de 12 h, aucun remboursement.` },
+  { re: /^Hello, (.+)\.$/,
+    en: (m) => `Hello, ${m[1]}.`, zh: (m) => `你好，${m[1]}。`, fr: (m) => `Bonjour, ${m[1]}.` },
+];
+function _i18nLookup(key) {
+  const dict = (window.YUMI_I18N || {})[LANG] || {};
+  if (dict[key] !== undefined) return dict[key];
+  for (const p of I18N_PATTERNS) { const m = key.match(p.re); if (m) return p[LANG](m); }
+  return null;
+}
+/* Source (English) text of every translated node / placeholder, so
+ * switching between two non-source languages (fr -> zh) restores
+ * the English source first instead of looking up French strings. */
+const _i18nSrc = new WeakMap();
+const _i18nPhSrc = new WeakMap();
+let _i18nApplying = false;
+function applyI18n() {
+  if (!document.body || _i18nApplying) return;
+  _i18nApplying = true;
+  try {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const el = node.parentElement;
+        if (!el || el.closest("script, style, #voices-grid, .lang-pop")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const n of nodes) {
+      let src = _i18nSrc.get(n);
+      if (src === undefined) { src = n.nodeValue; _i18nSrc.set(n, src); }
+      const srcKey = _i18nNorm(src);
+      const rep = _i18nLookup(srcKey);
+      /* Replace the whole trimmed core (raw whitespace inside a
+       * multi-line node never matches the normalized key). */
+      let target = src;
+      if (rep != null) {
+        const m = src.match(/^(\s*)[\s\S]*?(\s*)$/);
+        target = (m ? m[1] : "") + rep + (m ? m[2] : "");
+      }
+      if (target !== n.nodeValue) n.nodeValue = target;
+    }
+    document.querySelectorAll("[placeholder]").forEach((el) => {
+      let src = _i18nPhSrc.get(el);
+      if (src === undefined) { src = el.getAttribute("placeholder"); _i18nPhSrc.set(el, src); }
+      if (!src) return;
+      const dict = (window.YUMI_I18N || {})[LANG] || {};
+      const target = dict[src] !== undefined ? dict[src] : src;
+      if (target !== el.getAttribute("placeholder")) el.setAttribute("placeholder", target);
+    });
+  } finally { _i18nApplying = false; }
+}
+function setLang(l) {
+  if (!["en", "zh", "fr"].includes(l)) return;
+  LANG = l;
+  try { localStorage.setItem("yumi_lang", l); } catch { /* private mode */ }
+  document.documentElement.lang = I18N_LOCALES[l];
+  document.querySelectorAll(".lang-switch").forEach((w) => {
+    w.querySelector(".lang-cur").textContent = LANG_NAMES[l];
+    w.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("active", b.dataset.lang === l));
+  });
+  applyI18n();
+}
+function buildLangSwitch() {
+  document.querySelectorAll(".site-header").forEach((h) => {
+    if (h.querySelector(".lang-switch")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "lang-switch";
+    wrap.innerHTML = `<button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false">🌐 <span class="lang-cur">${LANG_NAMES[LANG]}</span> <span aria-hidden="true">▾</span></button>` +
+      `<div class="lang-pop" hidden>${["en", "zh", "fr"].map((l) => `<button type="button" data-lang="${l}" class="${l === LANG ? "active" : ""}">${LANG_NAMES[l]}</button>`).join("")}</div>`;
+    h.insertBefore(wrap, h.querySelector(".open-booking") || null);
+    const btn = wrap.querySelector(".lang-btn");
+    const pop = wrap.querySelector(".lang-pop");
+    btn.addEventListener("click", (e) => { e.stopPropagation(); pop.hidden = !pop.hidden; btn.setAttribute("aria-expanded", String(!pop.hidden)); });
+    document.addEventListener("click", () => { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); });
+    pop.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { setLang(b.dataset.lang); pop.hidden = true; }));
+  });
+}
+const WEEKDAYS_LONG = { en: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  zh: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+  fr: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"] };
+const WEEKDAYS_SHORT = { en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  zh: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+  fr: ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."] };
+function weekdayLong(wd) { return WEEKDAYS_LONG[LANG][Number(wd)]; }
+function weekdayShort(wd) { return WEEKDAYS_SHORT[LANG][Number(wd)]; }
+document.documentElement.lang = I18N_LOCALES[LANG];
+document.addEventListener("DOMContentLoaded", () => {
+  buildLangSwitch();
+  applyI18n();
+  new MutationObserver(() => applyI18n())
+    .observe(document.body, { childList: true, subtree: true, characterData: true });
+});
 
 async function api(path, options) {
   const res = await fetch(path, {
@@ -348,7 +473,7 @@ function createPicker({ getMinutes, onPick }) {
 
   function renderCal() {
     const { y, m } = view;
-    const title = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-US",
+    const title = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale(),
       { month: "long", year: "numeric", timeZone: "UTC" });
     const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
     const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -651,7 +776,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const sel = $("#bk-selected");
     if (state.date && state.time && dur) {
       const lr = localRange(state.date, state.time, dur.minutes);
-      sel.textContent = `Selected: ${fmtLocalDate(lr.start, true)}, ${lr.text} (${tzAbbr(lr.start)} · ${localTZName}) · JST ${state.date} ${state.time}`;
+      sel.textContent = `${L3("Selected", "已选", "Sélection")} : ${fmtLocalDate(lr.start, true)}, ${lr.text} (${tzAbbr(lr.start)} · ${localTZName}) · JST ${state.date} ${state.time}`;
     } else {
       sel.textContent = "Selected: choose a date and a time";
     }
@@ -672,8 +797,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    * which materializes every lesson at once. */
   const pkg = { size: 10, freq: 1, slots: [{ weekday: "", time: "" }] };
   const pkgTimeCache = {};
-  const WEEKDAY_LABELS = ["Sunday 周日", "Monday 周一", "Tuesday 周二",
-    "Wednesday 周三", "Thursday 周四", "Friday 周五", "Saturday 周六"];
+  const WEEKDAY_LABELS = WEEKDAYS_LONG.en;
   const WEEKDAY_CN = ["日", "一", "二", "三", "四", "五", "六"];
 
   function pkgComplete() {
@@ -735,7 +859,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "choice" + (pkg.size === size ? " selected" : "");
-      b.innerHTML = `${size} 节课 · ${size} lessons` +
+      b.innerHTML = L3(`${size} lessons`, `${size} 节课`, `${size} cours`) +
         (dur ? `<span class="choice-price">${money(size * dur.price)}</span>` : "");
       b.onclick = () => { pkg.size = size; renderPkgSizes(); renderPkgSummary(); };
       $("#bk-pkg-sizes").appendChild(b);
@@ -748,7 +872,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "choice" + (pkg.freq === f ? " selected" : "");
-      b.textContent = `一周${f}节 · ${f}× / week`;
+      b.textContent = L3(`${f}× / week`, `一周${f}节`, `${f}× / semaine`);
       b.onclick = () => {
         pkg.freq = f;
         while (pkg.slots.length < f) pkg.slots.push({ weekday: "", time: "" });
@@ -768,11 +892,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = document.createElement("div");
       row.className = "pkg-slot";
       row.innerHTML = `
-        <span class="pkg-slot-title">固定时间 ${i + 1} · Weekly slot ${i + 1}</span>
-        <div class="field">星期 · Weekday
+        <span class="pkg-slot-title">${L3("Weekly slot", "固定时间", "Créneau hebdomadaire")} ${i + 1}</span>
+        <div class="field">${L3("Weekday", "星期", "Jour de la semaine")}
           <div class="wd-chips" role="group" aria-label="Weekday"></div></div>
-        <div class="field">开始时间 (JST) · Start time
-          <div class="time-chips-sm"><p class="time-hint">先选星期…</p></div></div>`;
+        <div class="field">${L3("Start time (JST)", "开始时间 (JST)", "Heure de début (JST)")}
+          <div class="time-chips-sm"><p class="time-hint">${L3("Pick a weekday first…", "先选星期…", "Choisissez d'abord un jour…")}</p></div></div>`;
       box.appendChild(row);
       const wdBox = row.querySelector(".wd-chips");
       const timeBox = row.querySelector(".time-chips-sm");
@@ -781,8 +905,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         b.type = "button";
         b.className = "wd-chip" + (String(wd) === String(slot.weekday) ? " selected" : "");
         b.setAttribute("aria-pressed", String(wd) === String(slot.weekday) ? "true" : "false");
-        b.textContent = `${WD_SHORT[wd]} ${WEEKDAY_CN[wd]}`;
-        b.title = label;
+        b.textContent = weekdayShort(wd);
+        b.title = weekdayLong(wd);
         b.onclick = () => {
           slot.weekday = String(wd);
           slot.time = "";
@@ -796,15 +920,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       const fillTimes = async () => {
         if (slot.weekday === "") {
-          timeBox.innerHTML = `<p class="time-hint">先选星期…</p>`;
+          timeBox.innerHTML = `<p class="time-hint">${L3("Pick a weekday first…", "先选星期…", "Choisissez d'abord un jour…")}</p>`;
           return;
         }
-        timeBox.innerHTML = `<p class="time-hint">加载中…</p>`;
+        timeBox.innerHTML = `<p class="time-hint">${L3("Loading…", "加载中…", "Chargement…")}</p>`;
         const minutes = durationOf(state.durationId)?.minutes || 50;
         const times = await pkgSlotTimes(Number(slot.weekday), minutes);
         if (slot.time && !times.includes(slot.time)) slot.time = "";
         if (!times.length) {
-          timeBox.innerHTML = `<p class="time-hint">这一天暂时没有可约时间</p>`;
+          timeBox.innerHTML = `<p class="time-hint">${L3("No times available on this weekday for now", "这一天暂时没有可约时间", "Aucun horaire disponible ce jour-là pour le moment")}</p>`;
         } else {
           timeBox.innerHTML = "";
           for (const t of times) {
@@ -837,20 +961,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dur = durationOf(state.durationId);
     const dates = pkgPlanDates();
     const summary = $("#bk-pkg-summary");
-    if (!dur) { summary.textContent = "请选择每周固定的上课时间"; return; }
+    if (!dur) { summary.textContent = L3("Please choose your fixed weekly lesson times", "请选择每周固定的上课时间", "Veuillez choisir vos horaires hebdomadaires fixes"); return; }
     if (dates && pkgComplete()) {
       summary.textContent =
-        `每周 ${pkg.freq} 节 · 共 ${pkg.size} 节 · 预计从 ${dates[0]} 上到 ${dates[dates.length - 1]} · 合计 ${money(pkg.size * dur.price)}`;
+        L3(`${pkg.freq}× / week · ${pkg.size} lessons · planned ${dates[0]} → ${dates[dates.length - 1]} · total ${money(pkg.size * dur.price)}`,
+          `每周 ${pkg.freq} 节 · 共 ${pkg.size} 节 · 预计从 ${dates[0]} 上到 ${dates[dates.length - 1]} · 合计 ${money(pkg.size * dur.price)}`,
+          `${pkg.freq}× / semaine · ${pkg.size} cours · prévu du ${dates[0]} au ${dates[dates.length - 1]} · total ${money(pkg.size * dur.price)}`);
     } else if (dates) {
-      summary.textContent = "两个固定时间不能完全相同，请调整其中一个。";
+      summary.textContent = L3("The two fixed times cannot be identical — please adjust one of them.", "两个固定时间不能完全相同，请调整其中一个。", "Les deux horaires fixes ne peuvent pas être identiques — veuillez en ajuster un.");
     } else {
-      summary.textContent = "请选择每周固定的上课时间（先选星期，再选开始时间）";
+      summary.textContent = L3("Please choose your fixed weekly lesson times (weekday first, then a start time)", "请选择每周固定的上课时间（先选星期，再选开始时间）", "Veuillez choisir vos horaires hebdomadaires fixes (le jour d'abord, puis l'heure de début)");
     }
     $("#bk-pkg-total").innerHTML = `
       <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
-      <div class="bk-total-row"><span>课时包 ${pkg.size} 节 × ${dur.minutes} min</span><span>${money(pkg.size * dur.price)}</span></div>
+      <div class="bk-total-row"><span>${L3(`Package ${pkg.size} lessons × ${dur.minutes} min`, `课时包 ${pkg.size} 节 × ${dur.minutes} 分钟`, `Forfait ${pkg.size} cours × ${dur.minutes} min`)}</span><span>${money(pkg.size * dur.price)}</span></div>
       <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(pkg.size * dur.price)}</span></div>
-      <p class="note">支付后系统会一次性排好全部 ${pkg.size} 节课；个别日期被占用时会自动顺延一周。</p>`;
+      <p class="note">${L3(`After payment, all ${pkg.size} lessons are scheduled at once; if a date is taken, that lesson moves one week later automatically.`, `支付后系统会一次性排好全部 ${pkg.size} 节课；个别日期被占用时会自动顺延一周。`, `Après le paiement, les ${pkg.size} cours sont tous programmés d'un coup ; si une date est prise, le cours est automatiquement décalé d'une semaine.`)}</p>`;
   }
 
   function setMode(mode) {
@@ -918,7 +1044,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!state.courseId) return setMsg("#bk-msg-1", "Please choose a course.", false);
     if (state.mode === "package") {
       if (!pkgComplete()) {
-        return setMsg("#bk-msg-1", "请选择课时包，并为每一节固定课选好星期和开始时间。", false);
+        return setMsg("#bk-msg-1", L3("Please choose a package size and pick a weekday and start time for every weekly slot.", "请选择课时包，并为每一节固定课选好星期和开始时间。", "Veuillez choisir un forfait et, pour chaque créneau, un jour et une heure de début."), false);
       }
       setMsg("#bk-msg-1", "");
       showPane(2);
@@ -988,12 +1114,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const dur = durationOf(state.durationId);
         const dates = pkgPlanDates() || [];
         const slotsText = subscription.slots.map((sl) =>
-          `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+          `${weekdayShort(sl.weekday)} ${sl.time}`).join(" · ");
         const rows = [
           ["Course", courseName(subscription.courseId)],
-          ["课时包 Package", `${subscription.totalLessons} 节 · ${dur.minutes} min each`],
-          ["每周固定时间 Weekly", `${slotsText} (JST)`],
-          ["预计安排 Planned", dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : ""],
+          [L3("Package", "课时包", "Forfait"), `${subscription.totalLessons} ${L3("lessons", "节课", "cours")} · ${dur.minutes} min`],
+          [L3("Fixed weekly times", "每周固定时间", "Horaires hebdomadaires fixes"), `${slotsText} (JST)`],
+          [L3("Planned", "预计安排", "Prévu"), dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : ""],
           ["Name", name],
           ["Email", email],
           ["Total", money(subscription.totalPrice)],
@@ -1055,11 +1181,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const sub = data.subscription;
         const dur = durationOf(state.durationId);
         const slotsText = sub.slots.map((sl) =>
-          `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+          `${weekdayShort(sl.weekday)} ${sl.time}`).join(" · ");
         const rows = [
           ["Course", courseName(sub.courseId)],
-          ["课时包 Package", `${sub.totalLessons} 节 · ${dur.minutes} min each`],
-          ["每周固定时间 Weekly", `${slotsText} (JST)`],
+          [L3("Package", "课时包", "Forfait"), `${sub.totalLessons} ${L3("lessons", "节课", "cours")} · ${dur.minutes} min`],
+          [L3("Fixed weekly times", "每周固定时间", "Horaires hebdomadaires fixes"), `${slotsText} (JST)`],
           ["Name", sub.name],
           ["Email", sub.email],
           ["Total", money(sub.totalPrice)],
@@ -1068,11 +1194,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           rows.map(([k, v]) => `<tr><th>${k}</th><td>${escHtml(v)}</td></tr>`).join("");
         const lessons = data.lessons || [];
         $("#bk-done-extra").innerHTML = `
-          <h4 class="bk-sub">你的课程安排 · Your ${lessons.length} lessons</h4>
+          <h4 class="bk-sub">${L3(`Your ${lessons.length} lessons`, `你的课程安排 · 共 ${lessons.length} 节`, `Vos ${lessons.length} cours`)}</h4>
           <ul class="done-lessons">${lessons.map((l) =>
             `<li>${dateLong(l.date)} · ${l.time} JST</li>`).join("")}</ul>
           ${(data.skippedDates || []).length
-            ? `<p class="note">这些日期已被占用或老师休息，对应课程已自动顺延一周：${data.skippedDates.join(", ")}</p>` : ""}`;
+            ? `<p class="note">${L3(`These dates were taken or the teacher is off, so those lessons moved one week later: ${data.skippedDates.join(", ")}`, `这些日期已被占用或老师休息，对应课程已自动顺延一周：${data.skippedDates.join(", ")}`, `Ces dates étaient prises ou la professeure est en congé : ces cours ont été décalés d'une semaine : ${data.skippedDates.join(", ")}`)}</p>` : ""}`;
         state.pkgOrder = null;
         showPane(4);
         bkDraftClear(localStorage);
@@ -1280,31 +1406,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     const visible = subs.filter((s) => s.status !== "pending_payment");
     if (!visible.length) { box.innerHTML = ""; return; }
     box.innerHTML = `
-      <h3 class="my-section-title">我的课时包 · My lesson packages</h3>
+      <h3 class="my-section-title">${L3("My lesson packages", "我的课时包", "Mes forfaits")}</h3>
       ${visible.map(subCard).join("")}`;
     visible.forEach(wireSubCard);
   }
 
   function subCard(s) {
     const slotsText = (s.slots || []).map((sl) =>
-      `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+      `${weekdayShort(sl.weekday)} ${sl.time}`).join(" · ");
     const stopped = s.status === "stopped";
     return `
     <div class="my-card">
       <table class="summary">
-        <tr><th>课时包 Package</th><td>${s.totalLessons} 节 · ${escHtml(courseName(s.courseId))} · ${s.durationMinutes} min</td></tr>
-        <tr><th>每周固定时间</th><td>${escHtml(slotsText)} (JST)</td></tr>
-        <tr><th>状态 Status</th><td>${stopped ? "已停止 Stopped" : "进行中 Active"}</td></tr>
-        ${!stopped ? `<tr><th>还剩 Remaining</th><td>${s.remainingLessons} 节</td></tr>` : ""}
-        ${!stopped && s.nextLesson ? `<tr><th>下一节 Next lesson</th><td>${s.nextLesson.date} · ${s.nextLesson.time} JST</td></tr>` : ""}
+        <tr><th>${L3("Package", "课时包", "Forfait")}</th><td>${s.totalLessons} ${L3("lessons", "节课", "cours")} · ${escHtml(courseName(s.courseId))} · ${s.durationMinutes} min</td></tr>
+        <tr><th>${L3("Fixed weekly times", "每周固定时间", "Horaires hebdomadaires fixes")}</th><td>${escHtml(slotsText)} (JST)</td></tr>
+        <tr><th>${L3("Status", "状态", "Statut")}</th><td>${stopped ? L3("Stopped", "已停止", "Arrêté") : L3("Active", "进行中", "Actif")}</td></tr>
+        ${!stopped ? `<tr><th>${L3("Remaining", "还剩", "Restants")}</th><td>${s.remainingLessons} ${L3("lessons", "节", "cours")}</td></tr>` : ""}
+        ${!stopped && s.nextLesson ? `<tr><th>${L3("Next lesson", "下一节", "Prochain cours")}</th><td>${s.nextLesson.date} · ${s.nextLesson.time} JST</td></tr>` : ""}
       </table>
       ${(s.lastSkippedDates || []).length
-        ? `<p class="note">这些日期已被占用或老师休息，对应课程已自动顺延一周：${s.lastSkippedDates.join(", ")}</p>` : ""}
+        ? `<p class="note">${L3(`These dates were taken or the teacher is off, so those lessons moved one week later: ${s.lastSkippedDates.join(", ")}`, `这些日期已被占用或老师休息，对应课程已自动顺延一周：${s.lastSkippedDates.join(", ")}`, `Ces dates étaient prises ou la professeure est en congé : ces cours ont été décalés d'une semaine : ${s.lastSkippedDates.join(", ")}`)}</p>` : ""}
       ${!stopped ? `
       <p class="msg" id="sub-msg-${s.id}"></p>
       <div class="my-actions">
-        <button class="btn btn-ghost" id="sub-buy-${s.id}">续购课时包</button>
-        <button class="btn btn-ghost" id="sub-stop-${s.id}">退掉剩余课时并退款</button>
+        <button class="btn btn-ghost" id="sub-buy-${s.id}">${L3("Buy this package again", "续购课时包", "Racheter ce forfait")}</button>
+        <button class="btn btn-ghost" id="sub-stop-${s.id}">${L3("Stop & refund remaining lessons", "退掉剩余课时并退款", "Arrêter et rembourser les cours restants")}</button>
       </div>` : ""}
     </div>`;
   }
@@ -1326,16 +1452,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (stopBtn) {
       stopBtn.onclick = async () => {
         const inside = s.insideWindowLessons || 0;
-        const text = `退掉剩余课时并退款？\n将取消剩余 ${s.remainingLessons} 节课，` +
-          `退款 ${money(s.refundableTotal || 0)}（mock）` +
-          (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") +
-          `。已上过的课不受影响，停止后不能恢复。`;
+        const text = L3(`Stop the package and refund the rest?\nThis cancels the remaining ${s.remainingLessons} lessons and refunds ${money(s.refundableTotal || 0)} (mock)` + (inside > 0 ? `; ${inside} of them start within 12 hours and are not refunded` : "") + `. Lessons already taken are unaffected, and stopping cannot be undone.`,
+          `退掉剩余课时并退款？\n将取消剩余 ${s.remainingLessons} 节课，退款 ${money(s.refundableTotal || 0)}（mock）` + (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") + `。已上过的课不受影响，停止后不能恢复。`,
+          `Arrêter le forfait et rembourser le reste ?\nCela annule les ${s.remainingLessons} cours restants et rembourse ${money(s.refundableTotal || 0)} (démo)` + (inside > 0 ? ` ; ${inside} d'entre eux commencent dans moins de 12 h et ne sont pas remboursés` : "") + `. Les cours déjà suivis ne sont pas affectés, et l'arrêt est définitif.`);
         if (!confirm(text)) return;
         try {
           const data = await api(`/api/subscriptions/${s.id}/stop`, {
             method: "POST", body: "{}",
           });
-          myActionMsg = `课时包已停止，共退款 ${money(data.refundTotal || 0)}（mock）。`;
+          myActionMsg = L3(`Package stopped. Total refunded: ${money(data.refundTotal || 0)} (mock).`, `课时包已停止，共退款 ${money(data.refundTotal || 0)}（mock）。`, `Forfait arrêté. Total remboursé : ${money(data.refundTotal || 0)} (démo).`);
           await loadMyBookings();
           await loadMySubscriptions();
         } catch (e) { setMsg(`#sub-msg-${s.id}`, e.message, false); }
@@ -1394,15 +1519,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? `<p class="note">Reschedules used: ${b.reschedules} / 2 ·
           开课前 12 小时以上取消可全额退款；12 小时内取消不退款。</p>` : ""}
       ${b.status === "cancelled" && b.refundAmount > 0
-        ? `<p class="note">已退款 · Refunded ${money(b.refundAmount)} (mock)</p>` : ""}
+        ? `<p class="note">${L3(`Refunded ${money(b.refundAmount)} (mock)`, `已退款 ${money(b.refundAmount)}（mock）`, `Remboursé : ${money(b.refundAmount)} (démo)`)}</p>` : ""}
       ${b.status === "cancelled" && !(b.refundAmount > 0) &&
         String(b.refund || "").includes("12-hour")
-        ? `<p class="note">已取消（未退款）· Cancelled inside the 12-hour window — no refund</p>` : ""}
+        ? `<p class="note">${L3("Cancelled inside the 12-hour window — no refund", "已取消（未退款）——在开课前 12 小时内取消，不退款", "Annulé dans les 12 h précédant le cours — aucun remboursement")}</p>` : ""}
       ${canManage ? `
       <p class="msg" id="my-msg-${b.id}"></p>
       <div class="my-actions">
         <button class="btn btn-ghost" id="my-cancel-${b.id}">Cancel this booking</button>
-        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-refund-${b.id}">申请退款</button>
+        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-refund-${b.id}">${L3("Request a refund", "申请退款", "Demander un remboursement")}</button>
         <button class="btn btn-ghost" id="my-resched-${b.id}">Reschedule</button>` : ""}
       </div>
       <div id="my-resched-box-${b.id}" class="hidden">
@@ -1417,7 +1542,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cancelBtn = document.getElementById(`my-cancel-${b.id}`);
     if (!cancelBtn) return;
     cancelBtn.onclick = async () => {
-      if (!confirm("Cancel this booking? 开课前 12 小时以上取消可全额退款；12 小时内取消不退款。")) return;
+      if (!confirm(L3("Cancel this booking? Cancel 12+ hours ahead for a full refund; inside 12 hours there is no refund.", "取消这节课？开课前 12 小时以上取消可全额退款；12 小时内取消不退款。", "Annuler cette réservation ? Annulez 12 h ou plus à l'avance pour un remboursement intégral ; à moins de 12 h, aucun remboursement."))) return;
       try {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
           method: "POST", body: "{}",
@@ -1433,16 +1558,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       refundBtn.onclick = async () => {
         const msLeft = jstInstantMs(b.date, b.time) - Date.now();
         const ok = msLeft >= 12 * 3600_000
-          ? confirm(`取消这节课并全额退款 ${money(b.amount)}？`)
-          : confirm("这节课距开课不足 12 小时，取消后不退款，确定取消吗？");
+          ? confirm(L3(`Cancel this lesson and refund ${money(b.amount)} in full?`, `取消这节课并全额退款 ${money(b.amount)}？`, `Annuler ce cours et rembourser intégralement ${money(b.amount)} ?`))
+          : confirm(L3("This lesson starts in less than 12 hours, so cancelling means no refund. Are you sure?", "这节课距开课不足 12 小时，取消后不退款，确定取消吗？", "Ce cours commence dans moins de 12 h : l'annulation ne donnera lieu à aucun remboursement. Confirmer ?"));
         if (!ok) return;
         try {
           const data = await api(`/api/bookings/${b.id}/cancel`, {
             method: "POST", body: "{}",
           });
           myActionMsg = data.booking.refundAmount > 0
-            ? `已取消并退款 ${money(data.booking.refundAmount)}（mock）。Booking ${b.id} cancelled and refunded.`
-            : `已取消（未退款）。Booking ${b.id} cancelled without a refund.`;
+            ? L3(`Booking ${b.id} cancelled and refunded ${money(data.booking.refundAmount)} (mock).`, `已取消并退款 ${money(data.booking.refundAmount)}（mock）。预约 ${b.id} 已取消。`, `Réservation ${b.id} annulée et remboursée : ${money(data.booking.refundAmount)} (démo).`)
+            : L3(`Booking ${b.id} cancelled without a refund.`, `已取消（未退款）。预约 ${b.id} 已取消。`, `Réservation ${b.id} annulée sans remboursement.`);
           await loadMyBookings();
           await loadMySubscriptions();
         } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }

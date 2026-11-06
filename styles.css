@@ -1293,3 +1293,14 @@ button { font-family: inherit; }
   .acct-head { flex-wrap: wrap; }
   .profile-card { padding: 18px; }
 }
+
+/* ---------- language switcher (front) ---------- */
+.lang-switch { position: relative; margin-left: 10px; flex: none; }
+.lang-btn { background: none; border: 1px solid var(--line, #e8dfe3); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; color: inherit; white-space: nowrap; }
+.lang-btn:hover { border-color: #d98aa5; }
+.lang-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--line, #e8dfe3); border-radius: 12px; box-shadow: 0 12px 32px rgba(60, 20, 40, .14); padding: 6px; z-index: 60; min-width: 132px; display: flex; flex-direction: column; }
+.lang-pop[hidden] { display: none; }
+.lang-pop button { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.lang-pop button:hover { background: #fdf0f4; }
+.lang-pop button.active { font-weight: 700; color: #bd4465; }
+@media (max-width: 860px) { .lang-switch { margin-left: 6px; } .lang-btn { padding: 5px 9px; font-size: 12.5px; } }
