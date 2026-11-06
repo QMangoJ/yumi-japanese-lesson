@@ -53,6 +53,40 @@ function rangeText(startMin, minutes) {
   return `${minTo12(startMin)}–${minTo12(startMin + minutes)}`;
 }
 
+/* ---------- visitor-local display ----------
+ * Bookings are anchored to JST (that is what gets stored and what the
+ * calendar shows). For display we convert the JST instant into the
+ * visitor's own timezone via Intl, so an 08:00 JST Monday lesson shows
+ * as its true local equivalent — e.g. Sunday evening in the Americas. */
+const localTZName = Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
+function jstInstantMs(dateStr, timeStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) - 9 * 3600_000 + toMin(timeStr) * 60000;
+}
+function fmtLocalTime(ms) {
+  return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+function fmtLocalDate(ms, long) {
+  return new Date(ms).toLocaleDateString("en-US", long
+    ? { weekday: "long", month: "long", day: "numeric", year: "numeric" }
+    : { weekday: "short", month: "short", day: "numeric" });
+}
+function tzAbbr(ms) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+    .formatToParts(new Date(ms));
+  return parts.find((p) => p.type === "timeZoneName")?.value || localTZName;
+}
+/** {start, end, text} for a lesson in the visitor's timezone. */
+function localRange(dateStr, timeStr, minutes) {
+  const start = jstInstantMs(dateStr, timeStr);
+  const end = start + minutes * 60000;
+  return { start, end, text: `${fmtLocalTime(start)}–${fmtLocalTime(end)}` };
+}
+/** JST "YYYY-MM-DD" of a local instant (to detect date shifts). */
+function jstDateOfMs(ms) {
+  return new Date(ms + 9 * 3600_000).toISOString().slice(0, 10);
+}
+
 async function api(path, options) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -199,7 +233,9 @@ function createPicker({ getMinutes, onPick }) {
       if (token !== loadToken) return;
       if (data.closed) {
         select.innerHTML = "<option>Closed on this day</option>";
-        note.textContent = "Closed on this day — I teach Tuesday to Saturday.";
+        note.textContent = data.blocked
+          ? "Not available on this date — please pick another day."
+          : "Closed on this day.";
         return;
       }
       const open = data.slots.filter((s) => s.available);
@@ -209,8 +245,13 @@ function createPicker({ getMinutes, onPick }) {
         return;
       }
       const minutes = getMinutes();
-      select.innerHTML = open.map((s) =>
-        `<option value="${s.time}">${rangeText(toMin(s.time), minutes)} · JST ${s.time}</option>`).join("");
+      select.innerHTML = open.map((s) => {
+        const lr = localRange(date, s.time, minutes);
+        // Show the local date too when it differs from the JST calendar day
+        // (e.g. an 08:00 JST Monday slot is Sunday evening in the Americas).
+        const dayPrefix = jstDateOfMs(lr.start) !== date ? `${fmtLocalDate(lr.start)} · ` : "";
+        return `<option value="${s.time}">${dayPrefix}${lr.text} ${tzAbbr(lr.start)} · JST ${s.time}</option>`;
+      }).join("");
       select.disabled = false;
       time = open[0].time; // Sakura pre-selects the first available start time
       select.value = time;
@@ -247,19 +288,28 @@ function createPicker({ getMinutes, onPick }) {
 
 function summaryRows(b) {
   const minutes = minutesOfBooking(b);
+  const lr = localRange(b.date, b.time, minutes);
   const rows = [["Course", courseName(b.courseId)]];
   if (b.lessonTypeId && !b.durationId) rows.push(["Lesson type", legacyName(b.lessonTypeId)]);
   rows.push(
     ["Duration", `${minutes} min`],
-    ["Date", `${b.date} (JST)`],
-    ["Time", `${rangeText(toMin(b.time), minutes)} JST (${b.time}–${minToHHMM(toMin(b.time) + minutes)})`],
+    ["Date", `${fmtLocalDate(lr.start, true)} · JST ${b.date}`],
+    ["Time", `${lr.text} ${tzAbbr(lr.start)} · JST ${rangeText(toMin(b.time), minutes)} (${b.time}–${minToHHMM(toMin(b.time) + minutes)})`],
     ["Name", b.name],
     ["Email", b.email],
     ["Total", money(b.amount)],
   );
   if (b.id) rows.unshift(["Booking reference", b.id]);
-  if (b.status) rows.push(["Status", b.status.replace("_", " ")]);
-  if (b.meetLink) rows.push(["Google Meet", `<a href="${b.meetLink}" target="_blank" rel="noopener">${b.meetLink}</a>`]);
+  if (b.status) {
+    const label = b.effectiveStatus && b.effectiveStatus !== b.status
+      ? b.effectiveStatus : b.status.replace("_", " ");
+    rows.push(["Status", label]);
+  }
+  if (b.meetLink) {
+    rows.push(["Online meeting", `<a href="${b.meetLink}" target="_blank" rel="noopener">${b.meetLink}</a>`]);
+  } else if (b.status === "paid") {
+    rows.push(["Online meeting", "Your teacher will send the meeting link before the lesson."]);
+  }
   return rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
 }
 
@@ -324,7 +374,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dur = durationOf(state.durationId);
     const sel = $("#bk-selected");
     if (state.date && state.time && dur) {
-      sel.textContent = `Selected: ${dateLong(state.date)}, ${rangeText(toMin(state.time), dur.minutes)} (Asia/Tokyo) · ${state.date} ${state.time} JST`;
+      const lr = localRange(state.date, state.time, dur.minutes);
+      sel.textContent = `Selected: ${fmtLocalDate(lr.start, true)}, ${lr.text} (${tzAbbr(lr.start)} · ${localTZName}) · JST ${state.date} ${state.time}`;
     } else {
       sel.textContent = "Selected: choose a date and a time";
     }
@@ -332,7 +383,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
       <div class="bk-total-row"><span>${dur.minutes} min lesson</span><span>${money(dur.price)}</span></div>
       <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(dur.price)}</span></div>
-      <p class="note">Lessons are online: your Google Meet link is sent after booking and payment.</p>` : "";
+      <p class="note">Lessons are online: your meeting link is sent after booking and payment.</p>` : "";
     $("#bk-to-2").disabled = !(state.courseId && state.date && state.time);
   }
 
@@ -411,83 +462,114 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  /* ---------- My Bookings ---------- */
+  /* ---------- My Bookings ----------
+   * One valid email + booking reference unlocks all of the student's own
+   * bookings, split into "Upcoming lessons" (manageable) and "Lesson
+   * history" (completed + cancelled, read-only, newest first). */
+
+  let myCreds = null; // {email, ref} of the last successful lookup
+  let myActionMsg = "";
 
   $("#my-find").onclick = async () => {
     const email = $("#my-email").value.trim();
     const ref = $("#my-ref").value.trim().toUpperCase();
-    const box = $("#my-result");
-    box.innerHTML = "";
     if (!email || !ref) return setMsg("#my-msg", "Enter your email and booking reference.", false);
-    try {
-      const { booking } = await api(
-        `/api/bookings/${encodeURIComponent(ref)}?email=${encodeURIComponent(email)}`);
-      setMsg("#my-msg", "");
-      renderMyBooking(booking, email);
-    } catch (e) {
-      setMsg("#my-msg", e.message, false);
-    }
+    myCreds = { email, ref };
+    myActionMsg = "";
+    await loadMyBookings();
   };
 
-  function renderMyBooking(b, email) {
+  async function loadMyBookings() {
     const box = $("#my-result");
-    const canManage = b.status === "paid" || b.status === "pending_payment";
+    try {
+      const data = await api(
+        `/api/my-bookings?email=${encodeURIComponent(myCreds.email)}&ref=${encodeURIComponent(myCreds.ref)}`);
+      setMsg("#my-msg", "");
+      renderMyBookings(data);
+    } catch (e) {
+      box.innerHTML = "";
+      setMsg("#my-msg", e.message, false);
+    }
+  }
+
+  function renderMyBookings({ upcoming, history }) {
+    const box = $("#my-result");
+    const section = (title, list, render) => list.length ? `
+      <h3 class="my-section-title">${title}</h3>
+      ${list.map(render).join("")}` : "";
     box.innerHTML = `
-      <table class="summary">${summaryRows(b)}</table>
-      ${b.status === "paid" ? `<p class="note">Reschedules used: ${b.reschedules} / 2</p>` : ""}
       <p class="msg" id="my-action-msg"></p>
+      ${section("Upcoming lessons", upcoming, (b) => myCard(b, true))}
+      ${section("Lesson history", history, (b) => myCard(b, false))}
+      ${!upcoming.length && !history.length ? "<p class='note'>No bookings found.</p>" : ""}`;
+    if (myActionMsg) setMsg("#my-action-msg", myActionMsg, true);
+    upcoming.forEach((b) => wireMyCard(b));
+  }
+
+  function myCard(b, manageable) {
+    const canManage = manageable &&
+      (b.status === "paid" || b.status === "pending_payment");
+    return `
+    <div class="my-card">
+      <table class="summary">${summaryRows(b)}</table>
+      ${b.status === "paid" && b.effectiveStatus === "upcoming"
+        ? `<p class="note">Reschedules used: ${b.reschedules} / 2</p>` : ""}
       ${canManage ? `
+      <p class="msg" id="my-msg-${b.id}"></p>
       <div class="my-actions">
-        <button class="btn btn-ghost" id="my-cancel">Cancel this booking</button>
-        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-resched">Reschedule</button>` : ""}
+        <button class="btn btn-ghost" id="my-cancel-${b.id}">Cancel this booking</button>
+        ${b.status === "paid" ? `<button class="btn btn-ghost" id="my-resched-${b.id}">Reschedule</button>` : ""}
       </div>
-      <div id="my-resched-box" class="hidden">
+      <div id="my-resched-box-${b.id}" class="hidden">
         <h4 class="bk-sub">Pick a new date &amp; time (${minutesOfBooking(b)} min lesson)</h4>
-        <div id="my-picker"></div>
-        <button class="btn" id="my-resched-go" disabled>Confirm new time</button>
-      </div>` : ""}`;
+        <div id="my-picker-${b.id}"></div>
+        <button class="btn" id="my-resched-go-${b.id}" disabled>Confirm new time</button>
+      </div>` : ""}
+    </div>`;
+  }
 
-    if (!canManage) return;
-
-    $("#my-cancel").onclick = async () => {
+  function wireMyCard(b) {
+    const email = myCreds.email;
+    const cancelBtn = document.getElementById(`my-cancel-${b.id}`);
+    if (!cancelBtn) return;
+    cancelBtn.onclick = async () => {
       if (!confirm("Cancel this booking? The policy in the FAQ applies.")) return;
       try {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
           method: "POST", body: JSON.stringify({ email }),
         });
-        renderMyBooking(data.booking, email);
-        setMsg("#my-action-msg",
-          `Booking cancelled. Refund: ${data.booking.refund}.`, true);
-      } catch (e) { setMsg("#my-action-msg", e.message, false); }
+        myActionMsg = `Booking ${b.id} cancelled. Refund: ${data.booking.refund}.`;
+        await loadMyBookings();
+      } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }
     };
 
-    const reschedBtn = $("#my-resched");
+    const reschedBtn = document.getElementById(`my-resched-${b.id}`);
     if (reschedBtn) {
       let newDate = null, newTime = null, picker = null;
       reschedBtn.onclick = () => {
-        $("#my-resched-box").classList.toggle("hidden");
+        document.getElementById(`my-resched-box-${b.id}`).classList.toggle("hidden");
         if (!picker) {
           picker = createPicker({
             getMinutes: () => minutesOfBooking(b),
             onPick: (date, time) => {
               newDate = date; newTime = time;
-              $("#my-resched-go").disabled = !(newDate && newTime);
+              document.getElementById(`my-resched-go-${b.id}`).disabled = !(newDate && newTime);
             },
           });
-          const mount = $("#my-picker");
+          const mount = document.getElementById(`my-picker-${b.id}`);
           mount.appendChild(picker.calEl);
           mount.appendChild(picker.timesEl);
         }
       };
-      $("#my-resched-go").onclick = async () => {
+      document.getElementById(`my-resched-go-${b.id}`).onclick = async () => {
         try {
-          const { booking } = await api(`/api/bookings/${b.id}/reschedule`, {
+          await api(`/api/bookings/${b.id}/reschedule`, {
             method: "POST",
             body: JSON.stringify({ email, date: newDate, time: newTime }),
           });
-          renderMyBooking(booking, email);
-          setMsg("#my-action-msg", "Rescheduled. See you then!", true);
-        } catch (e) { setMsg("#my-action-msg", e.message, false); }
+          myActionMsg = `Booking ${b.id} rescheduled. See you then!`;
+          await loadMyBookings();
+        } catch (e) { setMsg(`#my-msg-${b.id}`, e.message, false); }
       };
     }
   }

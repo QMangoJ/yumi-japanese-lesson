@@ -224,20 +224,22 @@
     <p class="section-lead">
       Booking opens in a pop-up right on this page: pick your course, date
       and time, and pay securely here — no account needed. Lessons are held
-      on Google Meet, and your personal Meet link arrives with your
+      online (Zoom / Google Meet), and your meeting link arrives with your
       confirmation.
     </p>
     <p><a class="btn open-booking" href="#book">Book a Lesson</a></p>
     <p class="note">New bookings are taken at least 72 hours in advance.
-    I'm available Tuesday to Saturday, 10:00–20:00 JST.</p>
+    I'm available Monday to Friday, 8:00–22:00 JST. Times are shown in
+    your own timezone when you book.</p>
   </section>
 
   <!-- MY BOOKINGS -->
   <section class="section section-alt" id="my">
     <p class="eyebrow">05 — MY BOOKINGS</p>
     <h2>My Bookings</h2>
-    <p class="section-lead">Enter the email and booking reference from your
-    confirmation to view, reschedule or cancel your lesson.</p>
+    <p class="section-lead">Enter the email and any booking reference from
+    your confirmations to see your upcoming lessons and your lesson
+    history — and to reschedule or cancel an upcoming lesson.</p>
     <div class="lookup-box">
       <label class="field">Email
         <input type="email" id="my-email" autocomplete="email" /></label>
@@ -345,9 +347,10 @@
       </details>
       <details>
         <summary>What tool do you use for lessons? Do I need to prepare anything in advance?</summary>
-        <p>Lessons are held on Google Meet. You do not need to install a special
-        app — simply click the link in your booking confirmation to join from
-        your browser.</p>
+        <p>Lessons are held online (Zoom / Google Meet). You do not need to
+        install a special app — simply click the link in your booking
+        confirmation to join from your browser. If no link is shown, your
+        teacher will send it before the lesson.</p>
       </details>
       <details>
         <summary>Do I need to bring or prepare anything before my lesson?</summary>
@@ -370,7 +373,7 @@
 
 <footer class="site-footer">
   <p>🌸 YUMI Japanese Lessons — Online Japanese lessons with Yumi N., certified Japanese tutor in Tokyo, Japan.</p>
-  <p><small>Lessons are held on Google Meet. Booking and payment are handled securely on this site.</small></p>
+  <p><small>Lessons are held online. Booking and payment are handled securely on this site.</small></p>
 </footer>
 
   <!-- BOOKING MODAL (Sakura-style pop-up) -->
@@ -389,14 +392,15 @@
       <div class="bk-pane" data-pane="1">
         <h3>Book your lesson</h3>
         <p class="note">Choose a course and a lesson at least 72 hours in
-        advance. Times are shown in Japan time (JST).</p>
+        advance. Times are shown in your timezone, with Japan time (JST)
+        as a reference.</p>
         <h4 class="bk-sub">Course</h4>
         <div class="choice-grid" id="bk-courses"></div>
         <div class="bk-cols">
           <div class="bk-col">
             <h4 class="bk-sub">01 · Choose a date</h4>
             <div id="bk-cal"></div>
-            <p class="note">Closed Sundays &amp; Mondays.</p>
+            <p class="note">Closed Saturdays &amp; Sundays. Calendar days are Japan dates; times are shown in your timezone.</p>
           </div>
           <div class="bk-col">
             <h4 class="bk-sub">02 · Choose a start time</h4>
@@ -453,8 +457,9 @@
       <div class="bk-pane hidden" data-pane="4">
         <h3>🎉 You're booked!</h3>
         <table class="summary" id="bk-done"></table>
-        <p>Lessons are held on Google Meet — your personal link is in the table
-        above. A confirmation has been sent to your email.</p>
+        <p>Lessons are held online — your meeting link is in the table above,
+        or your teacher will send it before the lesson. A confirmation has
+        been sent to your email.</p>
         <p class="note">Keep your booking reference safe: together with your email
         you can reschedule or cancel anytime in
         <a href="#my">My Bookings</a> (up to 24 hours before the lesson,

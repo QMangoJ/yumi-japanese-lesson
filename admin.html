@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin — YUMI Japanese Lessons</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .admin-wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+  .admin-card { background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+  .admin-card h2 { margin-top: 0; font-size: 20px; }
+  .day-row { display: flex; align-items: center; gap: 12px; padding: 6px 0;
+    border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+  .day-row:last-child { border-bottom: none; }
+  .day-name { width: 110px; font-weight: 600; }
+  .day-row input[type="time"] { width: 130px; }
+  .day-row .closed-note { color: var(--sub); font-size: 13px; }
+  textarea.blocked { width: 100%; min-height: 90px; }
+  .key-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .key-row .field { flex: 1; min-width: 240px; }
+</style>
+</head>
+<body>
+<div class="admin-wrap">
+  <h1>🌸 Yumi — Site Admin</h1>
+  <p class="note">Booking settings for yumi.ki-toko.com. Changes take effect
+  immediately — no redeploy needed. This page only works with the admin key;
+  without it, nothing here can read or change anything.</p>
+
+  <div class="admin-card">
+    <h2>Admin key</h2>
+    <div class="key-row">
+      <label class="field">Admin key
+        <input type="password" id="adm-key" autocomplete="off"
+          placeholder="Paste the admin key" /></label>
+      <button class="btn" id="adm-load" type="button">Load settings</button>
+    </div>
+    <p class="msg" id="adm-msg"></p>
+  </div>
+
+  <form id="adm-form" class="hidden">
+    <div class="admin-card">
+      <h2>Weekly hours (Japan time)</h2>
+      <p class="note">Lessons start on the hour. A lesson must end by the
+      day's closing time. Untick a day to close it.</p>
+      <div id="adm-weekly"></div>
+    </div>
+
+    <div class="admin-card">
+      <h2>Blocked dates</h2>
+      <p class="note">Holidays and days off — no lessons can be booked on
+      these dates. One date per line, as YYYY-MM-DD.</p>
+      <textarea class="blocked" id="adm-blocked" spellcheck="false"
+        placeholder="2026-12-31&#10;2027-01-01"></textarea>
+    </div>
+
+    <div class="admin-card">
+      <h2>Online meeting</h2>
+      <label class="field">Fixed meeting link (Zoom / Google Meet)
+        <input type="url" id="adm-meeting" placeholder="https://…" /></label>
+      <p class="note">Shown in every booking confirmation and email. Leave
+      empty and students will see “your teacher will send the meeting link
+      before the lesson”.</p>
+    </div>
+
+    <div class="admin-card">
+      <h2>Email (Resend)</h2>
+      <label class="field">From address
+        <input type="email" id="adm-resend-from"
+          placeholder="lesson-booking@yumi-japan.com" /></label>
+      <p class="note">Mail is sent as “Yumi Japanese Lessons
+      &lt;lesson-booking@yumi-japan.com&gt;” via Resend.</p>
+      <label class="field">Resend API key
+        <input type="password" id="adm-resend-key" autocomplete="off"
+          placeholder="Leave blank to keep the saved key" /></label>
+      <p class="note" id="adm-resend-state"></p>
+      <label class="field">Teacher notification email (optional)
+        <input type="email" id="adm-teacher"
+          placeholder="Where booking notifications go" /></label>
+      <p class="note">Booking emails are always recorded in the outbox.
+      They are actually sent only when both the From address and a Resend
+      API key are set.</p>
+    </div>
+
+    <button class="btn" type="submit">Save settings</button>
+    <p class="msg" id="adm-save-msg"></p>
+  </form>
+</div>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+let loaded = null;
+
+function setMsg(id, text, ok) {
+  const el = $(id);
+  el.textContent = text || "";
+  el.className = "msg" + (text ? (ok ? " msg-ok" : " msg-err") : "");
+}
+function key() { return $("#adm-key").value.trim(); }
+
+async function api(method, body) {
+  const res = await fetch("/api/admin/settings", {
+    method,
+    headers: { "Content-Type": "application/json", "X-Admin-Key": key() },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data.settings;
+}
+
+function renderWeekly(weekly) {
+  const box = $("#adm-weekly");
+  box.innerHTML = "";
+  for (let d = 0; d <= 6; d++) {
+    const h = weekly[d];
+    const row = document.createElement("div");
+    row.className = "day-row";
+    row.innerHTML = `
+      <span class="day-name">${DAYS[d]}</span>
+      <label><input type="checkbox" data-open="${d}" ${h ? "checked" : ""} /> Open</label>
+      <input type="time" data-start="${d}" value="${h ? h.start : "08:00"}" />
+      <span>to</span>
+      <input type="time" data-end="${d}" value="${h ? h.end : "22:00"}" />
+      <span class="closed-note" data-note="${d}">${h ? "" : "closed"}</span>`;
+    box.appendChild(row);
+  }
+  box.querySelectorAll("[data-open]").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const d = cb.dataset.open;
+      box.querySelector(`[data-note="${d}"]`).textContent = cb.checked ? "" : "closed";
+    });
+  });
+}
+
+function fill(s) {
+  loaded = s;
+  renderWeekly(s.weekly);
+  $("#adm-blocked").value = (s.blockedDates || []).join("\n");
+  $("#adm-meeting").value = s.meeting?.url || "";
+  $("#adm-resend-from").value = s.resend?.from || "";
+  $("#adm-resend-key").value = "";
+  $("#adm-resend-state").textContent = s.resend?.apiKeySet
+    ? "A Resend API key is saved. Leave the field blank to keep it, or type a new one to replace it."
+    : "No Resend API key saved yet.";
+  $("#adm-teacher").value = s.teacherEmail || "";
+  $("#adm-form").classList.remove("hidden");
+}
+
+$("#adm-load").onclick = async () => {
+  if (!key()) return setMsg("#adm-msg", "Enter the admin key first.", false);
+  setMsg("#adm-msg", "Loading…", true);
+  try {
+    fill(await api("GET"));
+    sessionStorage.setItem("yumiAdminKey", key());
+    setMsg("#adm-msg", "Settings loaded.", true);
+  } catch (e) { setMsg("#adm-msg", e.message, false); }
+};
+
+$("#adm-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const weekly = {};
+  for (let d = 0; d <= 6; d++) {
+    const open = document.querySelector(`[data-open="${d}"]`).checked;
+    weekly[d] = open ? {
+      start: document.querySelector(`[data-start="${d}"]`).value || "08:00",
+      end: document.querySelector(`[data-end="${d}"]`).value || "22:00",
+    } : null;
+  }
+  const blockedDates = $("#adm-blocked").value.split(/\s+/)
+    .map((x) => x.trim()).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x));
+  const settings = {
+    weekly,
+    blockedDates,
+    meeting: { type: "fixed", url: $("#adm-meeting").value.trim() },
+    resend: {
+      from: $("#adm-resend-from").value.trim(),
+      apiKey: $("#adm-resend-key").value.trim(),
+    },
+    teacherEmail: $("#adm-teacher").value.trim(),
+  };
+  setMsg("#adm-save-msg", "Saving…", true);
+  try {
+    fill(await api("PUT", { settings }));
+    setMsg("#adm-save-msg", "Saved. The booking pages use the new settings now.", true);
+  } catch (err) { setMsg("#adm-save-msg", err.message, false); }
+});
+
+const saved = sessionStorage.getItem("yumiAdminKey");
+if (saved) { $("#adm-key").value = saved; $("#adm-load").click(); }
+</script>
+</body>
+</html>

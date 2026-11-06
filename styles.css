@@ -409,6 +409,10 @@ a { color: var(--accent); }
 }
 
 .my-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 16px; }
+.my-section-title { margin: 26px 0 12px; font-size: 19px; }
+.my-card { border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 16px; background: var(--card); }
+.my-card .summary { margin-bottom: 6px; }
 .lesson .book-course { margin-top: 6px; }
 
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
