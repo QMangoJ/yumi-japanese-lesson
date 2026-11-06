@@ -263,6 +263,21 @@
   .savebar #adm-save { margin-left: auto; }
   #adm-save.dirty { box-shadow: 0 0 0 4px var(--accent-soft); }
   #adm-save.saved-flash { background: #2e7d32; color: #fff; }
+  /* Save button interaction states (Daniel: 缺少交互态 hover/点击 —
+     the shell's flat .btn treatment had killed the base shadow and
+     no :active/:disabled styling existed at all, so pressing the
+     button gave no feedback). Scoped to #adm-save: this one button
+     is the shared savebar control for both the Availability and
+     Settings views. */
+  #adm-save { transition: background .15s, box-shadow .15s, transform .06s, opacity .15s; }
+  #adm-save:hover:not(:disabled) { background: #bd4465;
+    box-shadow: 0 3px 10px rgba(212,87,122,.38); }
+  #adm-save.dirty:hover:not(:disabled) {
+    box-shadow: 0 0 0 4px var(--accent-soft), 0 3px 10px rgba(212,87,122,.38); }
+  #adm-save:active:not(:disabled) { background: #a93a58;
+    transform: translateY(1px); box-shadow: 0 1px 3px rgba(212,87,122,.3); }
+  #adm-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #adm-save:disabled { opacity: .55; cursor: wait; transform: none; box-shadow: none; }
 
   /* toast */
   .toast { position: fixed; right: 22px; bottom: 22px; z-index: 90; background: #33302e; color: #fff;
@@ -2527,6 +2542,7 @@ async function trySessionEntry() {
 async function doSave() {
   const btn = $("#adm-save");
   btn.disabled = true;
+  btn.textContent = "保存中… Saving…";
   try {
     const payload = collect();
     const badPrice = Object.entries(payload.pricing)
@@ -2555,6 +2571,10 @@ async function doSave() {
     $("#adm-save-msg").textContent = err.message;
   } finally {
     btn.disabled = false;
+    // Restore the dirty-aware label if the save didn't replace it
+    // (the success path leaves "已保存 ✓ Saved" + the flash timer
+    // in charge of restoring it).
+    if (btn.textContent === "保存中… Saving…") refreshDirty();
   }
 }
 $("#adm-form").addEventListener("submit", (e) => { e.preventDefault(); doSave(); });
