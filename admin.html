@@ -8,12 +8,143 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
 <style>
-  .admin-wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
-  .admin-card { background: var(--card); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
-  .admin-card h2 { margin-top: 0; font-size: 20px; }
-  .day-row { display: flex; align-items: center; gap: 12px; padding: 6px 0;
-    border-bottom: 1px dashed var(--line); flex-wrap: wrap; }
+  /* ============ admin base ============ */
+  body { background: #f6f6f7; font-size: 14.5px; line-height: 1.55; }
+  :root { --adm-line: #e7e0dc; --adm-line-strong: #d9d0cb; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  .shell :is(a, button, input, select, textarea):focus-visible,
+  .login-wrap :is(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  .shell .field input, .shell .field select, .shell .field textarea,
+  .login-wrap .field input {
+    border-color: var(--adm-line-strong); border-radius: 8px; padding: 9px 11px;
+  }
+  .shell .btn, .login-wrap .btn {
+    border-radius: 9px; box-shadow: none; padding: 9px 18px; font-size: 14px;
+  }
+  .shell .btn:hover, .login-wrap .btn:hover { transform: none; box-shadow: 0 2px 8px rgba(212,87,122,.25); }
+  .shell .btn-ghost { border-color: var(--adm-line-strong); color: var(--ink); background: #fff; }
+  .shell .btn-ghost:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+  .shell .btn-small { padding: 6px 12px; font-size: 13px; min-height: 32px; }
+
+  /* ============ login ============ */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .login-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(60, 40, 40, .07); padding: 36px 34px 28px;
+    width: 100%; max-width: 400px; text-align: left; }
+  .login-logo { font-size: 34px; line-height: 1; }
+  .login-card h1 { font-size: 22px; margin: 10px 0 2px; }
+  .login-sub { color: var(--sub); font-size: 13.5px; margin: 0 0 22px; }
+  .login-btn { width: 100%; margin-top: 4px; }
+  .login-note { font-size: 12.5px; margin-top: 18px; }
+
+  /* ============ app shell ============ */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 234px; flex: 0 0 234px; background: #fff; border-right: 1px solid var(--adm-line);
+    display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 40; }
+  .side-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16.5px;
+    padding: 18px 18px 14px; color: var(--ink); }
+  .side-logo { font-size: 20px; }
+  .side-nav { display: flex; flex-direction: column; gap: 2px; padding: 4px 10px; }
+  .side-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+    border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14.5px; font-weight: 600;
+    border-left: 3px solid transparent; }
+  .side-nav a svg { width: 18px; height: 18px; flex: 0 0 18px; stroke: var(--sub); fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .side-nav a .nav-cn { margin-left: auto; font-size: 12px; color: var(--sub); font-weight: 400; }
+  .side-nav a:hover { background: #faf5f3; }
+  .side-nav a.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+  .side-nav a.active svg { stroke: var(--accent); }
+  .side-nav a.active .nav-cn { color: var(--accent); }
+  .side-foot { margin-top: auto; border-top: 1px solid var(--adm-line); padding: 12px 10px;
+    display: flex; flex-direction: column; gap: 2px; }
+  .side-foot-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+    color: var(--sub); text-decoration: none; font-size: 14px; font-weight: 600;
+    background: none; border: none; font: inherit; cursor: pointer; text-align: left; width: 100%; }
+  .side-foot-link svg { width: 17px; height: 17px; stroke: var(--sub); fill: none; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .side-foot-link:hover { background: #faf5f3; color: var(--ink); }
+  .backdrop { position: fixed; inset: 0; background: rgba(40,30,30,.35); z-index: 39; }
+
+  .main { flex: 1; min-width: 0; margin-left: 234px; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--adm-line); padding: 12px 26px; }
+  .topbar h1 { font-size: 17.5px; margin: 0; }
+  .topbar-env { margin-left: auto; color: var(--sub); font-size: 13px; }
+  .burger { display: none; border: 1px solid var(--adm-line-strong); background: #fff; border-radius: 8px;
+    width: 38px; height: 38px; font-size: 17px; cursor: pointer; color: var(--ink); }
+  .content { flex: 1; padding: 24px 26px 40px; max-width: 1240px; width: 100%; margin: 0 auto; }
+  .view { animation: view-in .16s ease-out; }
+  @keyframes view-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+  .panel { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 20px; }
+  .panel h2 { margin: 0 0 6px; font-size: 16.5px; }
+  .panel h2 + .note { margin-top: 0; }
+  .panel hr.sep { border: none; border-top: 1px dashed var(--adm-line); margin: 20px 0; }
+
+  /* save bar */
+  .savebar { position: sticky; bottom: 0; z-index: 30; display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,.96); border-top: 1px solid var(--adm-line); padding: 12px 26px; }
+  .savebar .msg { margin: 0; }
+  .savebar-note { color: var(--sub); font-size: 13.5px; }
+  .savebar-note.dirty { color: var(--accent); font-weight: 700; }
+  .savebar #adm-save { margin-left: auto; }
+  #adm-save.dirty { box-shadow: 0 0 0 4px var(--accent-soft); }
+  #adm-save.saved-flash { background: #2e7d32; color: #fff; }
+
+  /* toast */
+  .toast { position: fixed; right: 22px; bottom: 22px; z-index: 90; background: #33302e; color: #fff;
+    padding: 11px 18px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    opacity: 0; transform: translateY(6px); transition: opacity .22s, transform .22s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+
+  /* ============ dashboard ============ */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .stat-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px; padding: 18px 20px; }
+  .stat-label { font-size: 13px; color: var(--sub); font-weight: 600; }
+  .stat-num { font-size: 34px; font-weight: 800; line-height: 1.15; margin: 4px 0 2px; }
+  .stat-sub { font-size: 12.5px; color: var(--sub); }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .dash-grid .panel { margin-bottom: 0; }
+  .dash-row { display: flex; gap: 12px; align-items: baseline; width: 100%; text-align: left;
+    background: none; border: none; border-bottom: 1px solid var(--adm-line);
+    padding: 9px 4px; font: inherit; cursor: pointer; color: var(--ink); }
+  .dash-row:last-child { border-bottom: none; }
+  .dash-row:hover { background: #faf5f3; }
+  .dash-time { font-weight: 700; white-space: nowrap; }
+  .dash-name { font-weight: 600; }
+  .dash-course { color: var(--sub); font-size: 13px; margin-left: auto; text-align: right; }
+
+  /* ============ tables ============ */
+  .table-scroll { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+  .data-table th, .data-table td { text-align: left; padding: 10px 10px;
+    border-bottom: 1px solid var(--adm-line); vertical-align: top; }
+  .data-table th { color: var(--sub); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .05em; font-weight: 700; white-space: nowrap; }
+  .data-table tbody tr:hover { background: #fdfaf9; }
+  .data-table .cell-sub { color: var(--sub); font-size: 12.5px; }
+  .data-table .nowrap { white-space: nowrap; }
+  .data-table .actions { white-space: nowrap; text-align: right; }
+  .data-table .actions .btn + .btn { margin-left: 6px; }
+  .table-loading { color: var(--sub); text-align: center !important; padding: 26px 10px !important; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12.5px;
+    font-weight: 700; white-space: nowrap; }
+  .pill-upcoming { background: var(--accent-soft); color: #b03a5e; }
+  .pill-completed { background: #edf4ed; color: #2e7d32; }
+  .pill-cancelled { background: #f7e9e6; color: #a3402f; }
+  .pill-pending_payment { background: #fdf3e0; color: #8a6d1a; }
+  .refund-line { display: block; color: var(--sub); font-size: 12.5px; margin-top: 3px; }
+  .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 6px; }
+  .filter-bar .field { margin-bottom: 0; flex: 0 1 auto; }
+  .filter-bar .field.grow { flex: 1 1 200px; }
+
+  /* ============ settings form pieces (carried over) ============ */
+  .day-row { display: flex; align-items: center; gap: 12px; padding: 7px 0;
+    border-bottom: 1px dashed var(--adm-line); flex-wrap: wrap; }
   .day-row:last-child { border-bottom: none; }
   .day-name { width: 110px; font-weight: 600; }
   .day-row input[type="time"] { width: 130px; }
@@ -21,6 +152,7 @@
   textarea.blocked { width: 100%; min-height: 90px; }
   .key-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
   .key-row .field { flex: 1; min-width: 200px; }
+  .bk-sub { font-size: 14px; margin: 18px 0 8px; }
 
   /* --- availability calendar (Feature D) --- */
   .adm-cal { max-width: 560px; margin: 0 auto; }
@@ -41,18 +173,17 @@
   .dot-special { background: var(--accent); }
   .dot-blocked { background: #b8a49c; }
   .adm-cal .cal-day.selected .dot-special { background: #fff; }
-  .adm-cal .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--line); }
+  .adm-cal .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--adm-line-strong); }
   .adm-cal .cal-day.today::after { display: none; }
 
-  .day-editor { border: 1.5px solid var(--line); border-radius: 12px;
-    padding: 16px; margin-top: 16px; background: #fff; }
-  .day-editor h3 { margin: 0 0 12px; font-size: 16.5px; }
-  .seg { display: flex; border: 1.5px solid var(--line); border-radius: 999px;
+  .day-editor { border: 1.5px solid var(--adm-line); border-radius: 12px;
+    padding: 16px; background: #fff; }
+  .seg { display: flex; border: 1.5px solid var(--adm-line-strong); border-radius: 999px;
     overflow: hidden; margin-bottom: 14px; }
   .seg button { flex: 1; border: none; background: #fff; font: inherit;
     font-size: 14px; padding: 9px 2px; cursor: pointer; color: var(--sub);
     min-height: 42px; }
-  .seg button + button { border-left: 1.5px solid var(--line); }
+  .seg button + button { border-left: 1.5px solid var(--adm-line-strong); }
   .seg button.active { background: var(--accent); color: #fff; font-weight: 700; }
   .de-special { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 6px; }
   .de-special .field { margin-bottom: 6px; }
@@ -62,9 +193,9 @@
     color: #fff; border-radius: 999px; padding: 8px 14px; font: inherit;
     font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
   .hour-chip.blocked { background: #fff; color: var(--sub);
-    border-color: var(--line); text-decoration: line-through; font-weight: 400; }
+    border-color: var(--adm-line-strong); text-decoration: line-through; font-weight: 400; }
   .vac-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 18px;
-    border-top: 1px dashed var(--line); padding-top: 16px; }
+    border-top: 1px dashed var(--adm-line); padding-top: 16px; }
   .vac-row .field { margin-bottom: 0; }
   .summary-line { font-size: 14px; margin-top: 16px; line-height: 2; }
   .sum-chip { display: inline-flex; align-items: center; gap: 6px;
@@ -73,21 +204,8 @@
   .sum-chip button { border: none; background: #fff; color: var(--accent);
     width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
     font-size: 13px; line-height: 1; padding: 0; }
-
-  /* --- save button dirty state --- */
-  #adm-save.dirty { background: var(--accent); color: #fff;
-    box-shadow: 0 0 0 4px var(--accent-soft); }
-  #adm-save.saved-flash { background: #2e7d32; color: #fff; }
-
-  /* --- bookings table --- */
-  .bk-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .bk-table th, .bk-table td { text-align: left; padding: 8px 8px;
-    border-bottom: 1px solid var(--line); vertical-align: top; }
-  .bk-table th { color: var(--sub); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
-  @media (max-width: 560px) {
-    .adm-cal .cal-day { height: 50px; }
-    .bk-table th:nth-child(2), .bk-table td:nth-child(2) { display: none; }
-  }
+  .avail-grid { display: grid; grid-template-columns: minmax(320px, 560px) 1fr; gap: 20px; align-items: start; }
+  .avail-grid .adm-cal { margin: 0; }
 
   /* --- calendar lesson mini-rows + day-panel lessons + remarks (Feature E) --- */
   .adm-cal .cal-day { height: auto; min-height: 58px; justify-content: flex-start; }
@@ -100,173 +218,325 @@
   .adm-cal .cal-day.selected .d-lesson { color: #fff; }
   .adm-cal .cal-day.selected .d-lesson.done,
   .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
-  .lesson-row { border: 1px solid var(--line); border-radius: 10px;
+  .lesson-row { border: 1px solid var(--adm-line); border-radius: 10px;
     padding: 10px 12px; margin-bottom: 10px; background: #fff; }
   .lesson-row.is-cancelled { opacity: .55; }
   .lesson-row .lr-head { font-weight: 700; font-size: 14.5px; }
   .lesson-row .lr-sub { color: var(--sub); font-size: 13px; margin-top: 2px;
     word-break: break-all; }
-  .remark-box { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .remark-box { margin-top: 8px; border-top: 1px dashed var(--adm-line); padding-top: 8px; }
   .remark-box label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
   .remark-box label .default-tag { color: var(--sub); font-weight: 400; }
   .remark-box textarea { width: 100%; min-height: 52px; font: inherit; font-size: 14px; }
   .remark-box .btn { margin-top: 6px; padding: 6px 14px; min-height: 36px; }
   .remark-row td { background: #fffafc; }
-  .sub-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .sub-table th, .sub-table td { text-align: left; padding: 8px;
-    border-bottom: 1px solid var(--line); vertical-align: top; }
-  .sub-table th { color: var(--sub); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .sch-grid { display: grid; grid-template-columns: minmax(320px, 600px) 1fr; gap: 20px; align-items: start; }
+  .sch-grid .adm-cal { max-width: 600px; margin: 0; }
+  .sch-panel h3 { margin: 0 0 6px; font-size: 16.5px; }
+
+  /* ============ responsive ============ */
+  @media (max-width: 1100px) {
+    .avail-grid, .sch-grid { grid-template-columns: 1fr; }
+    .avail-grid .adm-cal, .sch-grid .adm-cal { margin: 0 auto; }
+    .dash-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-105%); transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.12); }
+    .sidebar.open { transform: none; }
+    .main { margin-left: 0; }
+    .burger { display: block; }
+    .content { padding: 18px 14px 32px; }
+    .topbar { padding: 10px 14px; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .savebar { padding: 10px 14px; }
+    .savebar-note { display: none; }
+  }
+  @media (max-width: 560px) {
+    .adm-cal .cal-day { min-height: 50px; }
+  }
 </style>
 </head>
 <body>
-<div class="admin-wrap">
-  <h1>🌸 Yumi — Site Admin</h1>
-  <p class="note">Booking settings for yumi.ki-toko.com. Changes take effect
-  immediately — no redeploy needed. This page only works with the admin key;
-  without it, nothing here can read or change anything.</p>
 
-  <div class="admin-card">
-    <h2>Admin key</h2>
-    <div class="key-row">
-      <label class="field">Admin key
-        <input type="password" id="adm-key" autocomplete="off"
-          placeholder="Paste the admin key" /></label>
-      <button class="btn" id="adm-load" type="button">Load settings</button>
-    </div>
+<!-- ================= LOGIN ================= -->
+<div class="login-wrap" id="adm-login">
+  <div class="login-card">
+    <div class="login-logo">🌸</div>
+    <h1>Yumi Admin</h1>
+    <p class="login-sub">yumi.ki-toko.com · 老师后台</p>
+    <label class="field">Admin key
+      <input type="password" id="adm-key" autocomplete="off"
+        placeholder="Paste the admin key" /></label>
+    <button class="btn login-btn" id="adm-load" type="button">Unlock · 进入后台</button>
     <p class="msg" id="adm-msg"></p>
+    <p class="note login-note">Booking settings for yumi.ki-toko.com. Changes
+    take effect immediately — no redeploy needed. This page only works with
+    the admin key; without it, nothing here can read or change anything.</p>
   </div>
+</div>
 
-  <form id="adm-form" class="hidden">
-    <div class="admin-card">
-      <h2>Weekly hours (Japan time)</h2>
-      <p class="note">Lessons start on the hour. A lesson must end by the
-      day's closing time. Untick a day to close it. Specific dates can be
-      adjusted in the availability calendar below.</p>
-      <div id="adm-weekly"></div>
+<!-- ================= APP SHELL ================= -->
+<div class="shell hidden" id="adm-shell">
+  <div class="backdrop hidden" id="adm-backdrop"></div>
+  <aside class="sidebar" id="adm-sidebar">
+    <div class="side-brand"><span class="side-logo">🌸</span> Yumi Admin</div>
+    <nav class="side-nav">
+      <a href="#/dashboard" data-route="dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span><span class="nav-cn">概览</span></a>
+      <a href="#/bookings" data-route="bookings">
+        <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="0.5"/><circle cx="4" cy="12" r="0.5"/><circle cx="4" cy="18" r="0.5"/></svg>
+        <span>Bookings</span><span class="nav-cn">预约管理</span></a>
+      <a href="#/schedule" data-route="schedule">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Schedule</span><span class="nav-cn">课表</span></a>
+      <a href="#/availability" data-route="availability">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Availability</span><span class="nav-cn">可约时间</span></a>
+      <a href="#/packages" data-route="packages">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
+        <span>Packages</span><span class="nav-cn">课时包</span></a>
+      <a href="#/settings" data-route="settings">
+        <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
+        <span>Settings</span><span class="nav-cn">设置</span></a>
+    </nav>
+    <div class="side-foot">
+      <a class="side-foot-link" href="/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></svg>
+        View site ↗</a>
+      <button class="side-foot-link" id="adm-lock" type="button">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Lock · 锁定</button>
     </div>
+  </aside>
 
-    <div class="admin-card">
-      <h2>Availability calendar · 可约日历</h2>
-      <p class="note">点任意一天来单独调整：这天休息、特殊时段，或者屏蔽
-      某几个开始时间。日历上看到的就是学生能约到的安排。</p>
-      <div class="adm-cal" id="adm-cal"></div>
-      <div class="day-editor hidden" id="adm-day-editor"></div>
-      <div class="vac-row">
-        <label class="field">连续休息 · 从
-          <input type="date" id="vac-start" /></label>
-        <label class="field">到
-          <input type="date" id="vac-end" /></label>
-        <button class="btn btn-ghost" id="vac-apply" type="button">Apply 整段休息</button>
+  <div class="main">
+    <header class="topbar">
+      <button class="burger" id="adm-burger" type="button" aria-label="Toggle menu">☰</button>
+      <h1 id="adm-view-title">Dashboard · 概览</h1>
+      <span class="topbar-env">yumi.ki-toko.com</span>
+    </header>
+
+    <main class="content" id="adm-content">
+
+      <!-- ===== Dashboard ===== -->
+      <section class="view" id="adm-dashboard-card" data-view="dashboard">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">今日课程 · Lessons today</div>
+            <div class="stat-num" id="dash-today-count">–</div>
+            <div class="stat-sub" id="dash-today-sub">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">待上预约 · Upcoming bookings</div>
+            <div class="stat-num" id="dash-upcoming-count">–</div>
+            <div class="stat-sub">未来 90 天 · next 90 days</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">进行中课时包 · Active packages</div>
+            <div class="stat-num" id="dash-subs-count">–</div>
+            <div class="stat-sub" id="dash-subs-sub">—</div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="panel">
+            <h2>Today's lessons · 今天的课</h2>
+            <div id="dash-today-list"><p class="note">Loading…</p></div>
+          </div>
+          <div class="panel">
+            <h2>Next upcoming · 接下来的预约</h2>
+            <div id="dash-next-list"><p class="note">Loading…</p></div>
+          </div>
+        </div>
+        <p class="msg" id="dash-msg"></p>
+      </section>
+
+      <!-- ===== Bookings ===== -->
+      <div class="panel view hidden" id="adm-bookings-card" data-view="bookings">
+        <h2>Bookings · 预约管理</h2>
+        <div class="filter-bar">
+          <label class="field">Status
+            <select id="adm-bk-status">
+              <option value="">All</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="pending_payment">Pending payment</option>
+              <option value="paid">Paid (all)</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select></label>
+          <label class="field grow">Search (name, email, reference)
+            <input type="text" id="adm-bk-q" /></label>
+          <label class="field">Date
+            <input type="date" id="adm-bk-date" /></label>
+          <button class="btn" id="adm-bk-refresh" type="button">Refresh</button>
+        </div>
+        <p class="msg" id="adm-bk-msg"></p>
+        <div class="table-scroll">
+          <table class="data-table bk-table" id="adm-bk-table">
+            <thead><tr><th>Date &amp; time (JST)</th><th>Student</th><th>Course</th>
+              <th>Status</th><th>Amount</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
-      <p class="note" id="vac-msg"></p>
-      <div class="summary-line" id="adm-summary"></div>
-    </div>
 
-    <div class="admin-card">
-      <h2>Blocked dates</h2>
-      <p class="note">Holidays and days off — no lessons can be booked on
-      these dates. One date per line, as YYYY-MM-DD. (The calendar above
-      can do the same per day; this list still works and is overridden by
-      a "特殊时段" day in the calendar.)</p>
-      <textarea class="blocked" id="adm-blocked" spellcheck="false"
-        placeholder="2026-12-31&#10;2027-01-01"></textarea>
-    </div>
-
-    <div class="admin-card">
-      <h2>Online meeting</h2>
-      <label class="field">Fixed meeting link (Zoom / Google Meet)
-        <input type="url" id="adm-meeting" placeholder="https://…" /></label>
-      <p class="note">Shown in every booking confirmation and email. Leave
-      empty and students will see “your teacher will send the meeting link
-      before the lesson”.</p>
-    </div>
-
-    <div class="admin-card">
-      <h2>Email (Resend)</h2>
-      <label class="field">From address
-        <input type="email" id="adm-resend-from"
-          placeholder="yumi-lesson@ki-toko.com" /></label>
-      <p class="note">Mail is sent as “Yumi Japanese Lessons
-      &lt;yumi-lesson@ki-toko.com&gt;” via Resend.</p>
-      <label class="field">Resend API key
-        <input type="password" id="adm-resend-key" autocomplete="off"
-          placeholder="Leave blank to keep the saved key" /></label>
-      <p class="note" id="adm-resend-state"></p>
-      <label class="field">Teacher notification email (optional)
-        <input type="email" id="adm-teacher"
-          placeholder="Where booking notifications go" /></label>
-      <label class="field">Reply-to for student emails (optional)
-        <input type="email" id="adm-replyto"
-          placeholder="Where student replies should land" /></label>
-      <p class="note">Booking emails are always recorded in the outbox.
-      They are actually sent only when both the From address and a Resend
-      API key are set.</p>
-    </div>
-
-    <div class="admin-card">
-      <h2>Teacher's Google Calendar</h2>
-      <p class="note">Lessons feed (ICS) — give this URL to Yumi once; she
-      adds it in Google Calendar under <em>Settings → Add calendar →
-      From URL</em>, and every paid lesson then appears in her calendar
-      automatically (cancellations drop out on their own). Anyone with
-      the URL can see booking names — keep it private, and regenerate
-      the key to revoke access.</p>
-      <label class="field">Calendar feed key
-        <input type="text" id="adm-calendar-key" autocomplete="off"
-          placeholder="Leave empty to disable the feed" /></label>
-      <div class="key-row">
-        <button class="btn btn-ghost" id="adm-gen-key" type="button">Generate calendar key</button>
-        <button class="btn btn-ghost" id="adm-copy-feed" type="button">Copy feed URL</button>
+      <!-- ===== Schedule ===== -->
+      <div class="panel view hidden" id="adm-schedule-card" data-view="schedule">
+        <h2>Schedule · 课表</h2>
+        <p class="note">这个月已经订好的课。点任意一天看当天的课程和老师备注；
+        要改可约时间，去「Availability · 可约时间」。</p>
+        <div class="sch-grid">
+          <div class="adm-cal sch-cal" id="sch-cal"></div>
+          <div class="day-editor sch-panel" id="sch-day-panel"></div>
+        </div>
       </div>
-      <p class="note" id="adm-feed-url"></p>
-    </div>
 
-    <button class="btn" id="adm-save" type="submit">Save settings</button>
-    <p class="msg" id="adm-save-msg"></p>
-  </form>
+      <!-- ===== Settings form (Availability + Settings views) ===== -->
+      <form id="adm-form">
+        <section class="view hidden" data-view="availability">
+          <div class="panel">
+            <h2>Weekly hours (Japan time) · 每周时间</h2>
+            <p class="note">Lessons start on the hour. A lesson must end by the
+            day's closing time. Untick a day to close it. Specific dates can be
+            adjusted in the availability calendar below.</p>
+            <div id="adm-weekly"></div>
+          </div>
 
-  <div class="admin-card hidden" id="adm-bookings-card">
-    <h2>Bookings</h2>
-    <div class="key-row">
-      <label class="field">Status
-        <select id="adm-bk-status">
-          <option value="">All</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="pending_payment">Pending payment</option>
-          <option value="paid">Paid (all)</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select></label>
-      <label class="field">Search (name, email, reference)
-        <input type="text" id="adm-bk-q" /></label>
-      <label class="field">Date
-        <input type="date" id="adm-bk-date" /></label>
-      <button class="btn" id="adm-bk-refresh" type="button">Refresh</button>
-    </div>
-    <p class="msg" id="adm-bk-msg"></p>
-    <div style="overflow-x:auto">
-      <table class="bk-table" id="adm-bk-table">
-        <thead><tr><th>Date &amp; time (JST)</th><th>Course</th><th>Student</th>
-          <th>Status</th><th>Amount</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+          <div class="panel">
+            <h2>Availability calendar · 可约日历</h2>
+            <p class="note">点任意一天来单独调整：这天休息、特殊时段，或者屏蔽
+            某几个开始时间。日历上看到的就是学生能约到的安排。</p>
+            <div class="avail-grid">
+              <div class="adm-cal" id="adm-cal"></div>
+              <div class="day-editor hidden" id="adm-day-editor"></div>
+            </div>
+            <div class="vac-row">
+              <label class="field">连续休息 · 从
+                <input type="date" id="vac-start" /></label>
+              <label class="field">到
+                <input type="date" id="vac-end" /></label>
+              <button class="btn btn-ghost" id="vac-apply" type="button">Apply 整段休息</button>
+            </div>
+            <p class="note" id="vac-msg"></p>
+            <div class="summary-line" id="adm-summary"></div>
+          </div>
 
-  <div class="admin-card hidden" id="adm-subs-card">
-    <h2>订阅 · 每周固定课</h2>
-    <p class="note">学生的每周固定课订阅（每期 4 节）。这里只能停止订阅——
-    停止后，未来的课程会全部取消并退款（演示），已上过的课不受影响。</p>
-    <p class="msg" id="adm-subs-msg"></p>
-    <div style="overflow-x:auto">
-      <table class="sub-table" id="adm-subs-table">
-        <thead><tr><th>学生</th><th>固定时间</th><th>课程</th>
-          <th>状态</th><th>下一节</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
+          <div class="panel">
+            <h2>Blocked dates</h2>
+            <p class="note">Holidays and days off — no lessons can be booked on
+            these dates. One date per line, as YYYY-MM-DD. (The calendar above
+            can do the same per day; this list still works and is overridden by
+            a "特殊时段" day in the calendar.)</p>
+            <textarea class="blocked" id="adm-blocked" spellcheck="false"
+              placeholder="2026-12-31&#10;2027-01-01"></textarea>
+          </div>
+        </section>
+
+        <section class="view hidden" data-view="settings">
+          <div class="panel">
+            <h2>Email (Resend)</h2>
+            <label class="field">From address
+              <input type="email" id="adm-resend-from"
+                placeholder="yumi-lesson@ki-toko.com" /></label>
+            <p class="note">Mail is sent as “Yumi Japanese Lessons
+            &lt;yumi-lesson@ki-toko.com&gt;” via Resend.</p>
+            <label class="field">Resend API key
+              <input type="password" id="adm-resend-key" autocomplete="off"
+                placeholder="Leave blank to keep the saved key" /></label>
+            <p class="note" id="adm-resend-state"></p>
+            <label class="field">Teacher notification email (optional)
+              <input type="email" id="adm-teacher"
+                placeholder="Where booking notifications go" /></label>
+            <label class="field">Reply-to for student emails (optional)
+              <input type="email" id="adm-replyto"
+                placeholder="Where student replies should land" /></label>
+            <p class="note">Booking emails are always recorded in the outbox.
+            They are actually sent only when both the From address and a Resend
+            API key are set.</p>
+          </div>
+
+          <div class="panel">
+            <h2>Meeting &amp; Calendar</h2>
+            <label class="field">Fixed meeting link (Zoom / Google Meet)
+              <input type="url" id="adm-meeting" placeholder="https://…" /></label>
+            <p class="note">Shown in every booking confirmation and email. Leave
+            empty and students will see “your teacher will send the meeting link
+            before the lesson”.</p>
+            <hr class="sep" />
+            <p class="note">Lessons feed (ICS) — give this URL to Yumi once; she
+            adds it in Google Calendar under <em>Settings → Add calendar →
+            From URL</em>, and every paid lesson then appears in her calendar
+            automatically (cancellations drop out on their own). Anyone with
+            the URL can see booking names — keep it private, and regenerate
+            the key to revoke access.</p>
+            <label class="field">Calendar feed key
+              <input type="text" id="adm-calendar-key" autocomplete="off"
+                placeholder="Leave empty to disable the feed" /></label>
+            <div class="key-row">
+              <button class="btn btn-ghost" id="adm-gen-key" type="button">Generate calendar key</button>
+              <button class="btn btn-ghost" id="adm-copy-feed" type="button">Copy feed URL</button>
+            </div>
+            <p class="note" id="adm-feed-url"></p>
+          </div>
+
+          <div class="panel">
+            <h2>Access · 管理员白名单</h2>
+            <p class="note">用这些邮箱注册/登录网站的学生账号，登录后会在右上角
+            看到一个「Admin」入口（只是快捷方式 — 进后台仍然需要管理员密码）。
+            一行一个邮箱，保存后生效。</p>
+            <label class="field">Admin emails
+              <textarea id="adm-admin-emails" rows="3" spellcheck="false"
+                placeholder="yumi.japan2026@gmail.com"></textarea></label>
+          </div>
+
+          <div class="panel">
+            <h2>Google sign-in · Google 登录</h2>
+            <p class="note">让学生在登录弹窗里用 Google 账号一键登录（按邮箱
+            并入已有账号）。在 Google Cloud Console 建一个 OAuth 2.0 客户端
+            （Web 应用），把下面的回调地址登记进去，再把 Client ID 和
+            Client Secret 填到这里。两者都填好后，登录弹窗才会出现
+            Google 按钮。</p>
+            <label class="field">Redirect URI (copy into Google Cloud Console)
+              <input type="text" id="adm-google-redirect" readonly
+                value="https://yumi.ki-toko.com/api/auth/google/callback" /></label>
+            <label class="field">Google Client ID
+              <input type="text" id="adm-google-id" autocomplete="off"
+                placeholder="….apps.googleusercontent.com" /></label>
+            <label class="field">Google Client Secret
+              <input type="password" id="adm-google-secret" autocomplete="off"
+                placeholder="Leave blank to keep the saved secret" /></label>
+            <p class="note" id="adm-google-state"></p>
+          </div>
+        </section>
+      </form>
+
+      <!-- ===== Packages ===== -->
+      <div class="panel view hidden" id="adm-subs-card" data-view="packages">
+        <h2>订阅 · 课时包</h2>
+        <p class="note">学生的课时包（6 / 10 / 20 节，每周固定 1–3 个时间）。
+        这里只能停止课时包——停止后，剩余课程会全部取消并按规则退款
+        （开课前 12 小时内的不退款），已上过的课不受影响。</p>
+        <p class="msg" id="adm-subs-msg"></p>
+        <div class="table-scroll">
+          <table class="data-table sub-table" id="adm-subs-table">
+            <thead><tr><th>学生</th><th>固定时间</th><th>课程</th>
+              <th>状态</th><th>下一节</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <div class="savebar hidden" id="adm-savebar">
+      <span class="savebar-note" id="adm-dirty-note">所有修改已保存</span>
+      <p class="msg" id="adm-save-msg"></p>
+      <button class="btn" id="adm-save" type="button">Save settings</button>
     </div>
   </div>
 </div>
+
+<div class="toast hidden" id="adm-toast" role="status"></div>
 
 <script>
 "use strict";
@@ -286,8 +556,12 @@ let draft = null;          // settings draft (dateOverrides/blockedHours live he
 let savedSnapshot = "";    // canonical JSON of the last saved form state
 let monthBookings = [];    // bookings of the visible calendar month
 let allBookings = [];      // bookings table rows (latest load)
-let calCursor = null;      // {y, m} visible month
+let calCursor = null;      // {y, m} visible month (availability editor)
 let selectedDate = null;   // selected day in the availability calendar
+let schCursor = null;      // {y, m} visible month (schedule board)
+let schSelected = null;    // selected day on the schedule board
+let schBookings = [];      // bookings of the schedule board's month
+let dashLoadedAt = 0;      // dashboard cache timestamp
 let courseNames = {};
 let legacyNames = {};
 
@@ -299,6 +573,21 @@ async function api(path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
+}
+
+/* ---------- toast ---------- */
+
+let toastTimer = null;
+function toast(text) {
+  const t = $("#adm-toast");
+  t.textContent = text;
+  t.classList.remove("hidden");
+  requestAnimationFrame(() => t.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.classList.add("hidden"), 260);
+  }, 2600);
 }
 
 /* ---------- settings form <-> draft ---------- */
@@ -353,6 +642,7 @@ function fillForm(s) {
   $("#adm-teacher").value = s.teacherEmail || "";
   $("#adm-replyto").value = s.replyTo || "";
   $("#adm-calendar-key").value = s.calendarKey || "";
+  $("#adm-admin-emails").value = (s.adminEmails || []).join("\n");
   updateFeedUrl();
   savedSnapshot = snapshot();
   refreshDirty();
@@ -377,6 +667,8 @@ function collect() {
     teacherEmail: $("#adm-teacher").value.trim(),
     replyTo: $("#adm-replyto").value.trim(),
     calendarKey: $("#adm-calendar-key").value.trim(),
+    adminEmails: $("#adm-admin-emails").value.split(/[\s,]+/)
+      .map((x) => x.trim()).filter(Boolean),
     dateOverrides: draft ? draft.dateOverrides : {},
     blockedHours: draft ? draft.blockedHours : {},
   };
@@ -393,6 +685,11 @@ function refreshDirty() {
   const btn = $("#adm-save");
   btn.classList.toggle("dirty", dirty);
   btn.textContent = dirty ? "Save settings · 有未保存的修改" : "Save settings";
+  const note = $("#adm-dirty-note");
+  if (note) {
+    note.textContent = dirty ? "● 有未保存的修改 · Unsaved changes" : "所有修改已保存";
+    note.classList.toggle("dirty", dirty);
+  }
 }
 
 function afterChange(availabilityToo) {
@@ -416,7 +713,7 @@ function compactHours(range) {
   return `${f(range.start)}–${f(range.end)}`;
 }
 
-/* ---------- availability calendar + schedule board ---------- */
+/* ---------- availability calendar + schedule board (shared cells) ---------- */
 
 function monthRange() {
   const { y, m } = calCursor;
@@ -438,11 +735,8 @@ function lessonsOn(dateStr) {
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-function renderCalendar() {
-  const cal = $("#adm-cal");
-  if (!draft || !calCursor) { cal.innerHTML = ""; return; }
-  const s = collect();
-  const { y, m } = calCursor;
+function buildCalendarHtml(cursor, selected, lessonsFor, s, idPrefix) {
+  const { y, m } = cursor;
   const firstDow = new Date(Date.UTC(y, m, 1)).getUTCDay();
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
@@ -456,11 +750,11 @@ function renderCalendar() {
     const isOverride = Object.prototype.hasOwnProperty.call(s.dateOverrides, ds);
     const special = isOverride && hours !== null;
     const blocked = (s.blockedHours[ds] || []).length > 0;
-    const lessons = lessonsOn(ds).filter((b) => b.effectiveStatus !== "cancelled");
+    const lessons = lessonsFor(ds).filter((b) => b.effectiveStatus !== "cancelled");
     const cls = ["cal-day"];
     if (!hours) cls.push("is-closed");
     if (special) cls.push("is-special");
-    if (ds === selectedDate) cls.push("selected");
+    if (ds === selected) cls.push("selected");
     if (ds === today) cls.push("today");
     const sub = !hours ? "休" : compactHours(hours);
     const miniRows = lessons.slice(0, 2).map((b) => {
@@ -478,14 +772,20 @@ function renderCalendar() {
       ${miniRows ? `<span class="d-lessons">${miniRows}${more}</span>` : dots}
     </button>`;
   }
-  cal.innerHTML = `
+  return `
     <div class="cal-head">
-      <button type="button" class="cal-nav" id="adm-cal-prev" aria-label="Previous month">‹</button>
+      <button type="button" class="cal-nav" id="${idPrefix}-prev" aria-label="Previous month">‹</button>
       <span class="cal-title">${title}</span>
-      <button type="button" class="cal-nav" id="adm-cal-next" aria-label="Next month">›</button>
+      <button type="button" class="cal-nav" id="${idPrefix}-next" aria-label="Next month">›</button>
     </div>
     <div class="cal-grid cal-week"><span>SUN</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span></div>
     <div class="cal-grid">${cells}</div>`;
+}
+
+function renderCalendar() {
+  const cal = $("#adm-cal");
+  if (!draft || !calCursor) { cal.innerHTML = ""; return; }
+  cal.innerHTML = buildCalendarHtml(calCursor, selectedDate, lessonsOn, collect(), "adm-cal");
   $("#adm-cal-prev").onclick = () => shiftMonth(-1);
   $("#adm-cal-next").onclick = () => shiftMonth(1);
   cal.querySelectorAll(".cal-day").forEach((b) => {
@@ -530,7 +830,7 @@ function renderSummary() {
   });
 }
 
-/* ---------- day editor （这天的课程 + availability) ---------- */
+/* ---------- day panel: lessons + remarks (shared) ---------- */
 
 function hourOptions(selected) {
   let out = "";
@@ -563,7 +863,7 @@ function wireRemarkBoxes(root) {
         await api("/api/admin/student-note", {
           method: "POST", body: JSON.stringify({ email, note: ta.value }),
         });
-        for (const b of [...monthBookings, ...allBookings]) {
+        for (const b of [...monthBookings, ...allBookings, ...schBookings]) {
           if (b.email.toLowerCase() === email.toLowerCase()) {
             b.studentRemark = ta.value; b.remarkIsDefault = false;
           }
@@ -571,6 +871,10 @@ function wireRemarkBoxes(root) {
         btn.textContent = "已保存 ✓";
         setTimeout(() => { btn.textContent = "保存备注"; btn.disabled = false; }, 1600);
         renderCalendar();
+        if (schCursor) {
+          renderScheduleCalendar();
+          if (!box.closest("#sch-day-panel")) renderScheduleDay();
+        }
       } catch (e) {
         btn.textContent = "保存失败，重试";
         btn.disabled = false;
@@ -579,6 +883,24 @@ function wireRemarkBoxes(root) {
     };
   });
 }
+
+function lessonsListHtml(lessons) {
+  return lessons.length ? lessons.map((b) => {
+    const end = fromMin(toMin(b.time) + (b.durationMinutes || 60));
+    const statusLabel = { upcoming: "Upcoming", completed: "Completed",
+      cancelled: "Cancelled", pending_payment: "Pending payment" }[b.effectiveStatus] || b.effectiveStatus;
+    const tip = `${b.name} — ${courseNames[b.courseId] || ""}` +
+      (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
+    return `
+    <div class="lesson-row${b.effectiveStatus === "cancelled" ? " is-cancelled" : ""}" title="${esc(tip)}">
+      <div class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</div>
+      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · 已退款 ${money(b.refundAmount)}` : ""}</div>
+      ${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}
+    </div>`;
+  }).join("") : `<p class="note">这天还没有课程。</p>`;
+}
+
+/* ---------- availability day editor （这天的课程 + availability) ---------- */
 
 function renderDayEditor() {
   const ed = $("#adm-day-editor");
@@ -593,19 +915,7 @@ function renderDayEditor() {
   const weekly = s.weekly[String(wd)];
   const lessons = lessonsOn(ds);
 
-  const lessonsHtml = lessons.length ? lessons.map((b) => {
-    const end = fromMin(toMin(b.time) + (b.durationMinutes || 60));
-    const statusLabel = { upcoming: "Upcoming", completed: "Completed",
-      cancelled: "Cancelled", pending_payment: "Pending payment" }[b.effectiveStatus] || b.effectiveStatus;
-    const tip = `${b.name} — ${courseNames[b.courseId] || ""}` +
-      (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
-    return `
-    <div class="lesson-row${b.effectiveStatus === "cancelled" ? " is-cancelled" : ""}" title="${esc(tip)}">
-      <div class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</div>
-      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · 已退款 ${money(b.refundAmount)}` : ""}</div>
-      ${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}
-    </div>`;
-  }).join("") : `<p class="note">这天还没有课程。</p>`;
+  const lessonsHtml = lessonsListHtml(lessons);
 
   // start-hour chips (60-min granularity, like the worker's blockedHours)
   let chipsHtml = "";
@@ -674,6 +984,63 @@ function renderDayEditor() {
   });
 }
 
+/* ---------- schedule board （课表） ---------- */
+
+function lessonsOnSch(dateStr) {
+  return schBookings.filter((b) => b.date === dateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
+}
+
+async function loadScheduleMonth() {
+  if (!schCursor) return;
+  const { y, m } = schCursor;
+  const from = fmtD(y, m, 1);
+  const to = fmtD(y, m, new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
+  try {
+    const data = await api(`/api/admin/bookings?from=${from}&to=${to}`);
+    schBookings = data.bookings || [];
+  } catch { schBookings = []; }
+  renderScheduleCalendar();
+  renderScheduleDay();
+}
+
+function shiftScheduleMonth(delta) {
+  const nm = schCursor.m + delta;
+  schCursor = { y: schCursor.y + Math.floor(nm / 12), m: ((nm % 12) + 12) % 12 };
+  loadScheduleMonth();
+}
+
+function renderScheduleCalendar() {
+  const cal = $("#sch-cal");
+  if (!schCursor) { cal.innerHTML = ""; return; }
+  cal.innerHTML = buildCalendarHtml(schCursor, schSelected, lessonsOnSch,
+    draft ? collect() : { dateOverrides: {}, blockedHours: {}, blockedDates: [], weekly: {} }, "sch-cal");
+  $("#sch-cal-prev").onclick = () => shiftScheduleMonth(-1);
+  $("#sch-cal-next").onclick = () => shiftScheduleMonth(1);
+  cal.querySelectorAll(".cal-day").forEach((b) => {
+    b.onclick = () => { schSelected = b.dataset.date; renderScheduleCalendar(); renderScheduleDay(); };
+  });
+}
+
+function renderScheduleDay() {
+  const panel = $("#sch-day-panel");
+  if (!schSelected) { panel.innerHTML = `<p class="note">选择一天查看课程。</p>`; return; }
+  const wd = new Date(schSelected + "T00:00:00Z").getUTCDay();
+  panel.innerHTML = `
+    <h3>${schSelected} · 周${DAY_CN[wd]} ${DAY_NAMES[wd]}</h3>
+    <h4 class="bk-sub">这天的课程 · Lessons this day</h4>
+    ${lessonsListHtml(lessonsOnSch(schSelected))}`;
+  wireRemarkBoxes(panel);
+}
+
+function gotoSchedule(dateStr) {
+  const [y, m] = dateStr.split("-").map(Number);
+  schCursor = { y, m: m - 1 };
+  schSelected = dateStr;
+  if (location.hash !== "#/schedule") location.hash = "#/schedule";
+  loadScheduleMonth();
+}
+
 /* ---------- vacation （连续休息） ---------- */
 
 $("#vac-apply").addEventListener("click", () => {
@@ -734,25 +1101,32 @@ async function loadBookings() {
   if (st) params.set("status", st);
   if (q) params.set("q", q);
   if (date) params.set("date", date);
+  const tbody = $("#adm-bk-table").querySelector("tbody");
+  tbody.innerHTML = `<tr><td colspan="6" class="table-loading">Loading…</td></tr>`;
   const data = await api(`/api/admin/bookings?${params}`);
   allBookings = data.bookings || [];
   $("#adm-bk-msg").textContent = `${data.total} booking(s)`;
-  const tbody = $("#adm-bk-table").querySelector("tbody");
   tbody.innerHTML = allBookings.map((b) => {
     const cancellable = (b.status === "paid" || b.status === "pending_payment") &&
       b.effectiveStatus !== "completed";
     return `
     <tr>
-      <td>${b.date}<br>${b.time} JST</td>
-      <td>${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "—")}<br>${b.durationMinutes || ""} min</td>
-      <td>${esc(b.name)}<br>${esc(b.email)}</td>
-      <td>${STATUS_LABEL[b.effectiveStatus] || b.effectiveStatus}${b.refundAmount > 0 ? `<br><span title="${esc(b.refundedAt || "")}">已退款 ${money(b.refundAmount)}</span>` : ""}</td>
+      <td class="nowrap">${b.date}<br><span class="cell-sub">${b.time} JST</span></td>
+      <td>${esc(b.name)}<br><span class="cell-sub">${esc(b.email)}</span></td>
+      <td>${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "—")}<br><span class="cell-sub">${b.durationMinutes || ""} min</span></td>
+      <td><span class="pill pill-${b.effectiveStatus}">${STATUS_LABEL[b.effectiveStatus] || b.effectiveStatus}</span>${b.refundAmount > 0 ? `<span class="refund-line" title="${esc(b.refundedAt || "")}">已退款 ${money(b.refundAmount)}</span>` : ""}</td>
       <td>${money(b.amount)}</td>
-      <td>${cancellable ? `<button type="button" class="btn btn-ghost" data-cancel="${b.id}">Cancel</button>` : ""}</td>
+      <td class="actions"><button type="button" class="btn btn-ghost btn-small" data-note="${b.id}">备注</button>${cancellable ? `<button type="button" class="btn btn-ghost btn-small" data-cancel="${b.id}">Cancel</button>` : ""}</td>
     </tr>
-    <tr class="remark-row"><td colspan="6">${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}</td></tr>`;
+    <tr class="remark-row hidden"><td colspan="6">${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}</td></tr>`;
   }).join("") || `<tr><td colspan="6">No bookings match.</td></tr>`;
   wireRemarkBoxes(tbody);
+  tbody.querySelectorAll("[data-note]").forEach((btn) => {
+    btn.onclick = () => {
+      const row = btn.closest("tr").nextElementSibling;
+      if (row) row.classList.toggle("hidden");
+    };
+  });
   tbody.querySelectorAll("[data-cancel]").forEach((btn) => {
     btn.onclick = async () => {
       const b = allBookings.find((x) => x.id === btn.dataset.cancel);
@@ -760,8 +1134,11 @@ async function loadBookings() {
       btn.disabled = true;
       try {
         await api(`/api/admin/bookings/${b.id}/cancel`, { method: "POST", body: "{}" });
+        toast("已取消并退款 · Cancelled");
         await loadBookings();
         await loadMonthBookings();
+        await loadScheduleMonth();
+        loadDashboard(true);
       } catch (e) { alert(e.message); btn.disabled = false; }
     };
   });
@@ -769,6 +1146,9 @@ async function loadBookings() {
 $("#adm-bk-refresh").addEventListener("click", () => loadBookings().catch((e) => alert(e.message)));
 $("#adm-bk-status").addEventListener("change", () => loadBookings().catch(() => {}));
 $("#adm-bk-date").addEventListener("change", () => loadBookings().catch(() => {}));
+$("#adm-bk-q").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); loadBookings().catch((err) => alert(err.message)); }
+});
 
 /* ---------- subscriptions （课时包） ---------- */
 
@@ -782,13 +1162,13 @@ async function loadSubs() {
       `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
     return `
     <tr>
-      <td>${esc(s.name)}<br>${esc(s.email)}</td>
-      <td>${esc(slots)}<br>${s.durationMinutes} min</td>
-      <td>${esc(courseNames[s.courseId] || s.courseId || "")}<br>${s.totalLessons} 节</td>
-      <td>${s.status === "active" ? "进行中" : s.status === "stopped" ? "已停止" : esc(s.status)}</td>
+      <td>${esc(s.name)}<br><span class="cell-sub">${esc(s.email)}</span></td>
+      <td>${esc(slots)}<br><span class="cell-sub">${s.durationMinutes} min</span></td>
+      <td>${esc(courseNames[s.courseId] || s.courseId || "")}<br><span class="cell-sub">${s.totalLessons} 节</span></td>
+      <td>${s.status === "active" ? `<span class="pill pill-upcoming">进行中</span>` : s.status === "stopped" ? `<span class="pill pill-cancelled">已停止</span>` : esc(s.status)}</td>
       <td>${s.status === "active" ? `${s.remainingLessons ?? "—"} 节` +
-        (s.nextLesson ? `<br>下一节 ${s.nextLesson.date}` : "") : "—"}</td>
-      <td>${s.status === "active" ? `<button type="button" class="btn btn-ghost" data-stop="${s.id}">停止</button>` : ""}</td>
+        (s.nextLesson ? `<br><span class="cell-sub">下一节 ${s.nextLesson.date}</span>` : "") : "—"}</td>
+      <td class="actions">${s.status === "active" ? `<button type="button" class="btn btn-ghost btn-small" data-stop="${s.id}">停止</button>` : ""}</td>
     </tr>`;
   }).join("");
   tbody.querySelectorAll("[data-stop]").forEach((btn) => {
@@ -802,12 +1182,118 @@ async function loadSubs() {
       btn.disabled = true;
       try {
         await api(`/api/admin/subscriptions/${s.id}/stop`, { method: "POST", body: "{}" });
+        toast("课时包已停止 · Package stopped");
         await loadSubs();
         await loadMonthBookings();
+        await loadScheduleMonth();
+        loadDashboard(true);
       } catch (e) { alert(e.message); btn.disabled = false; }
     };
   });
 }
+
+/* ---------- dashboard （概览，全部派生自现有 admin API) ---------- */
+
+function jstTodayStr() {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+}
+function addDaysStr(ds, n) {
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+async function loadDashboard(force) {
+  if (!adminKey) return;
+  if (!force && Date.now() - dashLoadedAt < 60_000) return;
+  dashLoadedAt = Date.now();
+  const today = jstTodayStr();
+  try {
+    const [todayData, upData, subsData] = await Promise.all([
+      api(`/api/admin/bookings?from=${today}&to=${today}`),
+      api(`/api/admin/bookings?status=upcoming&from=${today}&to=${addDaysStr(today, 90)}`),
+      api(`/api/admin/subscriptions`),
+    ]);
+    const todayLessons = (todayData.bookings || [])
+      .filter((b) => b.effectiveStatus !== "cancelled")
+      .sort((a, b) => a.time.localeCompare(b.time));
+    $("#dash-today-count").textContent = todayLessons.length;
+    const twd = new Date(today + "T00:00:00Z").getUTCDay();
+    $("#dash-today-sub").textContent = `${today} · 周${DAY_CN[twd]}`;
+    $("#dash-upcoming-count").textContent =
+      upData.total ?? (upData.bookings || []).length;
+    const activeSubs = (subsData.subscriptions || []).filter((s) => s.status === "active");
+    $("#dash-subs-count").textContent = activeSubs.length;
+    const remaining = activeSubs.reduce((n, s) => n + (s.remainingLessons || 0), 0);
+    $("#dash-subs-sub").textContent = activeSubs.length
+      ? `共剩 ${remaining} 节课` : "暂无进行中的课时包";
+
+    const row = (b, withDate) => `
+      <button type="button" class="dash-row" data-goto="${b.date}">
+        <span class="dash-time">${withDate ? `${b.date.slice(5)} ` : ""}${b.time}</span>
+        <span class="dash-name">${esc(b.name)}</span>
+        <span class="dash-course">${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "")} · ${b.durationMinutes || ""} min</span>
+      </button>`;
+    $("#dash-today-list").innerHTML = todayLessons.length
+      ? todayLessons.map((b) => row(b, false)).join("")
+      : `<p class="note">今天没有课程。</p>`;
+    const next = [...(upData.bookings || [])]
+      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 6);
+    $("#dash-next-list").innerHTML = next.length
+      ? next.map((b) => row(b, true)).join("")
+      : `<p class="note">未来 90 天暂无待上预约。</p>`;
+    document.querySelectorAll("[data-goto]").forEach((el) => {
+      el.onclick = () => gotoSchedule(el.dataset.goto);
+    });
+    $("#dash-msg").textContent = "";
+  } catch (e) {
+    dashLoadedAt = 0;
+    $("#dash-msg").textContent = e.message;
+  }
+}
+
+/* ---------- router / shell ---------- */
+
+const ROUTES = {
+  dashboard: "Dashboard · 概览",
+  bookings: "Bookings · 预约管理",
+  schedule: "Schedule · 课表",
+  availability: "Availability · 可约时间",
+  packages: "Packages · 课时包",
+  settings: "Settings · 设置",
+};
+function routeName() {
+  const h = (location.hash || "").replace(/^#\/?/, "");
+  return ROUTES[h] ? h : "dashboard";
+}
+function closeSidebar() {
+  $("#adm-sidebar").classList.remove("open");
+  $("#adm-backdrop").classList.add("hidden");
+}
+function applyRoute() {
+  const r = routeName();
+  document.querySelectorAll("[data-view]").forEach((el) =>
+    el.classList.toggle("hidden", el.dataset.view !== r));
+  document.querySelectorAll(".side-nav a").forEach((a) =>
+    a.classList.toggle("active", a.dataset.route === r));
+  $("#adm-view-title").textContent = ROUTES[r];
+  $("#adm-savebar").classList.toggle("hidden",
+    !(r === "availability" || r === "settings"));
+  closeSidebar();
+  $("#adm-content").scrollTop = 0;
+  if (r === "dashboard") loadDashboard(false);
+}
+window.addEventListener("hashchange", applyRoute);
+$("#adm-burger").addEventListener("click", () => {
+  const open = $("#adm-sidebar").classList.toggle("open");
+  $("#adm-backdrop").classList.toggle("hidden", !open);
+});
+$("#adm-backdrop").addEventListener("click", closeSidebar);
+$("#adm-lock").addEventListener("click", () => {
+  sessionStorage.removeItem("yumiAdminKey");
+  adminKey = "";
+  location.hash = "";
+  location.reload();
+});
 
 /* ---------- load + save ---------- */
 
@@ -819,26 +1305,33 @@ async function loadAll() {
     const data = await api("/api/admin/settings");
     sessionStorage.setItem("yumiAdminKey", adminKey);
     fillForm(data.settings);
-    $("#adm-form").classList.remove("hidden");
-    $("#adm-bookings-card").classList.remove("hidden");
-    $("#adm-subs-card").classList.remove("hidden");
+    $("#adm-login").classList.add("hidden");
+    $("#adm-shell").classList.remove("hidden");
     $("#adm-msg").textContent = "";
     const now = new Date(Date.now() + 9 * 3600_000);
     calCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
+    schCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
     selectedDate = now.toISOString().slice(0, 10);
+    schSelected = selectedDate;
+    if (!location.hash) history.replaceState(null, "", "#/dashboard");
+    applyRoute();
     renderCalendar();
     renderSummary();
     await loadMonthBookings();
+    await loadScheduleMonth();
     await loadBookings();
     await loadSubs();
+    await loadDashboard(true);
   } catch (e) {
     $("#adm-msg").textContent = e.message;
   }
 }
 $("#adm-load").addEventListener("click", loadAll);
+$("#adm-key").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); loadAll(); }
+});
 
-$("#adm-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+async function doSave() {
   const btn = $("#adm-save");
   btn.disabled = true;
   try {
@@ -853,14 +1346,18 @@ $("#adm-form").addEventListener("submit", async (e) => {
     btn.classList.add("saved-flash");
     btn.textContent = "已保存 ✓ Saved";
     $("#adm-save-msg").textContent = "";
+    toast("已保存 · Settings saved");
     setTimeout(() => { btn.classList.remove("saved-flash"); refreshDirty(); }, 1800);
     await loadMonthBookings();
+    await loadScheduleMonth();
   } catch (err) {
     $("#adm-save-msg").textContent = err.message;
   } finally {
     btn.disabled = false;
   }
-});
+}
+$("#adm-form").addEventListener("submit", (e) => { e.preventDefault(); doSave(); });
+$("#adm-save").addEventListener("click", () => doSave());
 
 // Text-ish inputs only affect the dirty state; the blocked-dates list
 // also changes the calendar, so it re-renders availability too.
