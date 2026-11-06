@@ -176,22 +176,43 @@ function effectiveStatus(b, now = Date.now()) {
   return b.status; // pending_payment stays pending_payment
 }
 
-function publicBooking(b, settings) {
+/** Student-facing display status: students never see a payment
+ *  state — a pending-payment booking simply reads as "upcoming";
+ *  "cancelled" is the only special state ever shown. */
+function studentEffectiveStatus(b) {
+  if (b.status === "cancelled") return "cancelled";
+  if (b.status === "pending_payment") return "upcoming";
+  return effectiveStatus(b);
+}
+
+function publicBooking(b, settings, audience = "student") {
   if (!b) return null;
   const { id, courseId, lessonTypeId, durationId, durationMinutes, date, time,
     name, email, status, amount, currency, reschedules,
     lessonsTotal, createdAt } = b;
-  // The meeting link is resolved at read time so the teacher can change it
-  // in settings and existing bookings pick up the new link. Bookings paid
-  // before this change keep the link stored on them, if any.
-  const meetLink = b.meetLink || (settings && settings.meeting.url) || null;
-  return { id, courseId, lessonTypeId, durationId, durationMinutes, date, time,
-    name, email, status, effectiveStatus: effectiveStatus(b),
-    amount, currency, meetLink, reschedules,
+  // The meeting link is resolved at read time so the teacher can change
+  // it in settings and existing bookings pick up the new link — but a
+  // student only receives it once the booking is PAID. The teacher
+  // (audience "admin") always sees it.
+  const paid = status === "paid";
+  const meetLink = (audience === "admin" || paid)
+    ? (b.meetLink || (settings && settings.meeting.url) || null)
+    : null;
+  const base = { id, courseId, lessonTypeId, durationId, durationMinutes,
+    date, time, name, email, amount, currency, meetLink, reschedules,
     lessonsTotal, createdAt, subscriptionId: b.subscriptionId || null,
     refund: b.refund || null,
     refundAmount: b.refundAmount ?? null,
     refundedAt: b.refundedAt || null };
+  if (audience === "admin") {
+    return { ...base, status, effectiveStatus: effectiveStatus(b) };
+  }
+  // Student view: no payment-state strings anywhere — a pending
+  // booking is "unpaid" (machine field) with needsPayment for actions.
+  return { ...base,
+    status: paid || status === "cancelled" ? status : "unpaid",
+    effectiveStatus: studentEffectiveStatus(b),
+    needsPayment: status === "pending_payment" };
 }
 
 /* ---------------- Settings (KV `meta:settings`) ---------------- */
@@ -677,6 +698,11 @@ function courseNameOf(b) {
 }
 
 function meetingLine(b, settings) {
+  // The meeting link is revealed only once the booking is PAID;
+  // before that the student sees a neutral placeholder instead.
+  if (b.status !== "paid") {
+    return "The meeting link will appear here once payment is complete.";
+  }
   const url = b.meetLink || settings.meeting.url;
   return url
     ? `Online meeting link: ${url}`
@@ -1226,7 +1252,7 @@ export default {
       const bookings = filtered.slice(0, cap).map((b) => {
         const r = remarks.get(b.email.toLowerCase()) || { note: "", isDefault: false };
         return {
-          ...publicBooking(b, settings),
+          ...publicBooking(b, settings, "admin"),
           cancelledBy: b.cancelledBy || null,
           refund: b.refund || null,
           studentRemark: r.note,
@@ -1279,7 +1305,7 @@ export default {
       }
       await saveBooking(env, booking);
       defer(notifyBookingEvent(env, settings, booking, "cancelled"));
-      return json({ booking: publicBooking(booking, settings), refunded: wasPaid });
+      return json({ booking: publicBooking(booking, settings, "admin"), refunded: wasPaid });
     }
 
     /* ----- Student accounts ----- */

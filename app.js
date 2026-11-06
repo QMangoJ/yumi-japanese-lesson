@@ -392,14 +392,16 @@ function summaryRows(b) {
     ["Email", b.email],
     ["Total", money(b.amount)],
   );
-  if (b.id) rows.unshift(["Booking reference", b.id]);
-  if (b.status) {
-    const label = b.effectiveStatus && b.effectiveStatus !== b.status
-      ? b.effectiveStatus : b.status.replace("_", " ");
-    rows.push(["Status", label]);
+  // Students never see the booking reference or a payment status on
+  // the website (the reference lives in the emails); the only status
+  // ever rendered here is "Cancelled".
+  if (b.effectiveStatus === "cancelled") {
+    rows.push(["Status", "Cancelled"]);
   }
   if (b.meetLink) {
     rows.push(["Online meeting", `<a href="${b.meetLink}" target="_blank" rel="noopener">${b.meetLink}</a>`]);
+  } else if (b.needsPayment) {
+    rows.push(["Online meeting", "The meeting link will appear here once payment is complete."]);
   } else if (b.status === "paid") {
     rows.push(["Online meeting", "Your teacher will send the meeting link before the lesson."]);
   }
@@ -789,14 +791,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         const slotsText = sub.slots.map((sl) =>
           `周${WEEKDAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
         const rows = [
-          ["Booking reference", sub.id],
           ["Course", courseName(sub.courseId)],
           ["课时包 Package", `${sub.totalLessons} 节 · ${dur.minutes} min each`],
           ["每周固定时间 Weekly", `${slotsText} (JST)`],
           ["Name", sub.name],
           ["Email", sub.email],
           ["Total", money(sub.totalPrice)],
-          ["Status", "active"],
         ];
         $("#bk-done").innerHTML =
           rows.map(([k, v]) => `<tr><th>${k}</th><td>${escHtml(v)}</td></tr>`).join("");
@@ -1028,7 +1028,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function myCard(b, manageable) {
     const canManage = manageable &&
-      (b.status === "paid" || b.status === "pending_payment");
+      (b.status === "paid" || b.status === "unpaid");
     return `
     <div class="my-card">
       <table class="summary">${summaryRows(b)}</table>
