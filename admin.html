@@ -256,18 +256,24 @@
   }
 
 /* ---------- weekly hour-block grid ---------- */
+.weekly-panel{padding:26px 28px}
 .wh-scroll{overflow-x:auto}
 .wh-paint{touch-action:none;user-select:none;-webkit-user-select:none}
-table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
+/* Fixed table layout: the time gutter plus 7 EQUAL day columns whose
+   widths never depend on cell or summary content. Below ~724px the
+   wrapper scrolls horizontally instead of squashing columns. */
+table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:100%;table-layout:fixed}
 .wh-grid th,.wh-grid td{padding:0;text-align:center;border:none}
-.wh-corner{width:46px}
-.wh-day-head{min-width:78px;padding:2px 2px 4px!important;vertical-align:top}
-.wh-day-name{font-weight:650;font-size:13px}
-.wh-all{display:block;margin:5px auto 3px;font:inherit;font-size:11.5px;padding:2px 12px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
+.wh-corner{width:52px}
+.wh-day-head{padding:4px 2px 8px!important;vertical-align:top}
+.wh-day-name{font-weight:650;font-size:13.5px}
+.wh-all{display:block;margin:6px auto 5px;font:inherit;font-size:12px;padding:4px 14px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
 .wh-all:hover{border-color:var(--accent);color:var(--accent)}
-.wh-day-sum{display:block;font-size:10.5px;color:var(--muted);line-height:1.4;min-height:29px;font-variant-numeric:tabular-nums}
-.wh-hour-label{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding-right:7px!important;text-align:right!important;white-space:nowrap}
-.wh-cell{width:100%;height:26px;border:1px solid var(--adm-line);background:#f4f2f0;border-radius:5px;cursor:pointer;font-size:11px;color:#cfc8c3;padding:0}
+/* Each selected range on its own line; 3 lines of height are always
+   reserved so the header never grows/shrinks while painting. */
+.wh-day-sum{display:block;font-size:10.5px;color:var(--muted);line-height:1.45;min-height:46px;font-variant-numeric:tabular-nums;white-space:pre-line}
+.wh-hour-label{font-size:12.5px;font-weight:600;color:var(--sub);font-variant-numeric:tabular-nums;padding-right:8px!important;text-align:right!important;white-space:nowrap}
+.wh-cell{width:100%;height:43px;border:1px solid var(--adm-line);background:#f4f2f0;border-radius:6px;cursor:pointer;font-size:12px;color:#cfc8c3;padding:0}
 .wh-cell:hover{border-color:var(--accent)}
 .wh-cell.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 
@@ -478,7 +484,7 @@ table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
       <!-- ===== Settings form (Availability + Settings views) ===== -->
       <form id="adm-form">
         <section class="view hidden" data-view="availability">
-          <div class="panel">
+          <div class="panel weekly-panel">
             <h2>Weekly hours (Japan time) · 每周时间</h2>
             <p class="note">点格子切换那一小时是否可约（粉色 = 可约，灰色 = 不可约）；
             按住鼠标拖动可以连续涂抹，手机上逐格点按。每列顶部的「全天」可以一键
@@ -745,6 +751,7 @@ function gridHours(day) {
     .map((c) => Number(c.dataset.hour)).sort((a, b) => a - b);
 }
 function runsText(hours) {
+  // One range per line (the header summary stacks them vertically).
   if (!hours.length) return "休息";
   const runs = [];
   let s = hours[0], p = hours[0];
@@ -753,7 +760,7 @@ function runsText(hours) {
     runs.push(`${pad(s)}:00–${pad(p + 1)}:00`); s = h; p = h;
   }
   runs.push(`${pad(s)}:00–${pad(p + 1)}:00`);
-  return runs.join(", ");
+  return runs.join("\n");
 }
 function updateDaySummary(day) {
   const el = document.querySelector(`#adm-weekly [data-sum="${day}"]`);
