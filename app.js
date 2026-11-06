@@ -1262,15 +1262,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     authUser = data.user;
     applyAuthToForm();
   } catch { authUser = null; }
-  /* Nav "My Bookings" leads to the account page: for signed-in
-   * users the link itself points at /account (plain navigation,
-   * new-tab friendly); signed-out visitors are sent through Google
-   * sign-in first and land on /account afterwards (the OAuth
-   * returnTo carries them there). If Google sign-in is not
-   * configured, the plain #my section anchor stays as fallback. */
+  /* Header nav account item is auth-state-aware: signed-out
+   * visitors see "Login" and are sent through Google sign-in,
+   * landing on /account afterwards (the OAuth returnTo carries
+   * them there); signed-in users see "Account" and the link
+   * itself points straight at /account (plain navigation,
+   * new-tab friendly). If Google sign-in is not configured, the
+   * plain #my section anchor stays as fallback. */
   const navMy = document.querySelector('.site-header nav a[href="#my"]');
   if (navMy) {
-    if (authUser) navMy.href = "/account";
+    if (authUser) {
+      navMy.href = "/account";
+      navMy.textContent = "Account";
+    }
     navMy.addEventListener("click", (e) => {
       if (!authUser && state.config?.googleAuth) {
         e.preventDefault();

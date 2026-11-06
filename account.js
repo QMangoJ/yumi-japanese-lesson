@@ -26,6 +26,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const loading = $("#acct-loading");
   if (loading) loading.remove();
 
+  /* Header nav account item mirrors the homepage: the static
+   * label is "Login"; signed-in users get "Account" pointing
+   * straight at /account, signed-out visitors are sent through
+   * Google sign-in and land back here (same flow as the gate). */
+  const navAcct = document.querySelector('.site-header nav a[href="/#my"]');
+  if (navAcct) {
+    if (user) {
+      navAcct.textContent = "Account";
+      navAcct.href = "/account";
+    } else if (config?.googleAuth) {
+      navAcct.addEventListener("click", (e) => {
+        e.preventDefault();
+        location.href = "/api/auth/google?next=" +
+          encodeURIComponent("/account");
+      });
+    }
+  }
+
   /* ---------- Signed out: Google sign-in gate ---------- */
   if (!user) {
     $("#acct-signedout").classList.remove("hidden");
