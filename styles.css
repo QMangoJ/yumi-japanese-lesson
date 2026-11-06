@@ -536,6 +536,11 @@ button { font-family: inherit; }
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  /* Flex-centred chevron, same fix as .cal-nav / .modal-close. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 .vp-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .vp-btn:disabled { opacity: 0.35; cursor: default; }
@@ -952,6 +957,10 @@ button { font-family: inherit; }
   width: 34px; height: 34px; border-radius: 50%;
   border: 1.5px solid var(--line); background: #fff;
   font-size: 19px; line-height: 1; cursor: pointer; color: var(--ink);
+  /* Same centring fix as .modal-close: flex-centre the chevron's
+     line box instead of letting it ride at the top of the button. */
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
 }
 .cal-nav:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .cal-nav:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -1065,12 +1074,20 @@ button { font-family: inherit; }
   border-radius: 50%;
   border: 1.5px solid var(--line);
   background: #fff;
-  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   color: var(--ink);
   z-index: 5;
+  /* Pixel-centred ×: the button is a flex box and the glyph is an
+     inline SVG drawn symmetrically around the viewBox centre, so
+     it sits at the exact centre of the circle on every platform.
+     (A text × rides high in its line box and shifts with fonts.) */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
+.modal-close svg { display: block; width: 15px; height: 15px; }
 .modal-close:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Steps + close wrapper: transparent on desktop (display: contents —
