@@ -209,6 +209,13 @@ a { color: var(--accent); }
   color: var(--accent);
   margin: 0 0 16px;
 }
+/* Alt sections center each direct child via .section-alt > * (auto side
+   margins), but the h2 rules above zero those margins and outrank it, so
+   headings in alt sections hug the left edge. Restore their centering. */
+.section.section-alt > h2 {
+  margin-left: auto;
+  margin-right: auto;
+}
 .section-lead { color: var(--sub); max-width: 640px; }
 
 .cards-3 {
