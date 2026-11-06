@@ -1687,6 +1687,11 @@ function openStudent(email) {
       <div>下节课 <strong>${s.nextLesson ? `${s.nextLesson.date} ${s.nextLesson.time}` : "—"}</strong></div>
       <div>上节课 <strong>${s.lastLessonDate || "—"}</strong></div>
     </div>
+    ${s.profile ? `
+    <div class="stu-facts" style="grid-template-columns:1fr">
+      <div>日语水平 <strong>${esc(s.profile.level || "—")}</strong></div>
+      <div>学习目标 <strong style="white-space:pre-wrap">${esc(s.profile.goals || "—")}</strong></div>
+    </div>` : ""}
     <h4 class="bk-sub">课时包 · Packages</h4>
     ${pkgHtml}
     <h4 class="bk-sub">课程时间线 · Timeline</h4>
