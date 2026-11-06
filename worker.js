@@ -209,7 +209,8 @@ function publicBooking(b, settings, audience = "student") {
     : null;
   const base = { id, courseId, lessonTypeId, durationId, durationMinutes,
     date, time, name, email, amount, currency, meetLink, reschedules,
-    lessonsTotal, createdAt, subscriptionId: b.subscriptionId || null,
+    lessonsTotal, createdAt, paidAt: b.paidAt || null,
+    subscriptionId: b.subscriptionId || null,
     refund: b.refund || null,
     refundAmount: b.refundAmount ?? null,
     refundedAt: b.refundedAt || null };
@@ -1048,7 +1049,7 @@ function publicSubscription(sub, nextLesson = null, remainingLessons = null, ref
     durationMinutes: sub.durationMinutes,
     slots, totalLessons: sub.totalLessons || 0,
     pricePerLesson: sub.pricePerLesson, totalPrice: sub.totalPrice || 0,
-    status: sub.status, createdAt: sub.createdAt,
+    status: sub.status, createdAt: sub.createdAt, paidAt: sub.paidAt || null,
     remainingLessons,
     refundableLessons: refundable ? refundable.count : null,
     refundableTotal: refundable ? refundable.total : null,

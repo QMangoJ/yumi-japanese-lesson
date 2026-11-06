@@ -289,6 +289,30 @@
     opacity: 0; transform: translate(-50%, -6px); transition: opacity .22s, transform .22s; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+  /* revenue view （收入统计） */
+  .rev-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    justify-content: space-between; margin: 4px 0 16px; }
+  .rev-modes { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .rev-chip { appearance: none; -webkit-appearance: none; border: 1px solid var(--adm-line-strong);
+    background: #fff; color: var(--ink); border-radius: 999px; padding: 6px 14px;
+    font: inherit; font-size: 13.5px; cursor: pointer; }
+  .rev-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .rev-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; }
+  .rev-nav { display: inline-flex; align-items: center; gap: 10px; }
+  #rev-label { font-weight: 650; font-size: 15px; min-width: 168px; text-align: center; }
+  .rev-stats { grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); }
+  .rev-chart { display: flex; align-items: flex-end; gap: 4px; height: 168px;
+    padding-top: 6px; border-bottom: 1px solid var(--adm-line); }
+  .rev-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end; }
+  .rev-val { font-size: 11px; color: var(--sub); margin-bottom: 4px; white-space: nowrap; }
+  .rev-bar { width: min(70%, 34px); background: var(--accent); border-radius: 5px 5px 0 0; min-height: 2px; }
+  .rev-bar.zero { background: var(--adm-line-strong); }
+  .rev-labels { display: flex; gap: 4px; margin-top: 6px; }
+  .rev-lab { flex: 1 1 0; min-width: 0; text-align: center; font-size: 11px; color: var(--sub);
+    white-space: nowrap; overflow: hidden; }
+  .rev-note { margin-top: 14px; }
+
   /* ============ dashboard ============ */
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
   .stat-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px; padding: 18px 20px; }
@@ -589,6 +613,9 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <a href="#/packages" data-route="packages">
         <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
         <span>Packages</span><span class="nav-cn">课时包</span></a>
+      <a href="#/revenue" data-route="revenue">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        <span>Revenue</span><span class="nav-cn">收入</span></a>
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Settings</span><span class="nav-cn">设置</span></a>
@@ -871,6 +898,58 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <tbody></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ===== Revenue ===== -->
+      <div class="panel view hidden" id="adm-revenue-card" data-view="revenue">
+        <h2>收入统计 · Revenue</h2>
+        <div class="rev-controls">
+          <div class="rev-modes" role="group" aria-label="Period type · 周期类型">
+            <button type="button" class="rev-chip" data-rev-mode="week">周 · Week</button>
+            <button type="button" class="rev-chip" data-rev-mode="month">月 · Month</button>
+            <button type="button" class="rev-chip" data-rev-mode="quarter">季度 · Quarter</button>
+            <button type="button" class="rev-chip" data-rev-mode="year">年 · Year</button>
+          </div>
+          <div class="rev-nav">
+            <button type="button" class="btn btn-ghost btn-small" id="rev-prev" aria-label="Previous period">‹</button>
+            <span id="rev-label">…</span>
+            <button type="button" class="btn btn-ghost btn-small" id="rev-next" aria-label="Next period">›</button>
+          </div>
+        </div>
+        <div class="stat-grid rev-stats">
+          <div class="stat-card">
+            <div class="stat-label">总收入 · Total revenue</div>
+            <div class="stat-num" id="rev-total"><span class="skl skl-num"></span></div>
+            <div class="stat-sub">单次课 + 课时包</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">单次课收入 · Single lessons</div>
+            <div class="stat-num" id="rev-single"><span class="skl skl-num"></span></div>
+            <div class="stat-sub">按上课日期计</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">课时包收入 · Packages</div>
+            <div class="stat-num" id="rev-package"><span class="skl skl-num"></span></div>
+            <div class="stat-sub">按购买日期计</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">课时数 · Lessons</div>
+            <div class="stat-num" id="rev-lessons"><span class="skl skl-num"></span></div>
+            <div class="stat-sub" id="rev-lessons-sub"><span class="skl skl-line" style="width:54%"></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">预约数 · Bookings</div>
+            <div class="stat-num" id="rev-bookings"><span class="skl skl-num"></span></div>
+            <div class="stat-sub">计入收入的预约 + 课时包</div>
+          </div>
+        </div>
+        <div class="rev-chart" id="rev-chart"></div>
+        <div class="rev-labels" id="rev-labels"></div>
+        <p class="note rev-note">统计口径：单次课收入按上课日期（JST）计入，金额为预约时记录的金额；
+          已取消并全额退款的不计入；开课前 12 小时内取消、未退款的照常计入（钱已收）。
+          课时包收入按购买（付款）日期计入整包价格，与上课日期无关。课时数包含课时包的课时。
+          周以周日为开始（与后台日历一致）。</p>
+        <p class="msg" id="rev-msg"></p>
       </div>
 
     </main>
@@ -2376,6 +2455,193 @@ function openStudent(email) {
   $("#stu-backdrop").classList.remove("hidden");
 }
 
+/* ==== REV-BEGIN: revenue aggregation (pure; harness-tested) ====
+ * Period math is all in JST (Asia/Tokyo) date strings, matching
+ * the rest of the admin. Weeks start on Sunday (same convention
+ * as the admin calendars). Single-lesson revenue is attributed to
+ * the LESSON date; package revenue to the PURCHASE (paidAt) date.
+ * A booking counts toward single revenue when it is not a package
+ * lesson and either it is paid, or it was cancelled without a
+ * refund after having been paid (inside-12h cancel: money kept).
+ * Cancelled-with-full-refund and never-paid bookings never count. */
+function revAddDays(ds, n) {
+  const d = new Date(ds + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function revMonthEnd(y, m) { // m: 0-based
+  return new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
+}
+function revJstDateOfMs(ms) {
+  return new Date(ms + 9 * 3600_000).toISOString().slice(0, 10);
+}
+const REV_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function revPeriod(mode, anchor) {
+  const [y, m0] = anchor.split("-").map(Number);
+  const m = m0 - 1;
+  let start, end, label;
+  const buckets = [];
+  if (mode === "week") {
+    const dow = new Date(anchor + "T00:00:00Z").getUTCDay();
+    start = revAddDays(anchor, -dow);
+    end = revAddDays(start, 6);
+    label = `${start} – ${end.slice(5)}`;
+    for (let i = 0; i < 7; i++) {
+      const ds = revAddDays(start, i);
+      buckets.push({ key: ds, label: `${REV_WEEKDAYS[i]} ${Number(ds.slice(8))}` });
+    }
+  } else if (mode === "month") {
+    start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    end = revMonthEnd(y, m);
+    label = `${y}年${m + 1}月`;
+    const days = Number(end.slice(8));
+    for (let d = 1; d <= days; d++) {
+      const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      buckets.push({ key: ds, label: String(d) });
+    }
+  } else if (mode === "quarter") {
+    const q = Math.floor(m / 3);
+    const sm = q * 3;
+    start = `${y}-${String(sm + 1).padStart(2, "0")}-01`;
+    end = revMonthEnd(y, sm + 2);
+    label = `${y} Q${q + 1}`;
+    for (let i = 0; i < 3; i++) {
+      const key = `${y}-${String(sm + i + 1).padStart(2, "0")}`;
+      buckets.push({ key, label: `${sm + i + 1}月` });
+    }
+  } else { // year
+    start = `${y}-01-01`;
+    end = `${y}-12-31`;
+    label = `${y}年`;
+    for (let i = 0; i < 12; i++) {
+      const key = `${y}-${String(i + 1).padStart(2, "0")}`;
+      buckets.push({ key, label: `${i + 1}月` });
+    }
+  }
+  return { mode, start, end, label, buckets };
+}
+function revBucketKey(mode, ds) {
+  return (mode === "quarter" || mode === "year") ? ds.slice(0, 7) : ds;
+}
+function revSingleCounts(b) {
+  if (!b || b.subscriptionId) return false;
+  if (b.status === "paid") return true;
+  // Cancelled after payment with NO refund (inside-12h): money kept.
+  return b.status === "cancelled" && !!b.paidAt && !(Number(b.refundAmount) > 0);
+}
+function revAggregate(bookings, subscriptions, period) {
+  const inPeriod = (ds) => !!ds && ds >= period.start && ds <= period.end;
+  const bucketTotals = new Map(period.buckets.map((b) => [b.key, 0]));
+  const addTo = (ds, amt) => {
+    const k = revBucketKey(period.mode, ds);
+    if (bucketTotals.has(k)) bucketTotals.set(k, bucketTotals.get(k) + amt);
+  };
+  let single = 0, packageRev = 0, lessonsDone = 0, lessonsBooked = 0, count = 0;
+  for (const b of bookings || []) {
+    if (!inPeriod(b.date)) continue;
+    // Lesson volume counts every real lesson (single + package);
+    // cancelled and never-paid lessons are not lessons held/booked.
+    if (b.effectiveStatus === "completed") lessonsDone++;
+    else if (b.effectiveStatus === "upcoming") lessonsBooked++;
+    if (revSingleCounts(b)) {
+      const amt = Number(b.amount) || 0;
+      single += amt; count++;
+      addTo(b.date, amt);
+    }
+  }
+  for (const s of subscriptions || []) {
+    if (!s || !s.paidAt || s.status === "pending_payment") continue;
+    const ds = revJstDateOfMs(Date.parse(s.paidAt));
+    if (!inPeriod(ds)) continue;
+    const amt = Number(s.totalPrice) || 0;
+    packageRev += amt; count++;
+    addTo(ds, amt);
+  }
+  return { total: single + packageRev, single, packageRev,
+    lessonsDone, lessonsBooked, bookingsCount: count,
+    buckets: period.buckets.map((b) => ({ ...b, total: bucketTotals.get(b.key) || 0 })) };
+}
+function revShiftAnchor(mode, anchor, dir) {
+  const [y, m0, d0] = anchor.split("-").map(Number);
+  if (mode === "week") return revAddDays(anchor, dir * 7);
+  const dm = mode === "month" ? 1 : mode === "quarter" ? 3 : 12;
+  const idx = y * 12 + (m0 - 1) + dir * dm;
+  const ny = Math.floor(idx / 12), nm = (idx % 12) + 1;
+  const last = Number(revMonthEnd(ny, nm - 1).slice(8));
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(Math.min(d0, last)).padStart(2, "0")}`;
+}
+/* ==== REV-END ==== */
+
+/* ---------- revenue view ---------- */
+let revMode = "month";
+let revAnchor = null; // JST date inside the shown period
+let revLoadedAt = 0, revSubsCache = null;
+
+async function loadRevenue(force) {
+  if (!authVia) return;
+  if (!force && revAnchor && Date.now() - revLoadedAt < 60_000) return;
+  if (!revAnchor) revAnchor = admDpToday();
+  const period = revPeriod(revMode, revAnchor);
+  document.querySelectorAll(".rev-chip").forEach((c) =>
+    c.classList.toggle("active", c.dataset.revMode === revMode));
+  $("#rev-label").textContent = period.label;
+  try {
+    // from/to bounds the lesson-date set AND raises the endpoint's
+    // result cap to 500 for the period.
+    const [bkData, subsData] = await Promise.all([
+      api(`/api/admin/bookings?from=${period.start}&to=${period.end}`),
+      revSubsCache ? Promise.resolve(revSubsCache)
+        : api("/api/admin/subscriptions").then((d) => (revSubsCache = d)),
+    ]);
+    renderRevenue(period, revAggregate(
+      bkData.bookings || [], subsData.subscriptions || [], period));
+    revLoadedAt = Date.now();
+    $("#rev-msg").textContent = "";
+  } catch (e) {
+    revLoadedAt = 0;
+    settleSkl($("#rev-total"), "–");
+    settleSkl($("#rev-single"), "–");
+    settleSkl($("#rev-package"), "–");
+    settleSkl($("#rev-lessons"), "–");
+    settleSkl($("#rev-lessons-sub"), "—");
+    settleSkl($("#rev-bookings"), "–");
+    $("#rev-chart").innerHTML = "";
+    $("#rev-labels").innerHTML = "";
+    $("#rev-msg").textContent = e.message;
+  }
+}
+function renderRevenue(period, agg) {
+  $("#rev-total").textContent = money(agg.total);
+  $("#rev-single").textContent = money(agg.single);
+  $("#rev-package").textContent = money(agg.packageRev);
+  $("#rev-lessons").textContent = agg.lessonsDone + agg.lessonsBooked;
+  $("#rev-lessons-sub").textContent =
+    `已完成 ${agg.lessonsDone} · 已预约 ${agg.lessonsBooked}`;
+  $("#rev-bookings").textContent = agg.bookingsCount;
+  const max = Math.max(1, ...agg.buckets.map((b) => b.total));
+  const showVals = agg.buckets.length <= 12;
+  $("#rev-chart").innerHTML = agg.buckets.map((b) => `
+    <div class="rev-col" title="${esc(b.label)} · ${money(b.total)}">
+      ${showVals && b.total > 0 ? `<span class="rev-val">${money(b.total)}</span>` : ""}
+      <div class="rev-bar${b.total > 0 ? "" : " zero"}"
+        style="height:${Math.max(2, Math.round(b.total / max * 100))}%"></div>
+    </div>`).join("");
+  $("#rev-labels").innerHTML = agg.buckets.map((b) =>
+    `<span class="rev-lab">${esc(b.label)}</span>`).join("");
+}
+document.querySelectorAll(".rev-chip").forEach((c) =>
+  c.addEventListener("click", () => {
+    revMode = c.dataset.revMode; loadRevenue(true);
+  }));
+$("#rev-prev").addEventListener("click", () => {
+  revAnchor = revShiftAnchor(revMode, revAnchor || admDpToday(), -1);
+  loadRevenue(true);
+});
+$("#rev-next").addEventListener("click", () => {
+  revAnchor = revShiftAnchor(revMode, revAnchor || admDpToday(), 1);
+  loadRevenue(true);
+});
+
 /* ---------- router / shell ---------- */
 
 const ROUTES = {
@@ -2385,6 +2651,7 @@ const ROUTES = {
   schedule: "Schedule · 课表",
   availability: "Availability · 可约时间",
   packages: "Packages · 课时包",
+  revenue: "Revenue · 收入统计",
   settings: "Settings · 设置",
 };
 function routeName() {
@@ -2408,6 +2675,7 @@ function applyRoute() {
   $("#adm-content").scrollTop = 0;
   if (r === "dashboard") loadDashboard(false);
   if (r === "students") loadStudents(false);
+  if (r === "revenue") loadRevenue(false);
 }
 window.addEventListener("hashchange", applyRoute);
 $("#adm-burger").addEventListener("click", () => {
