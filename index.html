@@ -20,7 +20,7 @@
     <a href="#faq">FAQ</a>
     <a href="#my">My Bookings</a>
   </nav>
-  <a class="btn btn-small" href="#book">Book a Lesson</a>
+  <a class="btn btn-small open-booking" href="#book">Book a Lesson</a>
 </header>
 
 <main id="top">
@@ -36,7 +36,7 @@
         with a patient teacher who has been exactly where you are.
       </p>
       <div class="hero-cta">
-        <a class="btn" href="#book">Book a lesson →</a>
+        <a class="btn open-booking" href="#book">Book a lesson →</a>
         <a class="btn btn-ghost" href="#lessons">See lesson menu</a>
       </div>
       <ul class="hero-stats">
@@ -209,6 +209,7 @@
     <p class="note">Every course is available at every duration — just pick
     30, 50 or 120 minutes when you book. New bookings are taken at least
     72 hours in advance.</p>
+    <p><a class="btn open-booking" href="#book">Book a Lesson</a></p>
   </section>
 
   <!-- BOOK -->
@@ -216,92 +217,15 @@
     <p class="eyebrow">04 — BOOK A LESSON</p>
     <h2>Book a Lesson</h2>
 
-    <ol class="steps" id="bk-steps">
-      <li data-step="1" class="active">Lesson</li>
-      <li data-step="2">Your Details</li>
-      <li data-step="3">Payment</li>
-      <li data-step="4">Done</li>
-    </ol>
-
-    <div class="booking-box">
-      <!-- Step 1: course, duration, date & time (one pane, like Sakura's booking modal) -->
-      <div class="bk-pane" data-pane="1">
-        <h3>Book your lesson</h3>
-        <p class="note">Choose a course and a lesson at least 72 hours in
-        advance. Times are shown in Japan time (JST).</p>
-        <h4 class="bk-sub">Course</h4>
-        <div class="choice-grid" id="bk-courses"></div>
-        <div class="bk-cols">
-          <div class="bk-col">
-            <h4 class="bk-sub">01 · Choose a date</h4>
-            <div id="bk-cal"></div>
-            <p class="note">Closed Sundays &amp; Mondays.</p>
-          </div>
-          <div class="bk-col">
-            <h4 class="bk-sub">02 · Choose a start time</h4>
-            <label class="field">Lesson duration
-              <select id="bk-duration"></select></label>
-            <div id="bk-times"></div>
-            <div class="bk-selected" id="bk-selected">Selected: choose a date and a time</div>
-            <div class="bk-total" id="bk-total"></div>
-          </div>
-        </div>
-        <p class="msg" id="bk-msg-1"></p>
-        <div class="bk-nav"><span></span>
-          <button class="btn" id="bk-to-2" disabled>Continue →</button></div>
-      </div>
-
-      <!-- Step 2 -->
-      <div class="bk-pane hidden" data-pane="2">
-        <h3>2. Your details</h3>
-        <label class="field">Your name
-          <input type="text" id="bk-name" autocomplete="name" placeholder="e.g. Alex Smith" /></label>
-        <label class="field">Email (for confirmation &amp; managing your booking)
-          <input type="email" id="bk-email" autocomplete="email" placeholder="you@example.com" /></label>
-        <label class="field">Anything you'd like me to know? (goals, level, topics — optional)
-          <textarea id="bk-notes" rows="3"></textarea></label>
-        <p class="msg" id="bk-msg-2"></p>
-        <div class="bk-nav">
-          <button class="btn btn-ghost" data-back="1">← Back</button>
-          <button class="btn" id="bk-to-3">Review &amp; pay →</button></div>
-      </div>
-
-      <!-- Step 3 -->
-      <div class="bk-pane hidden" data-pane="3">
-        <h3>3. Review &amp; payment</h3>
-        <table class="summary" id="bk-summary"></table>
-        <div class="test-banner">TEST MODE — this checkout is a demo. No real
-        payment is taken; use any card details to try the flow.</div>
-        <label class="field">Card number
-          <input type="text" id="pay-card" inputmode="numeric" placeholder="4242 4242 4242 4242" /></label>
-        <div class="field-row">
-          <label class="field">Expiry
-            <input type="text" id="pay-exp" placeholder="12 / 34" /></label>
-          <label class="field">CVC
-            <input type="text" id="pay-cvc" inputmode="numeric" placeholder="123" /></label>
-        </div>
-        <p class="note">Payments are processed securely through Stripe.
-        Major credit and debit cards are accepted (Visa, Mastercard, American Express).</p>
-        <p class="msg" id="bk-msg-3"></p>
-        <div class="bk-nav">
-          <button class="btn btn-ghost" data-back="2">← Back</button>
-          <button class="btn" id="bk-pay">Pay now</button></div>
-      </div>
-
-      <!-- Step 4 -->
-      <div class="bk-pane hidden" data-pane="4">
-        <h3>🎉 You're booked!</h3>
-        <table class="summary" id="bk-done"></table>
-        <p>Lessons are held on Google Meet — your personal link is in the table
-        above. A confirmation has been sent to your email.</p>
-        <p class="note">Keep your booking reference safe: together with your email
-        you can reschedule or cancel anytime in
-        <a href="#my">My Bookings</a> (up to 24 hours before the lesson,
-        max. 2 reschedules).</p>
-        <div class="bk-nav"><span></span>
-          <a class="btn" href="#my">Go to My Bookings</a></div>
-      </div>
-    </div>
+    <p class="section-lead">
+      Booking opens in a pop-up right on this page: pick your course, date
+      and time, and pay securely here — no account needed. Lessons are held
+      on Google Meet, and your personal Meet link arrives with your
+      confirmation.
+    </p>
+    <p><a class="btn open-booking" href="#book">Book a Lesson</a></p>
+    <p class="note">New bookings are taken at least 72 hours in advance.
+    I'm available Tuesday to Saturday, 10:00–20:00 JST.</p>
   </section>
 
   <!-- MY BOOKINGS -->
@@ -435,7 +359,7 @@
   <section class="cta">
     <h2>Ready to say “I can speak Japanese!”?</h2>
     <p>Book your first lesson and let's talk about your goals.</p>
-    <a class="btn btn-light" href="#book">Book a lesson →</a>
+    <a class="btn btn-light open-booking" href="#book">Book a lesson →</a>
   </section>
 
 </main>
@@ -444,6 +368,99 @@
   <p>🌸 YUMI Japanese Lessons — Online Japanese lessons with Yumi N., certified Japanese tutor in Chiba, Japan.</p>
   <p><small>Lessons are held on Google Meet. Booking and payment are handled securely on this site.</small></p>
 </footer>
+
+  <!-- BOOKING MODAL (Sakura-style pop-up) -->
+  <div class="modal-overlay hidden" id="book-modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">×</button>
+    <ol class="steps" id="bk-steps">
+      <li data-step="1" class="active">Lesson</li>
+      <li data-step="2">Your Details</li>
+      <li data-step="3">Payment</li>
+      <li data-step="4">Done</li>
+    </ol>
+
+    <div class="booking-box">
+      <!-- Step 1: course, duration, date & time (one pane, like Sakura's booking modal) -->
+      <div class="bk-pane" data-pane="1">
+        <h3>Book your lesson</h3>
+        <p class="note">Choose a course and a lesson at least 72 hours in
+        advance. Times are shown in Japan time (JST).</p>
+        <h4 class="bk-sub">Course</h4>
+        <div class="choice-grid" id="bk-courses"></div>
+        <div class="bk-cols">
+          <div class="bk-col">
+            <h4 class="bk-sub">01 · Choose a date</h4>
+            <div id="bk-cal"></div>
+            <p class="note">Closed Sundays &amp; Mondays.</p>
+          </div>
+          <div class="bk-col">
+            <h4 class="bk-sub">02 · Choose a start time</h4>
+            <label class="field">Lesson duration
+              <select id="bk-duration"></select></label>
+            <div id="bk-times"></div>
+            <div class="bk-selected" id="bk-selected">Selected: choose a date and a time</div>
+            <div class="bk-total" id="bk-total"></div>
+          </div>
+        </div>
+        <p class="msg" id="bk-msg-1"></p>
+        <div class="bk-nav"><span></span>
+          <button class="btn" id="bk-to-2" disabled>Continue →</button></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="bk-pane hidden" data-pane="2">
+        <h3>2. Your details</h3>
+        <label class="field">Your name
+          <input type="text" id="bk-name" autocomplete="name" placeholder="e.g. Alex Smith" /></label>
+        <label class="field">Email (for confirmation &amp; managing your booking)
+          <input type="email" id="bk-email" autocomplete="email" placeholder="you@example.com" /></label>
+        <label class="field">Anything you'd like me to know? (goals, level, topics — optional)
+          <textarea id="bk-notes" rows="3"></textarea></label>
+        <p class="msg" id="bk-msg-2"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="1">← Back</button>
+          <button class="btn" id="bk-to-3">Review &amp; pay →</button></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bk-pane hidden" data-pane="3">
+        <h3>3. Review &amp; payment</h3>
+        <table class="summary" id="bk-summary"></table>
+        <div class="test-banner">TEST MODE — this checkout is a demo. No real
+        payment is taken; use any card details to try the flow.</div>
+        <label class="field">Card number
+          <input type="text" id="pay-card" inputmode="numeric" placeholder="4242 4242 4242 4242" /></label>
+        <div class="field-row">
+          <label class="field">Expiry
+            <input type="text" id="pay-exp" placeholder="12 / 34" /></label>
+          <label class="field">CVC
+            <input type="text" id="pay-cvc" inputmode="numeric" placeholder="123" /></label>
+        </div>
+        <p class="note">Payments are processed securely through Stripe.
+        Major credit and debit cards are accepted (Visa, Mastercard, American Express).</p>
+        <p class="msg" id="bk-msg-3"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="2">← Back</button>
+          <button class="btn" id="bk-pay">Pay now</button></div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="bk-pane hidden" data-pane="4">
+        <h3>🎉 You're booked!</h3>
+        <table class="summary" id="bk-done"></table>
+        <p>Lessons are held on Google Meet — your personal link is in the table
+        above. A confirmation has been sent to your email.</p>
+        <p class="note">Keep your booking reference safe: together with your email
+        you can reschedule or cancel anytime in
+        <a href="#my">My Bookings</a> (up to 24 hours before the lesson,
+        max. 2 reschedules).</p>
+        <div class="bk-nav"><span></span>
+          <a class="btn" href="#my">Go to My Bookings</a></div>
+      </div>
+    </div>
+    </div>
+  </div>
 
 <script src="app.js"></script>
 </body>

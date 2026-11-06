@@ -446,6 +446,64 @@ a { color: var(--accent); }
 #my-picker .cal { margin-bottom: 14px; }
 #my-resched-go { margin-top: 14px; }
 
+/* Booking modal (Sakura-style pop-up) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(51, 40, 38, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px 14px;
+}
+.modal-card {
+  position: relative;
+  background: var(--card);
+  border-radius: 20px;
+  max-width: 920px;
+  width: 100%;
+  margin: auto;
+  padding: 26px 28px;
+  box-shadow: 0 24px 60px rgba(51, 40, 38, 0.28);
+}
+.modal-card .booking-box { border: none; box-shadow: none; padding: 0; }
+
+/* Compact spacing inside the modal so pane 1 fits shorter viewports:
+   the nav row (Continue) should be visible without scrolling. */
+.modal-card .steps { margin-bottom: 12px; }
+.modal-card .booking-box h3 { margin: 2px 0 10px; }
+.modal-card .choice-grid { margin-bottom: 12px; }
+.modal-card .bk-sub { margin: 10px 0 8px; }
+.modal-card .field { margin-bottom: 10px; }
+.modal-card .cal-day { aspect-ratio: auto; height: 36px; }
+.modal-card .bk-selected { margin: 10px 0; }
+.modal-card .bk-nav { margin-top: 12px; }
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink);
+  z-index: 1;
+}
+.modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 640px) {
+  .modal-overlay { padding: 12px 8px; }
+  .modal-card { padding: 20px 16px; }
+}
+
 @media (max-width: 760px) {
   .bk-cols { grid-template-columns: 1fr; }
   .cal { max-width: 100%; }

@@ -70,7 +70,10 @@ function setMsg(id, text, ok) {
   el.className = "msg" + (text ? (ok ? " msg-ok" : " msg-err") : "");
 }
 
+let flowDone = false; // true once pane 4 (Done) has been shown
+
 function showPane(n) {
+  flowDone = n === 4;
   document.querySelectorAll(".bk-pane").forEach((p) =>
     p.classList.toggle("hidden", p.dataset.pane !== String(n)));
   document.querySelectorAll("#bk-steps li").forEach((li) => {
@@ -78,7 +81,25 @@ function showPane(n) {
     li.classList.toggle("active", s === n);
     li.classList.toggle("done", s < n);
   });
-  $("#book").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------- Booking modal (Sakura-style pop-up) ----------
+ * Selections (course / duration / date / time) live in `state` and in the
+ * picker, so they survive a close + reopen within the same page visit.
+ * Only a completed booking resets: the next open starts fresh at pane 1.
+ */
+function openBooking() {
+  if (state.booking && flowDone) {
+    state.booking = null;
+    showPane(1);
+  }
+  $("#book-modal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeBooking() {
+  $("#book-modal").classList.add("hidden");
+  document.body.style.overflow = "";
 }
 
 function courseName(id) {
@@ -245,6 +266,22 @@ function summaryRows(b) {
 /* ---------- Wire up ---------- */
 
 document.addEventListener("DOMContentLoaded", async () => {
+  /* Modal open/close wiring (works even if the config fetch below fails) */
+  document.querySelectorAll(".open-booking").forEach((a) => {
+    a.addEventListener("click", (e) => { e.preventDefault(); openBooking(); });
+  });
+  $("#book-modal-close").addEventListener("click", closeBooking);
+  const overlay = $("#book-modal");
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeBooking();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeBooking();
+  });
+  // Pane 4's "Go to My Bookings" button: close the modal, then jump to #my.
+  const goMy = document.querySelector('.bk-pane[data-pane="4"] .bk-nav a[href="#my"]');
+  if (goMy) goMy.addEventListener("click", closeBooking);
+
   try {
     state.config = await api("/api/config");
   } catch {
@@ -312,6 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.querySelectorAll(".book-course").forEach((btn) => {
     btn.addEventListener("click", () => {
+      openBooking(); // resets first if a previous booking was completed
       state.courseId = btn.dataset.course;
       renderCourses();
       refreshSummary();
