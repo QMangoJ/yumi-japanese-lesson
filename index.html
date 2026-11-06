@@ -571,20 +571,33 @@
   <!-- PRICE -->
   <section class="section section-alt" id="price">
     <h2 class="eyebrow">04 — PRICE</h2>
-    <p class="section-lead">
-      Fully tailor-made lessons where you can freely adjust your learning
-      schedule around your life. Book and pay right here on this site.
-    </p>
-    <table class="price-table">
-      <thead>
-        <tr><th>Duration</th><th>USD ($)</th><th>Packages</th></tr>
-      </thead>
-      <tbody id="price-rows"><!-- rendered from /api/config by app.js --></tbody>
-    </table>
-    <p class="note">Every course is available at every duration — just pick
-    <span id="price-note-durations">a duration</span> when you book. New bookings are taken at least
-    72 hours in advance.</p>
-    <p><a class="btn open-booking" href="#book">Book a Lesson</a></p>
+    <div class="price-card">
+      <div class="price-card-head">
+        <div>
+          <p class="price-eyebrow">LESSON RATES</p>
+          <h3 class="price-title">Choose your lesson time.</h3>
+          <p class="price-sub">Fully tailor-made lessons where you can freely adjust your learning schedule around your life. Book and pay right here on this site.</p>
+        </div>
+        <span class="price-year">2026</span>
+      </div>
+      <div class="price-grid" role="table" aria-label="Lesson rates">
+        <div class="price-grid-head" role="row">
+          <span>Duration</span><span>Price (USD)</span><span>Per lesson</span><span aria-hidden="true"></span>
+        </div>
+        <div id="price-rows"><!-- rendered from /api/config by app.js --></div>
+        <div class="price-packages">
+          <div class="price-pkg-label">Package<br />Purchase</div>
+          <div class="price-pkg-list" id="price-packages"><!-- rendered from /api/config by app.js --></div>
+        </div>
+      </div>
+      <p class="note price-note">Every course is available at every duration — just pick
+      <span id="price-note-durations">a duration</span> when you book. New bookings are taken at least
+      72 hours in advance. Package totals are the per-lesson price × the number of lessons — no hidden fees.</p>
+      <div class="price-card-foot">
+        <p class="note">* All lessons are held online via Google Meet.</p>
+        <a class="btn open-booking" href="#book">BOOK A LESSON →</a>
+      </div>
+    </div>
   </section>
 
   <!-- BOOK -->

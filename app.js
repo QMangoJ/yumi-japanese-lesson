@@ -175,18 +175,36 @@ function durationOf(id) {
 /* Homepage price table: rendered from the same /api/config the
  * booking modal uses, so admin-edited prices show up everywhere
  * with no hardcoded numbers in the HTML. */
+/* Package sizes offered by the worker (PACKAGE_SIZES in worker.js).
+ * Package totals are ALWAYS size × the per-lesson price for the chosen
+ * duration — exactly how the worker computes totalPrice in
+ * POST /api/packages (priceFor × size). There is no package discount,
+ * so no discount badge is ever shown here. */
+const PACKAGE_SIZES = [6, 10, 20];
 function renderPrices() {
   const tb = $("#price-rows");
   if (!tb || !state.config) return;
   const ds = state.config.durations;
-  tb.innerHTML = ds.map((d, i) => `
-    <tr><td>${d.minutes} min</td><td>$${d.price}</td>${i === 0 ? `
-      <td rowspan="${ds.length}">
-        <strong>5 lessons</strong> — <em>10% OFF</em> the total<br />
-        <strong>10 lessons</strong> — <em>10% OFF</em> the total<br />
-        <small>Package students can freely adjust each lesson's
-        duration from 30 minutes up to 2 hours.</small>
-      </td>` : ""}</tr>`).join("");
+  tb.innerHTML = ds.map((d) => `
+    <div class="price-row" role="row" data-duration="${d.id}">
+      <span class="price-dur">${d.minutes} min</span>
+      <span class="price-amt">$${d.price}</span>
+      <span class="price-per">$${d.price} per lesson</span>
+      <span class="price-action"><button type="button" class="btn btn-small" data-book-duration="${d.id}">Book</button></span>
+    </div>`).join("");
+  const pkgBox = $("#price-packages");
+  if (pkgBox) {
+    pkgBox.innerHTML = PACKAGE_SIZES.map((size) => `
+      <div class="price-pkg-row">
+        <div class="price-pkg-main">
+          <strong>${size} lessons</strong>
+          <span class="price-pkg-per">per lesson: ${ds.map((d) => `$${d.price} (${d.minutes} min)`).join(" · ")}</span>
+        </div>
+        <div class="price-pkg-totals">${ds.map((d) =>
+          `<span><small>${d.minutes} min</small><b>$${size * d.price}</b></span>`).join("")}</div>
+        <button type="button" class="btn btn-small" data-buy-package="${size}">Buy</button>
+      </div>`).join("");
+  }
   const note = $("#price-note-durations");
   if (note && ds.length) {
     const mins = ds.map((d) => d.minutes);
@@ -750,6 +768,34 @@ document.addEventListener("DOMContentLoaded", async () => {
       showPane(1);
     });
   });
+
+  /* Price section actions (rendered dynamically by renderPrices, so
+   * they are wired by delegation): a duration row's Book opens the
+   * modal in single mode with that duration preselected; a package
+   * row's Buy opens the modal in package mode with that package size
+   * preselected — the same preselect path My Bookings repurchase uses. */
+  const priceSection = $("#price");
+  if (priceSection) {
+    priceSection.addEventListener("click", (e) => {
+      const durBtn = e.target.closest("[data-book-duration]");
+      if (durBtn) {
+        openBooking();
+        setMode("single");
+        applyDuration(durBtn.dataset.bookDuration, false);
+        showPane(1);
+        return;
+      }
+      const pkgBtn = e.target.closest("[data-buy-package]");
+      if (pkgBtn) {
+        openBooking();
+        pkg.size = Number(pkgBtn.dataset.buyPackage);
+        renderPkgSizes();
+        setMode("package");
+        renderPkgSummary();
+        showPane(1);
+      }
+    });
+  }
 
   document.querySelectorAll("[data-back]").forEach((btn) => {
     btn.addEventListener("click", () => showPane(Number(btn.dataset.back)));
