@@ -120,6 +120,63 @@ function showPane(n) {
   });
 }
 
+/** The sign-in gate pane: shown instead of pane 3 when a signed-out
+ *  student advances from Details to Payment. The stepper treats it
+ *  as step 3 (steps 1–2 done, 3 active). */
+function showGate() {
+  flowDone = false;
+  document.querySelectorAll(".bk-pane").forEach((p) =>
+    p.classList.toggle("hidden", p.dataset.pane !== "gate"));
+  document.querySelectorAll("#bk-steps li").forEach((li) => {
+    const s = Number(li.dataset.step);
+    li.classList.toggle("active", s === 3);
+    li.classList.toggle("done", s < 3);
+  });
+}
+
+/* ==== BK-DRAFT-BEGIN ==== */
+/* Booking draft for the payment sign-in gate (Daniel's decision,
+ * 2026-11-06: sign-in BEFORE payment, with the in-progress state
+ * preserved across the OAuth redirect in browser local storage —
+ * he approved local storage explicitly). When a signed-out student
+ * advances from Details to Payment, the draft is saved, the student
+ * goes through Google sign-in, and on return the draft is restored
+ * and the flow resumes at the Payment step. Drafts expire after 24
+ * hours and are cleared once a booking completes. The helpers take
+ * the storage object as a parameter so the harness can drive them
+ * directly against a fake store. */
+const BK_DRAFT_KEY = "yumi_booking_draft_v1";
+const BK_DRAFT_MAX_AGE_MS = 24 * 3600 * 1000;
+
+/** The gate applies only when Google sign-in is actually on. */
+function bkNeedsGate(googleAuth, user) {
+  return !!googleAuth && !user;
+}
+function bkDraftSave(store, draft) {
+  try {
+    store.setItem(BK_DRAFT_KEY,
+      JSON.stringify({ ...draft, savedAt: Date.now() }));
+    return true;
+  } catch { return false; }
+}
+function bkDraftLoad(store, now = Date.now()) {
+  try {
+    const raw = store.getItem(BK_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || typeof d !== "object" || typeof d.savedAt !== "number" ||
+        d.savedAt > now || now - d.savedAt > BK_DRAFT_MAX_AGE_MS) {
+      store.removeItem(BK_DRAFT_KEY);
+      return null;
+    }
+    return d;
+  } catch { return null; }
+}
+function bkDraftClear(store) {
+  try { store.removeItem(BK_DRAFT_KEY); } catch { /* ignore */ }
+}
+/* ==== BK-DRAFT-END ==== */
+
 /* ---------- Booking modal (Sakura-style pop-up) ----------
  * Selections (course / duration / date / time) live in `state` and in the
  * picker, so they survive a close + reopen within the same page visit.
@@ -412,6 +469,27 @@ function createPicker({ getMinutes, onPick }) {
     setMinutes() { if (date) loadTimes(); loadMonth(); },
     get date() { return date; },
     get time() { return time; },
+    /* Restore a previously picked date+time (booking-draft resume
+     * after the sign-in round-trip): jump the calendar to that
+     * month, load its times, then select the requested time.
+     * loadTimes pre-selects the first available slot, so the
+     * requested time is applied after it settles. Resolves true
+     * only when the requested time ended up selected. */
+    async setSelection(ds, ts) {
+      date = ds;
+      view = { y: Number(ds.slice(0, 4)), m: Number(ds.slice(5, 7)) };
+      renderCal();
+      loadMonth();
+      await loadTimes();
+      if (!ts) return true;
+      const chip = [...grid.querySelectorAll(".time-chip")]
+        .find((c) => c.dataset.time === ts && !c.disabled);
+      if (!chip) return false;
+      time = ts;
+      markSelectedChip();
+      onPick(date, time);
+      return true;
+    },
   };
 }
 
@@ -841,14 +919,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     showPane(2);
   };
 
-  /* Step 2: details -> create booking */
-  $("#bk-to-3").onclick = async () => {
+  /* ---------- Payment sign-in gate + draft ----------
+   * Advancing from Step 2 to Payment is where a booking gets
+   * created, so that is where the gate sits: with Google sign-in
+   * configured and no session, the student signs in FIRST (nothing
+   * is created, nothing is charged), the in-progress draft is kept
+   * in local storage, and the round-trip resumes at Payment. */
+  function collectDraft() {
+    return {
+      mode: state.mode,
+      courseId: state.courseId,
+      durationId: state.durationId,
+      date: state.date,
+      time: state.time,
+      pkg: state.mode === "package"
+        ? { size: pkg.size, freq: pkg.freq,
+            slots: pkg.slots.map((s) => ({ weekday: s.weekday, time: s.time })) }
+        : null,
+      name: $("#bk-name").value.trim(),
+      email: $("#bk-email").value.trim(),
+      notes: $("#bk-notes").value.trim(),
+    };
+  }
+
+  function enterGate() {
+    bkDraftSave(localStorage, collectDraft());
+    const link = $("#bk-gate-google");
+    if (link) {
+      link.href = "/api/auth/google?next=" +
+        encodeURIComponent(`${location.pathname}?bkresume=1`);
+    }
+    setMsg("#bk-msg-2", "");
+    showGate();
+  }
+
+  /* Step 2 -> Step 3: create the booking/package and show the
+   * review + payment pane. Resolves true on success; on failure the
+   * error is left in #bk-msg-2 and it resolves false. Callers gate
+   * on sign-in before calling this (see #bk-to-3). */
+  async function proceedToPayment() {
     const name = $("#bk-name").value.trim();
     const email = $("#bk-email").value.trim();
     const notes = $("#bk-notes").value.trim();
-    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return setMsg("#bk-msg-2", "Please enter your name and a valid email.", false);
-    }
     setMsg("#bk-msg-2", "Creating your booking…", true);
     if (state.mode === "package") {
       try {
@@ -881,10 +993,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         $("#bk-pay").textContent = `Pay ${money(subscription.totalPrice)}`;
         setMsg("#bk-msg-2", "");
         showPane(3);
+        return true;
       } catch (e) {
         setMsg("#bk-msg-2", e.message, false);
+        return false;
       }
-      return;
     }
     try {
       const { booking } = await api("/api/bookings", {
@@ -899,9 +1012,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("#bk-pay").textContent = `Pay ${money(booking.amount)}`;
       setMsg("#bk-msg-2", "");
       showPane(3);
+      return true;
     } catch (e) {
       setMsg("#bk-msg-2", e.message, false);
+      return false;
     }
+  }
+
+  /* Step 2: details -> gate or create booking */
+  $("#bk-to-3").onclick = async () => {
+    const name = $("#bk-name").value.trim();
+    const email = $("#bk-email").value.trim();
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return setMsg("#bk-msg-2", "Please enter your name and a valid email.", false);
+    }
+    if (bkNeedsGate(state.config.googleAuth, authUser)) {
+      enterGate();
+      return;
+    }
+    await proceedToPayment();
   };
 
   /* Step 3: mock payment */
@@ -936,6 +1065,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? `<p class="note">这些日期已被占用或老师休息，对应课程已自动顺延一周：${data.skippedDates.join(", ")}</p>` : ""}`;
         state.pkgOrder = null;
         showPane(4);
+        bkDraftClear(localStorage);
         if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
       } catch (e) {
         setMsg("#bk-msg-3", e.message, false);
@@ -950,18 +1080,110 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.booking = booking;
       $("#bk-done").innerHTML = summaryRows(booking);
       showPane(4);
+      bkDraftClear(localStorage);
       if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
     } catch (e) {
       setMsg("#bk-msg-3", e.message, false);
     }
   };
 
+  /* ---------- Draft resume after the sign-in round-trip ----------
+   * The gate sent the student to Google with ?bkresume=1 in the
+   * return path; a failed round-trip lands with ?login_error (the
+   * flag below is captured before renderAuthForms consumes it).
+   * Restore rules (Daniel's spec): everything the student picked
+   * and typed comes back; a signed-in return lands on the Payment
+   * step; if the chosen slot stopped being bookable meanwhile, the
+   * rest is kept and only the time must be re-picked; a failed or
+   * cancelled sign-in returns to the Details step, draft intact. */
+  let draftReturnFailed = false;
+
+  async function draftSlotStillValid(d) {
+    const dur = durationOf(d.durationId);
+    if (!dur || !d.date || !d.time) return false;
+    try {
+      const data = await api(`/api/availability?date=${d.date}&duration=${dur.minutes}`);
+      if (data.closed) return false;
+      const s = (data.slots || []).find((x) => x.time === d.time);
+      return !!s && !!s.available;
+    } catch { return false; }
+  }
+
+  function restoreDraftSelections(d) {
+    if (state.config.courses.some((c) => c.id === d.courseId)) {
+      state.courseId = d.courseId;
+    }
+    if (state.config.durations.some((x) => x.id === d.durationId)) {
+      state.durationId = d.durationId;
+    }
+    renderCourses();
+    renderDurations();
+    if (d.mode === "package" && d.pkg) {
+      pkg.size = [6, 10, 20].includes(d.pkg.size) ? d.pkg.size : 10;
+      pkg.freq = [1, 2, 3].includes(d.pkg.freq) ? d.pkg.freq : 1;
+      const slots = (Array.isArray(d.pkg.slots) ? d.pkg.slots : [])
+        .map((s) => ({ weekday: String(s?.weekday ?? ""), time: String(s?.time || "") }));
+      while (slots.length < pkg.freq) slots.push({ weekday: "", time: "" });
+      pkg.slots = slots.slice(0, pkg.freq);
+      renderPkgSizes();
+      renderPkgFreq();
+      renderPkgSlots();
+    }
+    setMode(d.mode === "package" ? "package" : "single");
+    $("#bk-name").value = d.name || "";
+    $("#bk-email").value = d.email || "";
+    $("#bk-notes").value = d.notes || "";
+    refreshSummary();
+  }
+
+  function rePickTime(d) {
+    state.date = null;
+    state.time = null;
+    refreshSummary();
+    showPane(1);
+    setMsg("#bk-msg-1",
+      "That time was just taken or is no longer bookable — please pick a new time. Your course and details were kept.",
+      false);
+  }
+
+  async function resumeBookingDraft() {
+    const returning =
+      new URLSearchParams(location.search).get("bkresume") === "1";
+    if (!returning && !draftReturnFailed) return;
+    const draft = bkDraftLoad(localStorage);
+    if (!draft) return;
+    if (returning) {
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
+    restoreDraftSelections(draft);
+    openBooking();
+    if (!authUser) {
+      showPane(2);
+      setMsg("#bk-msg-2",
+        "Google sign-in didn't complete — everything you entered is still here. When you're ready, continue to sign in and pay.",
+        false);
+      return;
+    }
+    applyAuthToForm(); // identity locks to the verified account
+    if (draft.mode !== "package") {
+      if (!(await draftSlotStillValid(draft))) return rePickTime(draft);
+      if (!(await picker.setSelection(draft.date, draft.time))) {
+        return rePickTime(draft);
+      }
+    }
+    const ok = await proceedToPayment();
+    if (!ok) {
+      if (draft.mode !== "package") rePickTime(draft);
+      else showPane(2); // the creation error already sits in #bk-msg-2
+    }
+  }
+
   /* ---------- My Bookings (account-based) ----------
    * Students sign in with Google; bookings are matched to the account
    * by email and split into "Upcoming lessons" (manageable) and
    * "Lesson history" (completed + cancelled, read-only, newest first).
-   * Lessons booked as a guest appear automatically once the student
-   * signs in with the same email. */
+   * Older guest bookings (made before sign-in-before-payment) appear
+   * automatically once the student signs in with the same email. */
 
   let myActionMsg = "";
 
@@ -1254,6 +1476,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    * Google round-trip lands back here with ?login_error=google. */
   if (new URLSearchParams(location.search).has("login_error")) {
     loginErrorPending = true;
+    draftReturnFailed = true; // a booking draft, if any, resumes on pane 2
     history.replaceState(null, "",
       location.pathname + location.hash);
   }
@@ -1285,6 +1508,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   renderAccountBar();
   if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
+  /* Last: a booking draft returning from the sign-in gate reopens
+   * the modal (needs config + auth + renderers all settled). */
+  await resumeBookingDraft();
 });
 
 /* ---------- Student voices: all 16 reviews, paged ----------

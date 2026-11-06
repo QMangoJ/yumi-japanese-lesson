@@ -875,6 +875,27 @@
           <button class="btn" id="bk-to-3">Review &amp; pay →</button></div>
       </div>
 
+      <!-- Sign-in gate: replaces Step 3 for a signed-out student
+           (payment requires Google sign-in). app.js saves the
+           in-progress draft to local storage before the redirect
+           and restores it on return, landing on Step 3. -->
+      <div class="bk-pane hidden" data-pane="gate">
+        <h3 class="bk-pane-title"><span class="step-badge">STEP 3</span>Sign in to pay</h3>
+        <p>One quick step before payment: sign in with Google, so this
+        booking is saved to <strong>your</strong> account. The booking
+        will use your Google email — that's what lets you (and only
+        you) reschedule or cancel it later.</p>
+        <p class="note">Everything you've picked and typed is saved on
+        this device — after signing in, you'll come straight back to
+        this booking, right at the payment step.</p>
+        <a class="google-btn bk-gate-btn" id="bk-gate-google" href="/api/auth/google">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+          <span>Continue with Google</span></a>
+        <p class="msg" id="bk-msg-gate"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="2">← Back</button><span></span></div>
+      </div>
+
       <!-- Step 3 -->
       <div class="bk-pane hidden" data-pane="3">
         <h3 class="bk-pane-title"><span class="step-badge">STEP 3</span>Review &amp; payment</h3>
@@ -906,10 +927,10 @@
         or your teacher will send it before the lesson. A confirmation has
         been sent to your email.</p>
         <p class="note">You can reschedule or cancel anytime in
-        <a href="#my">My Bookings</a> — just sign in with Google using
-        this email (signing in creates your account if you don't have
-        one yet, and this booking will appear automatically). Cancelling
-        and rescheduling follow the policy in the FAQ.</p>
+        <a href="#my">My Bookings</a> — this booking is saved to the
+        Google account you signed in with, so it's right there when
+        you come back. Cancelling and rescheduling follow the policy
+        in the FAQ.</p>
         <div class="bk-nav"><span></span>
           <a class="btn" href="#my">Go to My Bookings</a></div>
       </div>

@@ -783,6 +783,8 @@ button { font-family: inherit; }
   text-decoration: none;
 }
 .google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(60, 64, 67, 0.18); }
+/* The booking modal's sign-in gate button sits between paragraphs. */
+.bk-gate-btn { margin: 8px 0 4px; }
 .auth-avatar {
   width: 26px;
   height: 26px;

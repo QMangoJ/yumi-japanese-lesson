@@ -1587,7 +1587,7 @@ export default {
       let body;
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
       const name = String(body?.name || "").trim().slice(0, 80);
-      const email = String(body?.email || "").toLowerCase().trim().slice(0, 120);
+      let email = String(body?.email || "").toLowerCase().trim().slice(0, 120);
       const course = CONFIG.courses.find((c) => c.id === body?.courseId);
       const dur = CONFIG.durations.find((d) => d.id === body?.durationId);
       const size = Number(body?.packageSize);
@@ -1597,6 +1597,20 @@ export default {
       }
       if (!name || !EMAIL_RE.test(email)) {
         return json({ error: "Name and a valid email are required" }, 400);
+      }
+      /* Payment sign-in gate: same rule as POST /api/bookings —
+       * with Google sign-in configured, creation requires a session
+       * and the package is bound to the verified account email;
+       * unconfigured deployments keep the guest fallback. */
+      {
+        const gateSettings = await getSettings(env);
+        const me = await sessionUser(env, request);
+        if (googleConfigured(gateSettings)) {
+          if (!me) {
+            return json({ error: "Please sign in with Google to complete your booking" }, 401);
+          }
+          email = me.email.toLowerCase();
+        }
       }
       const rawSlots = Array.isArray(body?.slots) ? body.slots : [];
       if (rawSlots.length < 1 || rawSlots.length > 3) {
@@ -2016,9 +2030,25 @@ export default {
     if (path === "/api/bookings" && request.method === "POST") {
       let body;
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-      const { courseId, date, time, name, email, notes } = body || {};
+      const { courseId, date, time, name, notes } = body || {};
+      let email = body?.email;
       const course = CONFIG.courses.find((c) => c.id === courseId);
       const settings = await getSettings(env);
+      /* Payment sign-in gate (Daniel's decision, 2026-11-06): when
+       * Google sign-in is configured, a booking can only be created
+       * by a signed-in student and is bound to the verified account
+       * email — a booking paid under an arbitrary non-Google email
+       * could never be claimed into an account. When Google is NOT
+       * configured, the legacy guest checkout remains as fallback so
+       * checkout never dead-ends. Historical guest bookings are
+       * unaffected (they still claim by email on sign-in). */
+      const me = await sessionUser(env, request);
+      if (googleConfigured(settings)) {
+        if (!me) {
+          return json({ error: "Please sign in with Google to complete your booking" }, 401);
+        }
+        email = me.email;
+      }
       const purchase = resolvePurchase(body || {}, settings);
       if (!course || !purchase) return json({ error: "Unknown course or duration" }, 400);
       if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "")) {
