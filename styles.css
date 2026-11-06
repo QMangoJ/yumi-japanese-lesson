@@ -257,6 +257,17 @@ a { color: var(--accent); }
 .voices blockquote p { margin: 0 0 10px; }
 .voices footer { color: var(--sub); font-size: 14px; }
 
+/* Per-card star row inside each review blockquote. */
+.voices .stars {
+  color: var(--accent);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  margin: 0 0 8px;
+}
+
+/* Reviewer name in the card footer stands out from the muted footer text. */
+.voices footer strong { color: var(--ink); font-weight: 700; }
+
 .faq details {
   background: var(--card);
   border: 1px solid var(--line);
