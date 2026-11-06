@@ -564,6 +564,19 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .spin{display:inline-block;width:13px;height:13px;border-radius:50%;
   border:2px solid var(--accent-soft);border-top-color:var(--accent);
   animation:adm-spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
+
+  /* admin language switcher (en/ja) */
+  .adm-lang { position: relative; }
+  .adm-lang-btn { appearance: none; border: 1px solid var(--adm-line-strong); background: #fff; color: var(--ink);
+    border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .adm-lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .adm-lang-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--adm-line);
+    border-radius: 12px; box-shadow: 0 12px 32px rgba(31,26,23,.16); padding: 6px; min-width: 140px; z-index: 60; }
+  .adm-lang-pop.hidden { display: none; }
+  .adm-lang-pop button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px;
+    appearance: none; border: 0; background: none; font: inherit; font-size: 13.5px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--ink); }
+  .adm-lang-pop button:hover { background: #fdf3f5; }
+  .adm-lang-pop button.active { color: var(--accent); font-weight: 650; }
 </style>
 </head>
 <body>
@@ -573,7 +586,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
   <div class="login-card">
     <div class="login-logo">🌸</div>
     <h1>Yumi Admin</h1>
-    <p class="login-sub">yumi.ki-toko.com · 老师后台</p>
+    <p class="login-sub">yumi.ki-toko.com · Teacher admin</p>
     <div id="adm-google-wrap" hidden>
       <a class="google-btn adm-google-btn" href="/api/auth/google?next=%2Fadmin">
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
@@ -597,28 +610,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
     <nav class="side-nav">
       <a href="#/dashboard" data-route="dashboard">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-        <span>Dashboard</span><span class="nav-cn">概览</span></a>
+        <span>Dashboard</span></a>
       <a href="#/students" data-route="students">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Students</span><span class="nav-cn">学生</span></a>
+        <span>Students</span></a>
       <a href="#/bookings" data-route="bookings">
         <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="0.5"/><circle cx="4" cy="12" r="0.5"/><circle cx="4" cy="18" r="0.5"/></svg>
-        <span>Bookings</span><span class="nav-cn">预约管理</span></a>
+        <span>Bookings</span></a>
       <a href="#/schedule" data-route="schedule">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        <span>Schedule</span><span class="nav-cn">课表</span></a>
+        <span>Schedule</span></a>
       <a href="#/availability" data-route="availability">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Availability</span><span class="nav-cn">可约时间</span></a>
+        <span>Availability</span></a>
       <a href="#/packages" data-route="packages">
         <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
-        <span>Packages</span><span class="nav-cn">课时包</span></a>
+        <span>Packages</span></a>
       <a href="#/revenue" data-route="revenue">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
-        <span>Revenue</span><span class="nav-cn">收入</span></a>
+        <span>Revenue</span></a>
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
-        <span>Settings</span><span class="nav-cn">设置</span></a>
+        <span>Settings</span></a>
     </nav>
     <div class="side-foot">
       <a class="side-foot-link" href="/" target="_blank" rel="noopener">
@@ -626,14 +639,14 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         View site ↗</a>
       <button class="side-foot-link" id="adm-lock" type="button">
         <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Logout · 退出登录</button>
+        Logout</button>
     </div>
   </aside>
 
   <div class="main">
     <header class="topbar">
       <button class="burger" id="adm-burger" type="button" aria-label="Toggle menu">☰</button>
-      <h1 id="adm-view-title">Dashboard · 概览</h1>
+      <h1 id="adm-view-title">Dashboard</h1>
       <span class="topbar-auth" id="adm-auth-note"></span>
       <span class="topbar-env">yumi.ki-toko.com</span>
     </header>
@@ -644,28 +657,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <section class="view" id="adm-dashboard-card" data-view="dashboard">
         <div class="stat-grid">
           <div class="stat-card">
-            <div class="stat-label">今日课程 · Lessons today</div>
+            <div class="stat-label">Lessons today</div>
             <div class="stat-num" id="dash-today-count"><span class="skl skl-num"></span></div>
             <div class="stat-sub" id="dash-today-sub"><span class="skl skl-line" style="width:54%"></span></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">待上预约 · Upcoming bookings</div>
+            <div class="stat-label">Upcoming bookings</div>
             <div class="stat-num" id="dash-upcoming-count"><span class="skl skl-num"></span></div>
-            <div class="stat-sub">未来 90 天 · next 90 days</div>
+            <div class="stat-sub">next 90 days</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">进行中课时包 · Active packages</div>
+            <div class="stat-label">Active packages</div>
             <div class="stat-num" id="dash-subs-count"><span class="skl skl-num"></span></div>
             <div class="stat-sub" id="dash-subs-sub"><span class="skl skl-line" style="width:54%"></span></div>
           </div>
         </div>
         <div class="dash-grid">
           <div class="panel">
-            <h2>Today's lessons · 今天的课</h2>
+            <h2>Today's lessons</h2>
             <div id="dash-today-list"><div aria-hidden="true"><span class="skl skl-row" style="width:94%"></span><span class="skl skl-row" style="width:80%"></span><span class="skl skl-row" style="width:87%"></span></div></div>
           </div>
           <div class="panel">
-            <h2>Next upcoming · 接下来的预约</h2>
+            <h2>Next upcoming</h2>
             <div id="dash-next-list"><div aria-hidden="true"><span class="skl skl-row" style="width:94%"></span><span class="skl skl-row" style="width:80%"></span><span class="skl skl-row" style="width:87%"></span></div></div>
           </div>
         </div>
@@ -675,26 +688,26 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <!-- ===== Students ===== -->
       <section class="view hidden" data-view="students">
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-num" id="stu-stat-total"><span class="skl skl-num"></span></div><div class="stat-label">学生总数 · Students</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-upcoming"><span class="skl skl-num"></span></div><div class="stat-label">有待上课程 · With upcoming</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-package"><span class="skl skl-num"></span></div><div class="stat-label">有活跃课时包 · With package</div></div>
-          <div class="stat-card"><div class="stat-num" id="stu-stat-new"><span class="skl skl-num"></span></div><div class="stat-label">本月新学生 · New this month</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-total"><span class="skl skl-num"></span></div><div class="stat-label">Students</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-upcoming"><span class="skl skl-num"></span></div><div class="stat-label">With upcoming</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-package"><span class="skl skl-num"></span></div><div class="stat-label">With package</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-new"><span class="skl skl-num"></span></div><div class="stat-label">New this month</div></div>
         </div>
         <div class="panel">
           <div class="stu-controls">
-            <input type="search" id="stu-q" placeholder="搜索姓名或邮箱 · Search name or email" />
+            <input type="search" id="stu-q" placeholder="Search name or email" />
             <div class="chip-filters" id="stu-chips">
-              <button type="button" class="fchip active" data-filter="all">全部 All</button>
-              <button type="button" class="fchip" data-filter="upcoming">有待上课</button>
-              <button type="button" class="fchip" data-filter="package">有课时包</button>
-              <button type="button" class="fchip" data-filter="dormant">沉睡 Dormant</button>
+              <button type="button" class="fchip active" data-filter="all">All</button>
+              <button type="button" class="fchip" data-filter="upcoming">With upcoming</button>
+              <button type="button" class="fchip" data-filter="package">With package</button>
+              <button type="button" class="fchip" data-filter="dormant">Dormant</button>
             </div>
-            <label class="stu-sort">排序
+            <label class="stu-sort">Sort
               <select id="stu-sort" class="adm-dd-src">
-                <option value="next">下节课</option>
-                <option value="lessons">总课时</option>
-                <option value="spent">总消费</option>
-                <option value="activity">最近活跃</option>
+                <option value="next">Next lesson</option>
+                <option value="lessons">Total lessons</option>
+                <option value="spent">Total spent</option>
+                <option value="activity">Recent activity</option>
               </select></label>
           </div>
           <p class="note" id="stu-msg"></p>
@@ -703,13 +716,13 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <div class="skl-card" aria-hidden="true"><div class="skl-top"><span class="skl skl-avatar"></span><span class="skl skl-line" style="width:45%"></span></div><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:82%"></span></div>
             <div class="skl-card" aria-hidden="true"><div class="skl-top"><span class="skl skl-avatar"></span><span class="skl skl-line" style="width:45%"></span></div><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:82%"></span></div>
           </div>
-          <p class="note hidden" id="stu-empty">还没有学生记录。</p>
+          <p class="note hidden" id="stu-empty">No student records yet.</p>
         </div>
       </section>
 
       <!-- ===== Bookings ===== -->
       <div class="panel view hidden" id="adm-bookings-card" data-view="bookings">
-        <h2>Bookings · 预约管理</h2>
+        <h2>Bookings</h2>
         <div class="filter-bar">
           <label class="field">Status
             <select id="adm-bk-status" class="adm-dd-src">
@@ -738,9 +751,8 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
       <!-- ===== Schedule ===== -->
       <div class="panel view hidden" id="adm-schedule-card" data-view="schedule">
-        <h2>Schedule · 课表</h2>
-        <p class="note">这个月已经订好的课。点任意一天看当天的课程和老师备注；
-        要改可约时间，去「Availability · 可约时间」。</p>
+        <h2>Schedule</h2>
+        <p class="note">Lessons already booked this month. Click any day to see its lessons and teacher remarks; to change availability, go to Availability.</p>
         <div class="sch-grid">
           <div class="adm-cal sch-cal" id="sch-cal"><div aria-hidden="true"><span class="skl skl-caltitle"></span><div class="skl-cal"><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i></div></div></div>
           <div class="day-editor sch-panel" id="sch-day-panel"><div aria-hidden="true"><span class="skl skl-line" style="width:52%"></span><span class="skl skl-line" style="width:88%"></span><span class="skl skl-line" style="width:74%"></span><span class="skl skl-line" style="width:81%"></span></div></div>
@@ -751,28 +763,24 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <form id="adm-form">
         <section class="view hidden" data-view="availability">
           <div class="panel weekly-panel">
-            <h2>Weekly hours (Japan time) · 每周时间</h2>
-            <p class="note">点格子切换那一小时是否可约（粉色 = 可约，灰色 = 不可约）；
-            按住鼠标拖动可以连续涂抹，手机上逐格点按。每列顶部的「全天」可以一键
-            全选/清空当天，下方小字是当天已选时段的汇总。课程在整点开始，且整节课
-            必须落在已选小时内。具体某一天可以在下面的可约日历里单独调整。</p>
+            <h2>Weekly hours (Japan time)</h2>
+            <p class="note">Click a cell to toggle whether that hour is bookable (pink = bookable, grey = not); drag with the mouse to paint several cells, or tap one by one on a phone. The "All day" button at the top of each column selects/clears the whole day; the small text under each column summarises the day. Lessons start on the hour and must fit entirely inside the selected hours. Individual dates can be adjusted in the availability calendar below.</p>
             <div id="adm-weekly"></div>
           </div>
 
           <div class="panel">
-            <h2>Availability calendar · 可约日历</h2>
-            <p class="note">点任意一天来单独调整：这天休息、特殊时段，或者屏蔽
-            某几个开始时间。日历上看到的就是学生能约到的安排。</p>
+            <h2>Availability calendar</h2>
+            <p class="note">Click any day to adjust it individually: a day off, special hours, or blocking a few start times. What the calendar shows is exactly what students can book.</p>
             <div class="avail-grid">
               <div class="adm-cal" id="adm-cal"><div aria-hidden="true"><span class="skl skl-caltitle"></span><div class="skl-cal"><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i><i class="skl skl-cell"></i></div></div></div>
               <div class="day-editor hidden" id="adm-day-editor"></div>
             </div>
             <div class="vac-row">
-              <label class="field">连续休息 · 从
+              <label class="field">Vacation · from
                 <input type="date" id="vac-start" class="adm-dp-src" /></label>
-              <label class="field">到
+              <label class="field">to
                 <input type="date" id="vac-end" class="adm-dp-src" /></label>
-              <button class="btn btn-ghost" id="vac-apply" type="button">Apply 整段休息</button>
+              <button class="btn btn-ghost" id="vac-apply" type="button">Apply vacation</button>
             </div>
             <p class="note" id="vac-msg"></p>
             <div class="summary-line" id="adm-summary"></div>
@@ -780,10 +788,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
           <div class="panel">
             <h2>Blocked dates</h2>
-            <p class="note">Holidays and days off — no lessons can be booked on
-            these dates. One date per line, as YYYY-MM-DD. (The calendar above
-            can do the same per day; this list still works and is overridden by
-            a "特殊时段" day in the calendar.)</p>
+            <p class="note">Holidays and days off — no lessons can be booked on these dates. One date per line, as YYYY-MM-DD. (The calendar above can do the same per day.)</p>
             <textarea class="blocked" id="adm-blocked" spellcheck="false"
               placeholder="2026-12-31&#10;2027-01-01"></textarea>
           </div>
@@ -791,10 +796,8 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
         <section class="view hidden" data-view="settings">
           <div class="panel">
-            <h2>Prices · 价格（USD)</h2>
-            <p class="note">每种时长的单节课价格（美元）。保存后立即对
-            <strong>新</strong>预约和<strong>新</strong>课时包生效；已经订好的
-            预约/课时包保持原价不变。</p>
+            <h2>Prices (USD)</h2>
+            <p class="note">The per-lesson price for each duration (USD). Saving applies immediately to new bookings and new packages; existing bookings and packages keep the price they were bought at.</p>
             <div class="adm-price-grid">
               <label class="field">30 min
                 <span class="price-input"><span>$</span><input type="number" id="adm-price-30" min="0" step="0.5" inputmode="decimal"></span></label>
@@ -854,22 +857,16 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
           </div>
 
           <div class="panel">
-            <h2>Access · 管理员白名单</h2>
-            <p class="note">用这些邮箱注册/登录网站的学生账号，登录后会在右上角
-            看到一个「Admin」入口（只是快捷方式 — 进后台仍然需要管理员密码）。
-            一行一个邮箱，保存后生效。</p>
+            <h2>Access · Admin allowlist</h2>
+            <p class="note">Student accounts registered/signed in with these emails see an "Admin" entry in the top-right corner (just a shortcut — entering the admin still requires admin sign-in). One email per line; saving takes effect immediately.</p>
             <label class="field">Admin emails
               <textarea id="adm-admin-emails" rows="3" spellcheck="false"
                 placeholder="yumi.japan2026@gmail.com"></textarea></label>
           </div>
 
           <div class="panel">
-            <h2>Google sign-in · Google 登录</h2>
-            <p class="note">让学生在登录弹窗里用 Google 账号一键登录（按邮箱
-            并入已有账号）。在 Google Cloud Console 建一个 OAuth 2.0 客户端
-            （Web 应用），把下面的回调地址登记进去，再把 Client ID 和
-            Client Secret 填到这里。两者都填好后，登录弹窗才会出现
-            Google 按钮。</p>
+            <h2>Google sign-in</h2>
+            <p class="note">Let students sign in with one click using their Google account (accounts are merged by email). Create an OAuth 2.0 client (Web application) in Google Cloud Console, register the redirect URI below, then fill in the Client ID and Client Secret here. The Google button appears in the sign-in dialog only once both are set.</p>
             <label class="field">Redirect URI (copy into Google Cloud Console)
               <input type="text" id="adm-google-redirect" readonly
                 value="https://yumi.ki-toko.com/api/auth/google/callback" /></label>
@@ -886,10 +883,8 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
       <!-- ===== Packages ===== -->
       <div class="panel view hidden" id="adm-subs-card" data-view="packages">
-        <h2>订阅 · 课时包</h2>
-        <p class="note">学生的课时包（6 / 10 / 20 节，每周固定 1–3 个时间）。
-        这里只能停止课时包——停止后，剩余课程会全部取消并按规则退款
-        （开课前 12 小时内的不退款），已上过的课不受影响。</p>
+        <h2>Subscriptions · Packages</h2>
+        <p class="note">Student lesson packages (6 / 10 / 20 lessons, 1–3 fixed weekly times). This page can only stop a package — stopping cancels all remaining lessons and refunds them by the usual rules (no refund inside 12 hours of a lesson); lessons already taken are unaffected.</p>
         <p class="msg" id="adm-subs-msg"></p>
         <div class="table-scroll">
           <table class="data-table sub-table" id="adm-subs-table">
@@ -902,13 +897,13 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
       <!-- ===== Revenue ===== -->
       <div class="panel view hidden" id="adm-revenue-card" data-view="revenue">
-        <h2>收入统计 · Revenue</h2>
+        <h2>Revenue</h2>
         <div class="rev-controls">
-          <div class="rev-modes" role="group" aria-label="Period type · 周期类型">
-            <button type="button" class="rev-chip" data-rev-mode="week">周 · Week</button>
-            <button type="button" class="rev-chip" data-rev-mode="month">月 · Month</button>
-            <button type="button" class="rev-chip" data-rev-mode="quarter">季度 · Quarter</button>
-            <button type="button" class="rev-chip" data-rev-mode="year">年 · Year</button>
+          <div class="rev-modes" role="group" aria-label="Period type">
+            <button type="button" class="rev-chip" data-rev-mode="week">Week</button>
+            <button type="button" class="rev-chip" data-rev-mode="month">Month</button>
+            <button type="button" class="rev-chip" data-rev-mode="quarter">Quarter</button>
+            <button type="button" class="rev-chip" data-rev-mode="year">Year</button>
           </div>
           <div class="rev-nav">
             <button type="button" class="btn btn-ghost btn-small" id="rev-prev" aria-label="Previous period">‹</button>
@@ -918,44 +913,41 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         </div>
         <div class="stat-grid rev-stats">
           <div class="stat-card">
-            <div class="stat-label">总收入 · Total revenue</div>
+            <div class="stat-label">Total revenue</div>
             <div class="stat-num" id="rev-total"><span class="skl skl-num"></span></div>
-            <div class="stat-sub">单次课 + 课时包</div>
+            <div class="stat-sub">Single lessons + packages</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">单次课收入 · Single lessons</div>
+            <div class="stat-label">Single lessons</div>
             <div class="stat-num" id="rev-single"><span class="skl skl-num"></span></div>
-            <div class="stat-sub">按上课日期计</div>
+            <div class="stat-sub">By lesson date</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">课时包收入 · Packages</div>
+            <div class="stat-label">Packages</div>
             <div class="stat-num" id="rev-package"><span class="skl skl-num"></span></div>
-            <div class="stat-sub">按购买日期计</div>
+            <div class="stat-sub">By purchase date</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">课时数 · Lessons</div>
+            <div class="stat-label">Lessons</div>
             <div class="stat-num" id="rev-lessons"><span class="skl skl-num"></span></div>
             <div class="stat-sub" id="rev-lessons-sub"><span class="skl skl-line" style="width:54%"></span></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">预约数 · Bookings</div>
+            <div class="stat-label">Bookings</div>
             <div class="stat-num" id="rev-bookings"><span class="skl skl-num"></span></div>
-            <div class="stat-sub">计入收入的预约 + 课时包</div>
+            <div class="stat-sub">Revenue-counted bookings + packages</div>
           </div>
         </div>
         <div class="rev-chart" id="rev-chart"></div>
         <div class="rev-labels" id="rev-labels"></div>
-        <p class="note rev-note">统计口径：单次课收入按上课日期（JST）计入，金额为预约时记录的金额；
-          已取消并全额退款的不计入；开课前 12 小时内取消、未退款的照常计入（钱已收）。
-          课时包收入按购买（付款）日期计入整包价格，与上课日期无关。课时数包含课时包的课时。
-          周以周日为开始（与后台日历一致）。</p>
+        <p class="note rev-note">How it is counted: single-lesson revenue is attributed to the lesson date (JST) at the amount recorded when booked; cancelled-and-fully-refunded bookings are excluded; lessons cancelled inside 12 hours without a refund still count (the money was kept). Package revenue is attributed to the purchase (payment) date at the full package price, regardless of lesson dates. Lesson counts include package lessons. Weeks start on Sunday (same as the admin calendars).</p>
         <p class="msg" id="rev-msg"></p>
       </div>
 
     </main>
 
     <div class="savebar hidden" id="adm-savebar">
-      <span class="savebar-note" id="adm-dirty-note">所有修改已保存</span>
+      <span class="savebar-note" id="adm-dirty-note">All changes saved</span>
       <p class="msg" id="adm-save-msg"></p>
       <button class="btn" id="adm-save" type="button">Save settings</button>
     </div>
@@ -966,7 +958,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 <aside class="drawer hidden" id="stu-drawer" aria-label="Student detail">
   <div class="drawer-head">
     <h3 id="stu-detail-title">Student</h3>
-    <button type="button" class="btn btn-ghost btn-small" id="stu-close">关闭 ✕</button>
+    <button type="button" class="btn btn-ghost btn-small" id="stu-close">Close ✕</button>
   </div>
   <div id="stu-detail"></div>
 </aside>
@@ -975,6 +967,155 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
 <script>
 "use strict";
+/* ================= i18n: English / 日本語, ONE language at a time =========
+ * Default: saved choice (localStorage yumi_admin_lang) > browser
+ * language (ja -> Japanese, anything else -> English). Static HTML
+ * is English source; JS templates use A(en, ja); a text-node walker
+ * + MutationObserver translates everything else that renders later
+ * (tables, drawers, toasts). Data (names, remarks, emails) is never
+ * translated. Internal ids/fields/logic are untouched. */
+let ADM_LANG = (() => {
+  try { const v = localStorage.getItem("yumi_admin_lang"); if (v === "en" || v === "ja") return v; } catch { /* ignore */ }
+  return (navigator.language || "").toLowerCase().startsWith("ja") ? "ja" : "en";
+})();
+function admLocale() { return ADM_LANG === "ja" ? "ja-JP" : "en-US"; }
+function A(en, ja) { return ADM_LANG === "ja" ? ja : en; }
+const DAY_JP = ["日", "月", "火", "水", "木", "金", "土"];
+const DAY_JP_LONG = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
+function wdShort(wd) { return ADM_LANG === "ja" ? DAY_JP[Number(wd)] : DAY_NAMES[Number(wd)].slice(0, 3); }
+function wdLong(wd) { return ADM_LANG === "ja" ? DAY_JP_LONG[Number(wd)] : DAY_NAMES[Number(wd)]; }
+function statusLabel(v) {
+  const en = { upcoming: "Upcoming", completed: "Completed", cancelled: "Cancelled", pending_payment: "Pending payment" };
+  const ja = { upcoming: "予定", completed: "完了", cancelled: "キャンセル", pending_payment: "支払い待ち" };
+  return (ADM_LANG === "ja" ? ja : en)[v] || v;
+}
+
+const ADM_DICT_JA = {
+  "Yumi Admin": "Yumi 管理画面",
+  "Dashboard": "ダッシュボード", "Students": "生徒", "Bookings": "予約", "Schedule": "スケジュール",
+  "Availability": "予約可能時間", "Packages": "パッケージ", "Revenue": "収益", "Settings": "設定",
+  "View site ↗": "サイトを見る ↗", "Logout": "ログアウト",
+  "Admin sign-in is not configured.": "管理者ログインが設定されていません。",
+  "Continue with Google": "Google でログイン",
+  "Sign in with your Google account to manage bookings, the schedule and the site settings.": "Google アカウントでログインして、予約・スケジュール・サイト設定を管理します。",
+  "yumi.ki-toko.com · Teacher admin": "yumi.ki-toko.com · 先生用管理画面",
+  "Lessons today": "今日のレッスン", "Upcoming bookings": "今後の予約", "next 90 days": "今後 90 日",
+  "Active packages": "進行中のパッケージ", "Today's lessons": "今日のレッスン", "Next upcoming": "次の予約",
+  "Lessons already booked this month; cancelled ones are not counted.": "今月すでに予約されたレッスンです（キャンセル分は含みません）。",
+  "Click a cell to toggle whether that hour can be booked.": "セルをクリックすると、その時間帯の予約可否を切り替えられます。",
+  "Click any day to adjust that day on its own (a day off, special hours, or blocking single hours).": "日をクリックすると、その日だけ個別に調整できます（休み・特別時間・個別の時間ブロック）。",
+  "Weekly hours (Japan time)": "週間スケジュール（日本時間）", "Availability calendar": "予約カレンダー",
+  "Holidays and days off — pick a range and every day in it becomes a day off (existing bookings are unaffected). Saving still applies.": "休日・お休み — 期間を選ぶと、その間のすべての日が休みになります（既存の予約には影響しません）。反映には保存が必要です。",
+  "Vacation": "休暇", "from": "開始", "to": "終了", "Apply vacation": "休暇を適用",
+  "Prices (USD)": "価格（USD）",
+  "The per-lesson price for each duration (USD) — used at checkout and in price displays.": "各時間の 1 レッスンあたりの価格（USD）。支払い時と価格表示に使われます。",
+  "Access · Admin allowlist": "アクセス · 管理者許可リスト",
+  "Sign in with these email addresses — students who register with one of these emails can open this admin.": "これらのメールアドレスでログインすると、この管理画面を開けます。",
+  "Admin emails": "管理者メールアドレス",
+  "Google sign-in": "Google ログイン",
+  "Let students sign in from the login popup with Google (the button shows once both fields are filled). Also used for admin Google sign-in.": "生徒がログイン画面から Google でログインできるようにします（両方の欄を入力するとボタンが表示されます）。管理者の Google ログインにも使われます。",
+  "Google Client ID": "Google クライアント ID", "Google Client Secret": "Google クライアント シークレット",
+  "Redirect URI (copy into Google Cloud Console)": "リダイレクト URI（Google Cloud Console にコピー）",
+  "Email (Resend)": "メール（Resend）", "Resend API key": "Resend API キー", "From address": "送信元アドレス",
+  "Teacher notification email (optional)": "先生への通知メール（任意）",
+  "Reply-to for student emails (optional)": "生徒向けメールの返信先（任意）",
+  "Meeting & Calendar": "ミーティングとカレンダー",
+  "Fixed meeting link (Zoom / Google Meet)": "固定ミーティングリンク（Zoom / Google Meet）",
+  "Calendar feed key": "カレンダー購読キー", "Copy feed URL": "購読 URL をコピー", "Generate calendar key": "カレンダーキーを生成",
+  "Save settings": "設定を保存",
+  "Date & time (JST)": "日時（JST）", "Student": "生徒", "Course": "コース", "Status": "ステータス",
+  "Amount": "金額", "Actions": "操作", "Starts": "開始", "Ends": "終了", "Lessons": "レッスン数",
+  "Remaining": "残り", "Created": "作成日", "Email": "メール", "Package": "パッケージ",
+  "Slots (JST)": "枠（JST）", "Paid": "支払い", "When (JST)": "日時（JST）",
+  "Refresh": "更新", "All dates": "すべての日付", "All statuses": "すべてのステータス",
+  "Upcoming": "予定", "Completed": "完了", "Cancelled": "キャンセル", "Pending payment": "支払い待ち",
+  "Paid (all)": "支払い済み（すべて）", "Paid in full": "全額支払い済み", "Partially refunded": "一部返金",
+  "Fully refunded": "全額返金済み", "Not paid": "未払い",
+  "Cancel": "キャンセル", "Cancel + refund": "キャンセル＋返金", "Reschedule": "日時変更",
+  "All": "すべて", "With upcoming": "予約あり", "With package": "パッケージあり", "Dormant": "休眠",
+  "Sort:": "並び替え：", "Next lesson": "次のレッスン", "Total lessons": "総レッスン数",
+  "Total spent": "合計金額", "Recent activity": "最近の活動",
+  "No students yet — students appear here after their first paid booking.": "生徒はまだいません — 初回の支払い済み予約の後にここに表示されます。",
+  "New this month": "今月の新規",
+  "Student lesson packages (6 / 10 / 20 lessons, 1–3 fixed weekly times). This page can only stop a package — stopping cancels all remaining lessons and refunds them by the usual rules (no refund inside 12 hours of a lesson); lessons already taken are unaffected.": "生徒のレッスンパッケージ（6 / 10 / 20 レッスン、週 1〜3 回の固定枠）です。このページでは停止のみ可能です — 停止すると残りのレッスンはすべてキャンセルされ、通常のルールで返金されます（開始まで 12 時間以内のレッスンは返金なし）。受講済みのレッスンには影響しません。",
+  "Total revenue": "総収益", "Single lessons": "単発レッスン", "Week": "週", "Month": "月", "Quarter": "四半期", "Year": "年",
+  "Single lessons + packages": "単発＋パッケージ", "By lesson date": "レッスン日基準", "By purchase date": "購入日基準",
+  "Revenue-counted bookings + packages": "収益に含まれる予約＋パッケージ",
+  "How it is counted: single-lesson revenue is attributed to the lesson date (JST) at the amount recorded when booked; cancelled-and-fully-refunded bookings are excluded; lessons cancelled inside 12 hours without a refund still count (the money was kept). Package revenue is attributed to the purchase (payment) date at the full package price, regardless of lesson dates. Lesson counts include package lessons. Weeks start on Sunday (same as the admin calendars).": "集計方法：単発レッスンの収益はレッスン日（JST）基準で、予約時に記録された金額で計上します。キャンセルして全額返金された予約は含みません。開始まで 12 時間以内にキャンセルされ返金されなかったレッスンは計上します（代金を受け取っているため）。パッケージの収益は購入（支払い）日に全額を計上し、レッスン日には関係しません。レッスン数にはパッケージのレッスンも含まれます。週は日曜始まりです（管理画面のカレンダーと同じ）。",
+  "Close ✕": "閉じる ✕",
+  "SUN": "日", "MON": "月", "TUE": "火", "WED": "水", "THU": "木", "FRI": "金", "SAT": "土",
+  "Sunday": "日曜日", "Monday": "月曜日", "Tuesday": "火曜日", "Wednesday": "水曜日", "Thursday": "木曜日", "Friday": "金曜日", "Saturday": "土曜日",
+};
+const ADM_PATTERNS = [
+  [/^(\d+) booking\(s\)$/, (m) => `${m[1]} 件の予約`],
+  [/^(\d+) package\(s\)$/, (m) => `${m[1]} 件のパッケージ`],
+];
+function admLookup(key) {
+  if (ADM_LANG !== "ja" || !key) return null;
+  if (Object.prototype.hasOwnProperty.call(ADM_DICT_JA, key)) return ADM_DICT_JA[key];
+  for (const [re, fn] of ADM_PATTERNS) { const m = key.match(re); if (m) return fn(m); }
+  return null;
+}
+const ADM_PLACEHOLDERS = {
+  "Search (name, email, reference)": "検索（名前・メール・予約番号）",
+  "Search students…": "生徒を検索…",
+};
+function applyAdmI18n() {
+  if (ADM_LANG === "ja") {
+    document.querySelectorAll("input[placeholder], textarea[placeholder]").forEach((el) => {
+      const jp = ADM_PLACEHOLDERS[el.getAttribute("placeholder")];
+      if (jp) el.setAttribute("placeholder", jp);
+    });
+  }
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      const p = node.parentElement;
+      if (!p || p.closest("script, style, .adm-lang-pop")) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const raw = node.nodeValue;
+    const key = raw.trim().replace(/\s+/g, " ");
+    const rep = admLookup(key);
+    if (rep != null && rep !== key) node.nodeValue = raw.replace(key, rep);
+  }
+}
+function setAdmLang(lang) {
+  if (lang !== "en" && lang !== "ja") return;
+  if (lang === ADM_LANG) { applyAdmI18n(); return; }
+  try { localStorage.setItem("yumi_admin_lang", lang); } catch { /* ignore */ }
+  location.reload();
+}
+function buildAdmLangSwitch() {
+  const bar = document.querySelector(".adm-topbar-actions") || document.querySelector(".topbar") || document.body;
+  if (!bar || bar.querySelector(".adm-lang")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "adm-lang";
+  wrap.innerHTML = `<button type="button" class="adm-lang-btn" aria-haspopup="true">${ADM_LANG === "ja" ? "日本語" : "English"} <span aria-hidden="true">▾</span></button>
+    <div class="adm-lang-pop hidden" role="menu">
+      <button type="button" data-alang="en" class="${ADM_LANG === "en" ? "active" : ""}">English${ADM_LANG === "en" ? " ✓" : ""}</button>
+      <button type="button" data-alang="ja" class="${ADM_LANG === "ja" ? "active" : ""}">日本語${ADM_LANG === "ja" ? " ✓" : ""}</button>
+    </div>`;
+  const lock = document.querySelector("#adm-lock");
+  if (lock && lock.parentElement === bar) bar.insertBefore(wrap, lock); else bar.appendChild(wrap);
+  const btn = wrap.querySelector(".adm-lang-btn");
+  const pop = wrap.querySelector(".adm-lang-pop");
+  btn.addEventListener("click", (e) => { e.stopPropagation(); pop.classList.toggle("hidden"); });
+  document.addEventListener("click", () => pop.classList.add("hidden"));
+  pop.querySelectorAll("[data-alang]").forEach((b) => b.addEventListener("click", () => setAdmLang(b.dataset.alang)));
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("DOMContentLoaded", () => {
+    buildAdmLangSwitch();
+    applyAdmI18n();
+    new MutationObserver(() => applyAdmI18n()).observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
+}
+
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1020,7 +1161,7 @@ async function api(path, opts = {}) {
     });
   } catch (e) {
     if (e && e.name === "AbortError") {
-      throw new Error("请求超时，请重试 · Request timed out — please retry");
+      throw new Error(A("Request timed out — please retry", "リクエストがタイムアウトしました。再試行してください"));
     }
     throw e;
   } finally {
@@ -1240,11 +1381,17 @@ function admDpToday() { // admin "today" is JST, as in buildCalendarHtml
 function admDpLabel(ds) {
   const p = admDpParse(ds);
   if (!p) return "";
-  return new Date(Date.UTC(p.y, p.m, p.d)).toLocaleDateString("en-US",
+  return new Date(Date.UTC(p.y, p.m, p.d)).toLocaleDateString(_dpLocale(),
     { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 const ADM_DP_WEEK = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+/* i18n hooks: resolved lazily so this block also runs standalone
+ * (unit-extracted) — English fallback when the shell globals are absent. */
+const _dpJa = () => (typeof ADM_LANG !== "undefined" && ADM_LANG === "ja");
+const _dpLocale = () => (typeof admLocale === "function" ? admLocale() : "en-US");
+const _dpA = (en, ja) => (_dpJa() ? ja : en);
+const ADM_DP_WEEK_JA = ["日", "月", "火", "水", "木", "金", "土"];
 
 function admDatePicker(input, opts) {
   opts = opts || {};
@@ -1293,7 +1440,7 @@ function admDatePicker(input, opts) {
   head.appendChild(next);
   const week = document.createElement("div");
   week.className = "adm-dp-week";
-  ADM_DP_WEEK.forEach((w) => {
+  (_dpJa() ? ADM_DP_WEEK_JA : ADM_DP_WEEK).forEach((w) => {
     const s = document.createElement("span");
     s.textContent = w;
     week.appendChild(s);
@@ -1314,7 +1461,7 @@ function admDatePicker(input, opts) {
   const todayBtn = document.createElement("button");
   todayBtn.type = "button";
   todayBtn.className = "adm-dp-foot-btn";
-  todayBtn.textContent = "Today · 今天";
+  todayBtn.textContent = _dpA("Today", "今日");
   todayBtn.addEventListener("click", () => {
     const t = admDpToday();
     if (!outOfRange(t)) pick(t);
@@ -1325,7 +1472,7 @@ function admDatePicker(input, opts) {
     clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "adm-dp-foot-btn";
-    clearBtn.textContent = "Clear · 清除";
+    clearBtn.textContent = _dpA("Clear", "クリア");
     clearBtn.addEventListener("click", () => { setValue(""); close(); btn.focus(); });
     foot.appendChild(clearBtn);
   } else {
@@ -1357,7 +1504,7 @@ function admDatePicker(input, opts) {
     const dim = new Date(Date.UTC(cursor.y, cursor.m + 1, 0)).getUTCDate();
     const prevDim = new Date(Date.UTC(cursor.y, cursor.m, 0)).getUTCDate();
     title.textContent = new Date(Date.UTC(cursor.y, cursor.m, 1))
-      .toLocaleDateString("en-US",
+      .toLocaleDateString(_dpLocale(),
         { month: "long", year: "numeric", timeZone: "UTC" });
     const sel = input.value, today = admDpToday();
     todayBtn.disabled = outOfRange(today);
@@ -1492,7 +1639,7 @@ function gridHours(day) {
 }
 function runsText(hours) {
   // One range per line (the header summary stacks them vertically).
-  if (!hours.length) return "休息";
+  if (!hours.length) return A("Closed", "休み");
   const runs = [];
   let s = hours[0], p = hours[0];
   for (const h of hours.slice(1)) {
@@ -1518,8 +1665,8 @@ function buildWeekly() {
   const box = $("#adm-weekly");
   const head = GRID_DAYS.map((d) => `
     <th class="wh-day-head">
-      <div class="wh-day-name">周${DAY_CN[d]} ${DAY_NAMES[d].slice(0, 3)}</div>
-      <button type="button" class="wh-all" data-all="${d}">全天</button>
+      <div class="wh-day-name">${wdLong(d)}</div>
+      <button type="button" class="wh-all" data-all="${d}">${A("All day", "終日")}</button>
       <span class="wh-day-sum" data-sum="${d}"></span>
     </th>`).join("");
   box.innerHTML = `
@@ -1648,10 +1795,10 @@ function refreshDirty() {
   const dirty = !!draft && snapshot() !== savedSnapshot;
   const btn = $("#adm-save");
   btn.classList.toggle("dirty", dirty);
-  btn.textContent = dirty ? "Save settings · 有未保存的修改" : "Save settings";
+  btn.textContent = dirty ? A("Save settings · Unsaved changes", "設定を保存 · 未保存の変更あり") : A("Save settings", "設定を保存");
   const note = $("#adm-dirty-note");
   if (note) {
-    note.textContent = dirty ? "● 有未保存的修改 · Unsaved changes" : "所有修改已保存";
+    note.textContent = dirty ? A("● Unsaved changes", "● 未保存の変更があります") : A("All changes saved", "すべての変更が保存されました");
     note.classList.toggle("dirty", dirty);
   }
 }
@@ -1738,7 +1885,7 @@ function buildCalendarHtml(cursor, selected, lessonsFor, s, idPrefix) {
   const firstDow = new Date(Date.UTC(y, m, 1)).getUTCDay();
   const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
-  const title = new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-US",
+  const title = new Date(Date.UTC(y, m, 1)).toLocaleDateString(admLocale(),
     { month: "long", year: "numeric", timeZone: "UTC" });
   let cells = "";
   for (let i = 0; i < firstDow; i++) cells += `<span></span>`;
@@ -1754,14 +1901,14 @@ function buildCalendarHtml(cursor, selected, lessonsFor, s, idPrefix) {
     if (special) cls.push("is-special");
     if (ds === selected) cls.push("selected");
     if (ds === today) cls.push("today");
-    const sub = !hours ? "休" : (isOverride ? compactHours(hours) : compactRuns(s, ds));
+    const sub = !hours ? A("Off", "休") : (isOverride ? compactHours(hours) : compactRuns(s, ds));
     const miniRows = lessons.slice(0, 2).map((b) => {
       const done = b.effectiveStatus === "completed";
       const tip = `${b.time} ${b.name} — ${courseNames[b.courseId] || b.courseId || ""}` +
-        (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
+        (b.studentRemark ? ` · ${A("Note: ", "メモ：")}${b.studentRemark}` : "");
       return `<span class="d-lesson${done ? " done" : ""}" title="${esc(tip)}">${b.time} ${esc(b.name)}</span>`;
     }).join("");
-    const more = lessons.length > 2 ? `<span class="d-more">+${lessons.length - 2} 节</span>` : "";
+    const more = lessons.length > 2 ? `<span class="d-more">+${lessons.length - 2} ${A("lessons", "件")}</span>` : "";
     const dots = (special || blocked)
       ? `<span class="d-dots">${special ? `<span class="dot dot-special"></span>` : ""}${blocked ? `<span class="dot dot-blocked"></span>` : ""}</span>`
       : `<span class="d-dots"></span>`;
@@ -1809,15 +1956,15 @@ function renderSummary() {
     if (Object.prototype.hasOwnProperty.call(draft.dateOverrides, ds)) {
       const o = draft.dateOverrides[ds];
       chips.push({ ds, kind: "override",
-        text: o === null ? `${label} 休息` : `${label} 特殊时段 ${o.start}–${o.end}` });
+        text: o === null ? `${label} ${A("closed", "休み")}` : `${label} ${A("special hours", "特別時間")} ${o.start}–${o.end}` });
     }
     const bh = draft.blockedHours[ds] || [];
-    if (bh.length) chips.push({ ds, kind: "hours", text: `${label} 屏蔽 ${bh.join(", ")}` });
+    if (bh.length) chips.push({ ds, kind: "hours", text: `${label} ${A("blocked", "ブロック")} ${bh.join(", ")}` });
   }
   el.innerHTML = chips.length
-    ? `特殊安排：` + chips.map((c, i) =>
+    ? A("Special arrangements: ", "特別な設定：") + chips.map((c, i) =>
         `<span class="sum-chip">${esc(c.text)}<button type="button" data-chip="${i}" aria-label="Remove"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.2 3.2 12.8 12.8M12.8 3.2 3.2 12.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button></span>`).join("")
-    : `特殊安排：无（全部跟随每周安排）`;
+    : A("Special arrangements: none (all follow the weekly schedule)", "特別な設定：なし（すべて週間スケジュール通り）");
   el.querySelectorAll("[data-chip]").forEach((btn) => {
     btn.onclick = () => {
       const c = chips[Number(btn.dataset.chip)];
@@ -1842,11 +1989,11 @@ function hourOptions(selected) {
 function remarkBoxHtml(email, remark, isDefault) {
   return `
   <div class="remark-box">
-    <label>老师备注 · Teacher's note about this student
-      ${isDefault ? `<span class="default-tag">（学生首次预约时填写）</span>` : ""}</label>
+    <label>${A("Teacher's note about this student", "この生徒についての先生メモ")}
+      ${isDefault ? `<span class="default-tag">${A("(filled in by the student at their first booking)", "（生徒が初回予約時に入力）")}</span>` : ""}</label>
     <textarea class="remark-text" data-email="${esc(email)}"
-      placeholder="例如：想重点练口语 / 怕生，节奏放慢一点…">${esc(remark || "")}</textarea>
-    <button type="button" class="btn btn-ghost remark-save">保存备注</button>
+      placeholder="${A("e.g. wants to focus on speaking / shy, keep the pace slow…", "例：会話を重点的に練習したい／人見知りなのでペースはゆっくり…")}">${esc(remark || "")}</textarea>
+    <button type="button" class="btn btn-ghost remark-save">${A("Save note", "メモを保存")}</button>
   </div>`;
 }
 
@@ -1866,15 +2013,15 @@ function wireRemarkBoxes(root) {
             b.studentRemark = ta.value; b.remarkIsDefault = false;
           }
         }
-        btn.textContent = "已保存 ✓";
-        setTimeout(() => { btn.textContent = "保存备注"; btn.disabled = false; }, 1600);
+        btn.textContent = A("Saved ✓", "保存しました ✓");
+        setTimeout(() => { btn.textContent = A("Save note", "メモを保存"); btn.disabled = false; }, 1600);
         renderCalendar();
         if (schCursor) {
           renderScheduleCalendar();
           if (!box.closest("#sch-day-panel")) renderScheduleDay();
         }
       } catch (e) {
-        btn.textContent = "保存失败，重试";
+        btn.textContent = A("Save failed — retry", "保存に失敗しました。再試行してください");
         btn.disabled = false;
         alert(e.message);
       }
@@ -1888,14 +2035,14 @@ function lessonsListHtml(lessons) {
     const statusLabel = { upcoming: "Upcoming", completed: "Completed",
       cancelled: "Cancelled", pending_payment: "Pending payment" }[b.effectiveStatus] || b.effectiveStatus;
     const tip = `${b.name} — ${courseNames[b.courseId] || ""}` +
-      (b.studentRemark ? ` · 备注：${b.studentRemark}` : "");
+      (b.studentRemark ? ` · ${A("Note: ", "メモ：")}${b.studentRemark}` : "");
     return `
     <div class="lesson-row${b.effectiveStatus === "cancelled" ? " is-cancelled" : ""}" title="${esc(tip)}">
       <div class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</div>
-      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · 已退款 ${money(b.refundAmount)}` : ""}</div>
+      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · ${A("refunded", "返金済み")} ${money(b.refundAmount)}` : ""}</div>
       ${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}
     </div>`;
-  }).join("") : `<p class="note">这天还没有课程。</p>`;
+  }).join("") : `<p class="note">${A("No lessons this day.", "この日のレッスンはありません。")}</p>`;
 }
 
 /* ---------- availability day editor （这天的课程 + availability) ---------- */
@@ -1922,23 +2069,23 @@ function renderDayEditor() {
     const blocked = s.blockedHours[ds] || [];
     const starts = allIntervalStarts(s, ds);
     chipsHtml = `
-      <h4 class="bk-sub">屏蔽单个时间 · Block single hours</h4>
-      <p class="note">点一下某个时间就能屏蔽它（比如临时有事）；再点一次恢复。</p>
+      <h4 class="bk-sub">${A("Block single hours", "個別の時間をブロック")}</h4>
+      <p class="note">${A("Click a start time to block it (e.g. something came up); click again to unblock.", "開始時間をクリックするとブロックできます（急用のときなど）。もう一度クリックすると解除されます。")}</p>
       <div class="chip-row">${starts.map((t) =>
         `<button type="button" class="hour-chip${blocked.includes(t) ? " blocked" : ""}" data-hour="${t}">${t}</button>`).join("")}</div>`;
   }
 
   ed.innerHTML = `
-    <h3>${ds} · 周${DAY_CN[wd]} ${DAY_NAMES[wd]}</h3>
-    <h4 class="bk-sub">这天的课程 · Lessons this day</h4>
+    <h3>${ds} · ${wdLong(wd)}</h3>
+    <h4 class="bk-sub">${A("Lessons this day", "この日のレッスン")}</h4>
     ${lessonsHtml}
-    <h4 class="bk-sub">这天的可约安排 · Availability</h4>
+    <h4 class="bk-sub">${A("Availability this day", "この日の予約可能枠")}</h4>
     <div class="seg">
-      <button type="button" data-mode="follow" class="${mode === "follow" ? "active" : ""}">跟随每周安排</button>
-      <button type="button" data-mode="closed" class="${mode === "closed" ? "active" : ""}">这天休息</button>
-      <button type="button" data-mode="special" class="${mode === "special" ? "active" : ""}">特殊时段</button>
+      <button type="button" data-mode="follow" class="${mode === "follow" ? "active" : ""}">${A("Follow weekly schedule", "週間スケジュール通り")}</button>
+      <button type="button" data-mode="closed" class="${mode === "closed" ? "active" : ""}">${A("Day off", "休み")}</button>
+      <button type="button" data-mode="special" class="${mode === "special" ? "active" : ""}">${A("Special hours", "特別時間")}</button>
     </div>
-    ${mode === "follow" ? `<p class="note">每周安排：${followRuns || "这天休息（每周模板里就是关的）"}</p>` : ""}
+    ${mode === "follow" ? `<p class="note">${A("Weekly schedule: ", "週間スケジュール：")}${followRuns || A("closed (the weekly template is off this day)", "休み（週間テンプレートで休みの日）")}</p>` : ""}
     ${mode === "special" ? `
     <div class="de-special">
       <label class="field">Start <select id="de-start" class="adm-dd-src">${hourOptions(override.start)}</select></label>
@@ -2023,11 +2170,11 @@ function renderScheduleCalendar() {
 
 function renderScheduleDay() {
   const panel = $("#sch-day-panel");
-  if (!schSelected) { panel.innerHTML = `<p class="note">选择一天查看课程。</p>`; return; }
+  if (!schSelected) { panel.innerHTML = `<p class="note">${A("Pick a day to see its lessons.", "日を選ぶとレッスンが表示されます。")}</p>`; return; }
   const wd = new Date(schSelected + "T00:00:00Z").getUTCDay();
   panel.innerHTML = `
-    <h3>${schSelected} · 周${DAY_CN[wd]} ${DAY_NAMES[wd]}</h3>
-    <h4 class="bk-sub">这天的课程 · Lessons this day</h4>
+    <h3>${schSelected} · ${wdLong(wd)}</h3>
+    <h4 class="bk-sub">${A("Lessons this day", "この日のレッスン")}</h4>
     ${lessonsListHtml(lessonsOnSch(schSelected))}`;
   wireRemarkBoxes(panel);
 }
@@ -2047,7 +2194,7 @@ $("#vac-apply").addEventListener("click", () => {
   const msg = $("#vac-msg");
   if (!draft) return;
   if (!start || !end || end < start) {
-    msg.textContent = "请选择正确的起止日期。"; msg.className = "note msg-err"; return;
+    msg.textContent = A("Please choose a valid start and end date.", "正しい開始日と終了日を選んでください。"); msg.className = "note msg-err"; return;
   }
   let d = start, count = 0;
   while (d <= end && count <= 92) {
@@ -2056,7 +2203,7 @@ $("#vac-apply").addEventListener("click", () => {
     const [y, m, dd] = d.split("-").map(Number);
     d = new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10);
   }
-  msg.textContent = `已标记 ${count} 天休息（还没保存，点 Save 生效）。点某一天可以单独重新打开。`;
+  msg.textContent = A(`Marked ${count} day(s) as vacation (not saved yet — click Save to apply). Click a day to reopen it individually.`, `${count} 日を休みに設定しました（まだ保存されていません。「設定を保存」で反映されます）。日をクリックすると個別に再開できます。`);
   msg.className = "note";
   afterChange(true);
 });
@@ -2083,14 +2230,12 @@ $("#adm-copy-feed").addEventListener("click", async () => {
   if (!key) return;
   try {
     await navigator.clipboard.writeText(`${location.origin}/api/calendar.ics?key=${key}`);
-    $("#adm-feed-url").textContent = "Copied! 把这个链接发给 Yumi，她在 Google Calendar 里用 From URL 添加。";
+    $("#adm-feed-url").textContent = A("Copied! Send this link to Yumi — she adds it in Google Calendar via \"From URL\".", "コピーしました！このリンクを Yumi に送ってください。Google カレンダーの「URL で追加」から登録できます。");
   } catch { /* clipboard unavailable — the URL is shown above */ }
 });
 
 /* ---------- bookings table (Feature B + remarks) ---------- */
 
-const STATUS_LABEL = { upcoming: "Upcoming", completed: "Completed",
-  cancelled: "Cancelled", pending_payment: "Pending payment" };
 
 async function loadBookings() {
   const params = new URLSearchParams();
@@ -2114,9 +2259,9 @@ async function loadBookings() {
       <td class="nowrap">${b.date}<br><span class="cell-sub">${b.time} JST</span></td>
       <td>${esc(b.name)}<br><span class="cell-sub">${esc(b.email)}</span></td>
       <td>${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "—")}<br><span class="cell-sub">${b.durationMinutes || ""} min</span></td>
-      <td><span class="pill pill-${b.effectiveStatus}">${STATUS_LABEL[b.effectiveStatus] || b.effectiveStatus}</span>${b.refundAmount > 0 ? `<span class="refund-line" title="${esc(b.refundedAt || "")}">已退款 ${money(b.refundAmount)}</span>` : ""}</td>
+      <td><span class="pill pill-${b.effectiveStatus}">${statusLabel(b.effectiveStatus)}</span>${b.refundAmount > 0 ? `<span class="refund-line" title="${esc(b.refundedAt || "")}">${A("Refunded", "返金済み")} ${money(b.refundAmount)}</span>` : ""}</td>
       <td>${money(b.amount)}</td>
-      <td class="actions"><button type="button" class="btn btn-ghost btn-small" data-note="${b.id}">备注</button>${cancellable ? `<button type="button" class="btn btn-ghost btn-small" data-cancel="${b.id}">Cancel</button>` : ""}</td>
+      <td class="actions"><button type="button" class="btn btn-ghost btn-small" data-note="${b.id}">${A("Note", "メモ")}</button>${cancellable ? `<button type="button" class="btn btn-ghost btn-small" data-cancel="${b.id}">Cancel</button>` : ""}</td>
     </tr>
     <tr class="remark-row hidden"><td colspan="6">${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}</td></tr>`;
   }).join("") || `<tr><td colspan="6">No bookings match.</td></tr>`;
@@ -2134,7 +2279,7 @@ async function loadBookings() {
       btn.disabled = true;
       try {
         await api(`/api/admin/bookings/${b.id}/cancel`, { method: "POST", body: "{}" });
-        toast("已取消并退款 · Cancelled");
+        toast(A("Cancelled & refunded", "キャンセルし、返金しました"));
         await loadBookings();
         await loadMonthBookings();
         await loadScheduleMonth();
@@ -2144,7 +2289,7 @@ async function loadBookings() {
   });
   } catch (e) {
     $("#adm-bk-msg").textContent = "";
-    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">加载失败 · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-bk-retry>重试 · Retry</button></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">${A("Failed to load", "読み込みに失敗しました")} · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-bk-retry>${A("Retry", "再試行")}</button></td></tr>`;
     const rb = tbody.querySelector("[data-bk-retry]");
     if (rb) rb.onclick = () => loadBookings().catch(() => {});
   }
@@ -2164,33 +2309,32 @@ async function loadSubs() {
   try {
   const data = await api("/api/admin/subscriptions");
   const subs = data.subscriptions || [];
-  $("#adm-subs-msg").textContent = subs.length ? `${subs.length} package(s)` : "暂无订阅。";
+  $("#adm-subs-msg").textContent = subs.length ? `${subs.length} package(s)` : A("No subscriptions yet.", "まだ定期購入はありません。");
   tbody.innerHTML = subs.map((s) => {
     const slots = (s.slots || []).map((sl) =>
-      `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ");
+      `${wdShort(sl.weekday)} ${sl.time}`).join(" · ");
     return `
     <tr>
       <td>${esc(s.name)}<br><span class="cell-sub">${esc(s.email)}</span></td>
       <td>${esc(slots)}<br><span class="cell-sub">${s.durationMinutes} min</span></td>
-      <td>${esc(courseNames[s.courseId] || s.courseId || "")}<br><span class="cell-sub">${s.totalLessons} 节</span></td>
-      <td>${s.status === "active" ? `<span class="pill pill-upcoming">进行中</span>` : s.status === "stopped" ? `<span class="pill pill-cancelled">已停止</span>` : esc(s.status)}</td>
-      <td>${s.status === "active" ? `${s.remainingLessons ?? "—"} 节` +
-        (s.nextLesson ? `<br><span class="cell-sub">下一节 ${s.nextLesson.date}</span>` : "") : "—"}</td>
-      <td class="actions">${s.status === "active" ? `<button type="button" class="btn btn-ghost btn-small" data-stop="${s.id}">停止</button>` : ""}</td>
+      <td>${esc(courseNames[s.courseId] || s.courseId || "")}<br><span class="cell-sub">${s.totalLessons} ${A("lessons", "レッスン")}</span></td>
+      <td>${s.status === "active" ? `<span class="pill pill-upcoming">${A("Active", "進行中")}</span>` : s.status === "stopped" ? `<span class="pill pill-cancelled">${A("Stopped", "停止済み")}止</span>` : esc(s.status)}</td>
+      <td>${s.status === "active" ? `${s.remainingLessons ?? "—"} ${A("lessons", "レッスン")}` +
+        (s.nextLesson ? `<br><span class="cell-sub">${A("Next", "次回")} ${s.nextLesson.date}</span>` : "") : "—"}</td>
+      <td class="actions">${s.status === "active" ? `<button type="button" class="btn btn-ghost btn-small" data-stop="${s.id}">${A("Stop", "停止")}</button>` : ""}</td>
     </tr>`;
   }).join("");
   tbody.querySelectorAll("[data-stop]").forEach((btn) => {
     btn.onclick = async () => {
       const s = subs.find((x) => x.id === btn.dataset.stop);
       const inside = s.insideWindowLessons || 0;
-      const text = `停止 ${s.name} 的课时包？将取消剩余 ${s.remainingLessons} 节，` +
-        `退款 ${money(s.refundableTotal || 0)}` +
-        (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") + `。`;
+      const text = A(`Stop ${s.name}'s package? This cancels the remaining ${s.remainingLessons} lessons and refunds ${money(s.refundableTotal || 0)}` + (inside > 0 ? `; ${inside} of them start within 12 hours and are not refunded` : "") + ".",
+        `${s.name} のパッケージを停止しますか？残り ${s.remainingLessons} レッスンをキャンセルし、${money(s.refundableTotal || 0)} を返金します` + (inside > 0 ? `。うち ${inside} 件は開始まで 12 時間以内のため返金されません` : "") + "。");
       if (!confirm(text)) return;
       btn.disabled = true;
       try {
         await api(`/api/admin/subscriptions/${s.id}/stop`, { method: "POST", body: "{}" });
-        toast("课时包已停止 · Package stopped");
+        toast(A("Package stopped", "パッケージを停止しました"));
         await loadSubs();
         await loadMonthBookings();
         await loadScheduleMonth();
@@ -2200,7 +2344,7 @@ async function loadSubs() {
   });
   } catch (e) {
     $("#adm-subs-msg").textContent = "";
-    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">加载失败 · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-subs-retry>重试 · Retry</button></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">${A("Failed to load", "読み込みに失敗しました")} · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-subs-retry>${A("Retry", "再試行")}</button></td></tr>`;
     const rb = tbody.querySelector("[data-subs-retry]");
     if (rb) rb.onclick = () => loadSubs().catch(() => {});
   }
@@ -2245,14 +2389,14 @@ async function loadDashboard(force) {
       .sort((a, b) => a.time.localeCompare(b.time));
     $("#dash-today-count").textContent = todayLessons.length;
     const twd = new Date(today + "T00:00:00Z").getUTCDay();
-    $("#dash-today-sub").textContent = `${today} · 周${DAY_CN[twd]}`;
+    $("#dash-today-sub").textContent = `${today} · ${wdLong(twd)}`;
     $("#dash-upcoming-count").textContent =
       upData.total ?? (upData.bookings || []).length;
     const activeSubs = (subsData.subscriptions || []).filter((s) => s.status === "active");
     $("#dash-subs-count").textContent = activeSubs.length;
     const remaining = activeSubs.reduce((n, s) => n + (s.remainingLessons || 0), 0);
     $("#dash-subs-sub").textContent = activeSubs.length
-      ? `共剩 ${remaining} 节课` : "暂无进行中的课时包";
+      ? A(`${remaining} lessons left in total`, `合計で残り ${remaining} レッスン`) : A("No active package", "進行中のパッケージはありません");
 
     const row = (b, withDate) => `
       <button type="button" class="dash-row" data-goto="${b.date}">
@@ -2262,12 +2406,12 @@ async function loadDashboard(force) {
       </button>`;
     $("#dash-today-list").innerHTML = todayLessons.length
       ? todayLessons.map((b) => row(b, false)).join("")
-      : `<p class="note">今天没有课程。</p>`;
+      : `<p class="note">${A("No lessons today.", "今日のレッスンはありません。")}</p>`;
     const next = [...(upData.bookings || [])]
       .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 6);
     $("#dash-next-list").innerHTML = next.length
       ? next.map((b) => row(b, true)).join("")
-      : `<p class="note">未来 90 天暂无待上预约。</p>`;
+      : `<p class="note">${A("No upcoming bookings in the next 90 days.", "今後 90 日の予約はありません。")}</p>`;
     document.querySelectorAll("[data-goto]").forEach((el) => {
       el.onclick = () => gotoSchedule(el.dataset.goto);
     });
@@ -2282,7 +2426,7 @@ async function loadDashboard(force) {
     settleSkl($("#dash-today-list"), `<p class="note">—</p>`);
     settleSkl($("#dash-next-list"), `<p class="note">—</p>`);
     $("#dash-msg").innerHTML = `${esc(e.message)} ` +
-      `<button type="button" class="btn btn-ghost btn-small" id="dash-retry">重试 · Retry</button>`;
+      `<button type="button" class="btn btn-ghost btn-small" id="dash-retry">${A("Retry", "再試行")}</button>`;
     $("#dash-retry").onclick = () => loadDashboard(true);
   }
 }
@@ -2293,7 +2437,7 @@ let studentsCache = [], stuLoadedAt = 0, stuFilter = "all";
 const ACCT_BADGE = { google: "Google", registered: "Registered", guest: "Guest" };
 
 function fmtDay(ds) {
-  return new Date(ds + "T00:00:00Z").toLocaleDateString("en-US",
+  return new Date(ds + "T00:00:00Z").toLocaleDateString(admLocale(),
     { month: "short", day: "numeric", timeZone: "UTC" });
 }
 function avatarHtml(s) {
@@ -2325,7 +2469,7 @@ async function loadStudents(force) {
       .forEach((s) => settleSkl($(s), "–"));
     settleSkl($("#stu-grid"), "");
     $("#stu-msg").innerHTML = `${esc(e.message)} ` +
-      `<button type="button" class="btn btn-ghost btn-small" id="stu-retry">重试 · Retry</button>`;
+      `<button type="button" class="btn btn-ghost btn-small" id="stu-retry">${A("Retry", "再試行")}</button>`;
     $("#stu-retry").onclick = () => loadStudents(true);
   }
 }
@@ -2356,7 +2500,7 @@ function stuVisible() {
 function renderStudents() {
   const list = stuVisible();
   $("#stu-msg").textContent = studentsCache.length
-    ? `显示 ${list.length} / ${studentsCache.length} 位学生` : "";
+    ? A(`${list.length} / ${studentsCache.length} students`, `${list.length} / ${studentsCache.length} 名の生徒`) : "";
   $("#stu-empty").classList.toggle("hidden", studentsCache.length > 0);
   $("#stu-grid").innerHTML = list.map((s) => `
     <article class="stu-card" data-student="${esc(s.email)}" tabindex="0" role="button">
@@ -2370,11 +2514,11 @@ function renderStudents() {
         <div>${esc(s.email)}</div>
         <div>Next: <strong>${s.nextLesson ? `${fmtDay(s.nextLesson.date)} · ${s.nextLesson.time}` : "—"}</strong></div>
         <div>Package: <strong>${s.hasActivePackage ? `${s.activePackageRemaining} left` : "—"}</strong>
-          · Lessons: <strong>${s.totalLessons}</strong>（完成 ${s.completedLessons}）</div>
+          · ${A("Lessons", "レッスン")}: <strong>${s.totalLessons}</strong>${A(` (${s.completedLessons} completed)`, `（完了 ${s.completedLessons}）`)}</div>
         <div>Spent: <strong>${money(s.totalSpent)}</strong>
           · Last: <strong>${s.lastLessonDate ? fmtDay(s.lastLessonDate) : "—"}</strong></div>
       </div>
-      ${s.studentRemark ? `<div class="remark-snippet" title="${esc(s.studentRemark)}">备注：${esc(s.studentRemark)}</div>` : ""}
+      ${s.studentRemark ? `<div class="remark-snippet" title="${esc(s.studentRemark)}">${A("Note: ", "メモ：")}${esc(s.studentRemark)}</div>` : ""}
     </article>`).join("");
   $("#stu-grid").querySelectorAll("[data-student]").forEach((card) => {
     card.addEventListener("click", () => openStudent(card.dataset.student));
@@ -2409,17 +2553,17 @@ function openStudent(email) {
   const pkgHtml = s.packages.length ? s.packages.map((p) => `
     <div class="pkg-card">
       <div class="lr-head">${esc(courseNames[p.courseId] || p.courseId || "Package")} · ${p.durationMinutes} min</div>
-      <div class="lr-sub">${p.totalLessons} 节课 · 剩 ${p.remainingLessons} 节 · ${p.status}` +
+      <div class="lr-sub">${p.totalLessons} ${A("lessons", "レッスン")} · ${A("left", "残り")} ${p.remainingLessons} · ${p.status}` +
         (p.slots && p.slots.length
-          ? ` · ${p.slots.map((sl) => `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ")}` : "") +
+          ? ` · ${p.slots.map((sl) => `${wdShort(sl.weekday)} ${sl.time}`).join(" · ")}` : "") +
         ` · ${money(p.totalPrice)}</div>
-    </div>`).join("") : `<p class="note">没有课时包。</p>`;
+    </div>`).join("") : `<p class="note">${A("No packages.", "パッケージはありません。")}</p>`;
   const tlHtml = s.lessons.length ? s.lessons.map((l) => `
     <div class="tl-row">
       <span class="tl-date">${l.date} ${l.time}</span>
       <span class="tl-what">${esc(courseNames[l.courseId] || legacyNames[l.lessonTypeId] || "Lesson")} · ${l.durationMinutes} min</span>
-      <span class="pill pill-${l.status}">${STATUS_LABEL[l.status] || l.status}</span>
-    </div>`).join("") : `<p class="note">还没有课程。</p>`;
+      <span class="pill pill-${l.status}">${statusLabel(l.status)}</span>
+    </div>`).join("") : `<p class="note">${A("No lessons yet.", "まだレッスンがありません。")}</p>`;
   $("#stu-detail").innerHTML = `
     <div class="stu-top">${avatarHtml(s)}
       <div>
@@ -2428,22 +2572,22 @@ function openStudent(email) {
       </div>
     </div>
     <div class="stu-facts">
-      <div>总课时 <strong>${s.totalLessons}</strong>（已完成 ${s.completedLessons}）</div>
-      <div>总消费 <strong>${money(s.totalSpent)}</strong></div>
-      <div>下节课 <strong>${s.nextLesson ? `${s.nextLesson.date} ${s.nextLesson.time}` : "—"}</strong></div>
-      <div>上节课 <strong>${s.lastLessonDate || "—"}</strong></div>
+      <div>${A("Total lessons", "総レッスン数")} <strong>${s.totalLessons}</strong>${A(` (${s.completedLessons} completed)`, `（完了 ${s.completedLessons}）`)}</div>
+      <div>${A("Total spent", "合計金額")} <strong>${money(s.totalSpent)}</strong></div>
+      <div>${A("Next lesson", "次のレッスン")} <strong>${s.nextLesson ? `${s.nextLesson.date} ${s.nextLesson.time}` : "—"}</strong></div>
+      <div>${A("Last lesson", "前回のレッスン")} <strong>${s.lastLessonDate || "—"}</strong></div>
     </div>
     ${s.profile ? `
     <div class="stu-facts" style="grid-template-columns:1fr">
-      <div>日语水平 <strong>${esc(s.profile.level || "—")}</strong></div>
-      <div>学习目标 <strong style="white-space:pre-wrap">${esc(s.profile.goals || "—")}</strong></div>
+      <div>${A("Japanese level", "日本語レベル")} <strong>${esc(s.profile.level || "—")}</strong></div>
+      <div>${A("Learning goals", "学習目標")} <strong style="white-space:pre-wrap">${esc(s.profile.goals || "—")}</strong></div>
     </div>` : ""}
-    <h4 class="bk-sub">课时包 · Packages</h4>
+    <h4 class="bk-sub">${A("Packages", "パッケージ")}</h4>
     ${pkgHtml}
-    <h4 class="bk-sub">课程时间线 · Timeline</h4>
+    <h4 class="bk-sub">${A("Timeline", "タイムライン")}</h4>
     ${tlHtml}
     ${remarkBoxHtml(s.email, s.studentRemark, s.remarkIsDefault)}
-    <p style="margin-top:14px"><button type="button" class="btn" id="stu-view-bookings">查看该学生的预约 →</button></p>`;
+    <p style="margin-top:14px"><button type="button" class="btn" id="stu-view-bookings">${A("View this student's bookings →", "この生徒の予約を見る →")}</button></p>`;
   wireRemarkBoxes($("#stu-detail"));
   $("#stu-view-bookings").onclick = () => {
     closeStudentDrawer();
@@ -2464,6 +2608,9 @@ function openStudent(email) {
  * lesson and either it is paid, or it was cancelled without a
  * refund after having been paid (inside-12h cancel: money kept).
  * Cancelled-with-full-refund and never-paid bookings never count. */
+/* i18n hook: lazy typeof check so this block also runs standalone
+ * (unit-extracted by the harness) — English labels there. */
+const _revJa = () => (typeof ADM_LANG !== "undefined" && ADM_LANG === "ja");
 function revAddDays(ds, n) {
   const d = new Date(ds + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -2493,7 +2640,7 @@ function revPeriod(mode, anchor) {
   } else if (mode === "month") {
     start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
     end = revMonthEnd(y, m);
-    label = `${y}年${m + 1}月`;
+    label = _revJa() ? `${y}年${m + 1}月` : new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
     const days = Number(end.slice(8));
     for (let d = 1; d <= days; d++) {
       const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -2507,15 +2654,15 @@ function revPeriod(mode, anchor) {
     label = `${y} Q${q + 1}`;
     for (let i = 0; i < 3; i++) {
       const key = `${y}-${String(sm + i + 1).padStart(2, "0")}`;
-      buckets.push({ key, label: `${sm + i + 1}月` });
+      buckets.push({ key, label: _revJa() ? `${sm + i + 1}月` : new Date(Date.UTC(y, sm + i, 1)).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }) });
     }
   } else { // year
     start = `${y}-01-01`;
     end = `${y}-12-31`;
-    label = `${y}年`;
+    label = _revJa() ? `${y}年` : `${y}`;
     for (let i = 0; i < 12; i++) {
       const key = `${y}-${String(i + 1).padStart(2, "0")}`;
-      buckets.push({ key, label: `${i + 1}月` });
+      buckets.push({ key, label: _revJa() ? `${i + 1}月` : new Date(Date.UTC(y, i, 1)).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }) });
     }
   }
   return { mode, start, end, label, buckets };
@@ -2616,7 +2763,7 @@ function renderRevenue(period, agg) {
   $("#rev-package").textContent = money(agg.packageRev);
   $("#rev-lessons").textContent = agg.lessonsDone + agg.lessonsBooked;
   $("#rev-lessons-sub").textContent =
-    `已完成 ${agg.lessonsDone} · 已预约 ${agg.lessonsBooked}`;
+    A(`Completed ${agg.lessonsDone} · Booked ${agg.lessonsBooked}`, `完了 ${agg.lessonsDone} · 予約済み ${agg.lessonsBooked}`);
   $("#rev-bookings").textContent = agg.bookingsCount;
   const max = Math.max(1, ...agg.buckets.map((b) => b.total));
   const showVals = agg.buckets.length <= 12;
@@ -2644,16 +2791,19 @@ $("#rev-next").addEventListener("click", () => {
 
 /* ---------- router / shell ---------- */
 
-const ROUTES = {
-  dashboard: "Dashboard · 概览",
-  students: "Students · 学生看板",
-  bookings: "Bookings · 预约管理",
-  schedule: "Schedule · 课表",
-  availability: "Availability · 可约时间",
-  packages: "Packages · 课时包",
-  revenue: "Revenue · 收入统计",
-  settings: "Settings · 设置",
-};
+const ROUTES = { dashboard: 1, students: 1, bookings: 1, schedule: 1, availability: 1, packages: 1, revenue: 1, settings: 1 };
+function routeTitle(r) {
+  return {
+    dashboard: A("Dashboard", "ダッシュボード"),
+    students: A("Students", "生徒"),
+    bookings: A("Bookings", "予約管理"),
+    schedule: A("Schedule", "スケジュール"),
+    availability: A("Availability", "予約可能時間"),
+    packages: A("Packages", "パッケージ"),
+    revenue: A("Revenue", "収益"),
+    settings: A("Settings", "設定"),
+  }[r] || "";
+}
 function routeName() {
   const h = (location.hash || "").replace(/^#\/?/, "");
   return ROUTES[h] ? h : "dashboard";
@@ -2668,7 +2818,7 @@ function applyRoute() {
     el.classList.toggle("hidden", el.dataset.view !== r));
   document.querySelectorAll(".side-nav a").forEach((a) =>
     a.classList.toggle("active", a.dataset.route === r));
-  $("#adm-view-title").textContent = ROUTES[r];
+  $("#adm-view-title").textContent = routeTitle(r);
   $("#adm-savebar").classList.toggle("hidden",
     !(r === "availability" || r === "settings"));
   closeSidebar();
@@ -2708,7 +2858,7 @@ async function enterAdmin(settings) {
   $("#adm-shell").classList.remove("hidden");
   $("#adm-msg").textContent = "";
   $("#adm-auth-note").textContent = authVia === "session"
-    ? `Google 登录 · ${sessionEmail}` : "Admin key 登录";
+    ? A(`Google sign-in · ${sessionEmail}`, `Google ログイン · ${sessionEmail}`) : A("Admin key sign-in", "管理キーでログイン");
   const now = new Date(Date.now() + 9 * 3600_000);
   calCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
   schCursor = { y: now.getUTCFullYear(), m: now.getUTCMonth() };
@@ -2814,15 +2964,15 @@ async function trySessionEntry() {
 async function doSave() {
   const btn = $("#adm-save");
   btn.disabled = true;
-  btn.textContent = "保存中… Saving…";
+  btn.textContent = A("Saving…", "保存中…");
   try {
     const payload = collect();
     const badPrice = Object.entries(payload.pricing)
       .find(([, v]) => !Number.isFinite(v) || v <= 0);
     if (badPrice) {
       $("#adm-save-msg").textContent =
-        `价格无效：${badPrice[0]} min 的价格必须是正数（USD）。Prices must be positive numbers.`;
-      toast("价格无效 · Invalid price");
+        A(`Invalid price: the ${badPrice[0]} min price must be a positive number (USD).`, `価格が無効です：${badPrice[0]} 分の価格は正の数（USD）にしてください。`);
+      toast(A("Invalid price", "価格が無効です"));
       return;
     }
     const data = await api("/api/admin/settings", {
@@ -2833,9 +2983,9 @@ async function doSave() {
     savedSnapshot = snapshot();
     btn.classList.remove("dirty");
     btn.classList.add("saved-flash");
-    btn.textContent = "已保存 ✓ Saved";
+    btn.textContent = A("Saved ✓", "保存しました ✓");
     $("#adm-save-msg").textContent = "";
-    toast("已保存 · Settings saved");
+    toast(A("Settings saved", "設定を保存しました"));
     setTimeout(() => { btn.classList.remove("saved-flash"); refreshDirty(); }, 1800);
     await loadMonthBookings();
     await loadScheduleMonth();
@@ -2846,7 +2996,7 @@ async function doSave() {
     // Restore the dirty-aware label if the save didn't replace it
     // (the success path leaves "已保存 ✓ Saved" + the flash timer
     // in charge of restoring it).
-    if (btn.textContent === "保存中… Saving…") refreshDirty();
+    if (btn.textContent === A("Saving…", "保存中…")) refreshDirty();
   }
 }
 $("#adm-form").addEventListener("submit", (e) => { e.preventDefault(); doSave(); });
