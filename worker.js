@@ -80,6 +80,10 @@ const DEFAULT_SETTINGS = {
   // key stays empty until he provides it — until then the outbox only queues.
   resend: { apiKey: "", from: "yumi-lesson@ki-toko.com" },
   teacherEmail: "",
+  // Where student replies to outgoing mail should land (the From address
+  // itself cannot receive — Resend is send-only). Set by Daniel to his
+  // own inbox for now.
+  replyTo: "",
 };
 
 const JST = 9 * 60; // minutes offset
@@ -183,6 +187,9 @@ function normalizeSettings(raw) {
   if (typeof raw.teacherEmail === "string") {
     s.teacherEmail = raw.teacherEmail.slice(0, 200);
   }
+  if (typeof raw.replyTo === "string") {
+    s.replyTo = raw.replyTo.slice(0, 200);
+  }
   return s;
 }
 
@@ -201,6 +208,7 @@ function publicSettings(s) {
     meeting: s.meeting,
     resend: { from: s.resend.from, apiKeySet: !!s.resend.apiKey },
     teacherEmail: s.teacherEmail,
+    replyTo: s.replyTo,
   };
 }
 
@@ -347,10 +355,11 @@ const EMAIL_TEMPLATES = {
 
 /** Write one email to the outbox; attempt a real Resend send only when a
  *  key + sender are configured. Returns the stored record. */
-async function queueEmail(env, settings, { to, subject, body, bookingRef, kind }) {
+async function queueEmail(env, settings, { to, subject, body, bookingRef, kind, replyTo }) {
   const id = crypto.randomUUID();
   const rec = {
     id, to, subject, body, kind,
+    replyTo: replyTo || null,
     bookingRef: bookingRef || null,
     status: "queued",
     createdAt: new Date().toISOString(),
@@ -370,7 +379,10 @@ async function queueEmail(env, settings, { to, subject, body, bookingRef, kind }
           Authorization: `Bearer ${settings.resend.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ from: fromHeader, to: [to], subject, text: body }),
+        body: JSON.stringify({
+          from: fromHeader, to: [to], subject, text: body,
+          ...(replyTo ? { reply_to: replyTo } : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -398,6 +410,7 @@ async function notifyBookingEvent(env, settings, booking, kind) {
   const { subject, body } = tpl(booking, settings);
   await queueEmail(env, settings, {
     to: booking.email, subject, body, bookingRef: booking.id, kind,
+    replyTo: settings.replyTo || "",
   });
   if (settings.teacherEmail) {
     await queueEmail(env, settings, {
@@ -405,6 +418,8 @@ async function notifyBookingEvent(env, settings, booking, kind) {
       subject: `[New ${kind}] ${subject}`,
       body: `Booking event: ${kind}\nStudent: ${booking.name} <${booking.email}>\n\n${body}`,
       bookingRef: booking.id, kind: `teacher_${kind}`,
+      // The teacher hits "reply" and writes straight to the student.
+      replyTo: booking.email,
     });
   }
 }

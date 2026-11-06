@@ -80,6 +80,9 @@
       <label class="field">Teacher notification email (optional)
         <input type="email" id="adm-teacher"
           placeholder="Where booking notifications go" /></label>
+      <label class="field">Reply-to for student emails (optional)
+        <input type="email" id="adm-replyto"
+          placeholder="Where student replies should land" /></label>
       <p class="note">Booking emails are always recorded in the outbox.
       They are actually sent only when both the From address and a Resend
       API key are set.</p>
@@ -149,6 +152,7 @@ function fill(s) {
     ? "A Resend API key is saved. Leave the field blank to keep it, or type a new one to replace it."
     : "No Resend API key saved yet.";
   $("#adm-teacher").value = s.teacherEmail || "";
+  $("#adm-replyto").value = s.replyTo || "";
   $("#adm-form").classList.remove("hidden");
 }
 
@@ -183,6 +187,7 @@ $("#adm-form").addEventListener("submit", async (e) => {
       apiKey: $("#adm-resend-key").value.trim(),
     },
     teacherEmail: $("#adm-teacher").value.trim(),
+    replyTo: $("#adm-replyto").value.trim(),
   };
   setMsg("#adm-save-msg", "Saving…", true);
   try {
