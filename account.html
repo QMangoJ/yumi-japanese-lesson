@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Account — Yumi Japanese Lessons</title>
+<meta name="description" content="Your Yumi Japanese Lessons account: upcoming lessons, lesson packages, learning profile and past activity." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
+<link rel="canonical" href="https://yumi.ki-toko.com/account" />
+<meta name="theme-color" content="#d4577a" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Yumi Japanese Lessons" />
+<meta property="og:title" content="My Account — Yumi Japanese Lessons" />
+<meta property="og:description" content="Manage your lessons and packages with Yumi — online Japanese lessons with English support." />
+<meta property="og:url" content="https://yumi.ki-toko.com/account" />
+<meta property="og:image" content="https://yumi.ki-toko.com/images/yumi-avatar.jpg" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="/">🌸 YUMI <span>Japanese Lessons</span></a>
+  <nav>
+    <a href="/#voices">Reviews</a>
+    <a href="/#about">About</a>
+    <a href="/#lessons">Lessons</a>
+    <a href="/#price">Price</a>
+    <a href="/#faq">FAQ</a>
+    <a href="/#contact">Contact</a>
+    <a href="/#my">My Bookings</a>
+    <a href="/admin" id="nav-admin" hidden>Admin</a>
+  </nav>
+  <a class="btn btn-small open-booking" href="#book">Book a Lesson</a>
+</header>
+
+<main>
+  <section class="section">
+    <div class="acct-col">
+      <p class="note" id="acct-loading">Loading your account…</p>
+
+      <!-- Signed out: Google sign-in gate (rendered by account.js) -->
+      <div id="acct-signedout" class="hidden">
+        <p class="eyebrow">MY ACCOUNT</p>
+        <h1 class="acct-title">Your lessons, all in one place.</h1>
+        <p class="section-lead">Sign in with Google to see your upcoming
+        lessons, your lesson packages and your learning profile — and to
+        reschedule or cancel an upcoming lesson. Booked as a guest before?
+        Sign in with the same email and your bookings appear here
+        automatically.</p>
+        <div id="acct-auth"></div>
+      </div>
+
+      <!-- Signed in -->
+      <div id="acct-app" class="hidden">
+        <div class="acct-head">
+          <span id="acct-avatar"></span>
+          <div class="acct-head-text">
+            <p class="eyebrow">MY ACCOUNT</p>
+            <h1 class="acct-title" id="acct-greeting">Hello.</h1>
+            <p class="note">Manage your lessons and packages here. Times
+            are shown in your timezone, with Japan time (JST) shown
+            alongside.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-small" id="acct-logout">Sign out</button>
+        </div>
+
+        <div class="acct-stats">
+          <div class="acct-stat">
+            <div class="acct-stat-num" id="acct-stat-pkg">–</div>
+            <div class="acct-stat-label">Package lessons left</div>
+            <div class="acct-stat-sub">remaining in your active packages</div>
+          </div>
+          <div class="acct-stat">
+            <div class="acct-stat-num" id="acct-stat-upcoming">–</div>
+            <div class="acct-stat-label">Upcoming lessons</div>
+            <div class="acct-stat-sub">bookings still ahead of you</div>
+          </div>
+          <div class="acct-stat">
+            <div class="acct-stat-num is-email" id="acct-stat-email">–</div>
+            <div class="acct-stat-label">Member email</div>
+            <div class="acct-stat-sub">Google account</div>
+          </div>
+        </div>
+
+        <div class="acct-sec">
+          <div class="acct-sec-head">
+            <h2>Upcoming lessons</h2>
+            <a href="#book" class="acct-sec-link open-booking">Book a lesson →</a>
+          </div>
+          <!-- app.js renders the booking cards here (same renderer as
+               the homepage My Bookings section) -->
+          <div id="my-result"></div>
+        </div>
+
+        <div class="acct-sec">
+          <div class="acct-sec-head">
+            <h2>Lesson packages</h2>
+          </div>
+          <!-- app.js renders the package cards here -->
+          <div id="my-subs"></div>
+          <p class="note hidden" id="acct-subs-empty">You don't have a
+          lesson package yet. A package books the same time every week —
+          steady rhythm, steady progress.
+          <a href="#book" class="open-booking">See packages in the booking window →</a></p>
+        </div>
+
+        <div class="acct-sec">
+          <div class="acct-sec-head">
+            <h2>Learning profile</h2>
+          </div>
+          <div class="profile-card">
+            <p class="note">Tell Yumi where you are and where you'd like
+            to go — she plans your lessons around it. This is shared with
+            Yumi only.</p>
+            <div class="field">Japanese level
+              <div class="lvl-chips" id="profile-levels" role="group" aria-label="Japanese level"></div>
+            </div>
+            <label class="field">Learning goals
+              <textarea id="profile-goals" rows="4" maxlength="2000"
+                placeholder="e.g. Hold everyday conversations on my trip to Japan this spring; pass JLPT N4 in December…"></textarea></label>
+            <p class="msg" id="profile-msg"></p>
+            <button type="button" class="btn" id="profile-save">Save profile</button>
+          </div>
+        </div>
+
+        <div class="acct-sec">
+          <div class="acct-sec-head">
+            <h2>Past activity</h2>
+          </div>
+          <!-- app.js renders completed + cancelled lessons here -->
+          <div id="my-history"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+  <!-- STICKY BOOKING BAR (mobile only; styled in styles.css) -->
+  <div class="sticky-book">
+    <span class="sticky-book-text">★ 5.0 · 414 lessons taught</span>
+    <a class="btn btn-small open-booking" href="#book">Book a lesson</a>
+  </div>
+
+  <!-- BOOKING MODAL (Sakura-style pop-up) -->
+  <div class="modal-overlay hidden" id="book-modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+    <div class="modal-top">
+    <ol class="steps" id="bk-steps">
+      <li data-step="1" class="active">Lesson</li>
+      <li data-step="2">Your Details</li>
+      <li data-step="3">Payment</li>
+      <li data-step="4">Done</li>
+    </ol>
+      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="booking-box">
+      <!-- Step 1: course, duration, date & time (one pane, like Sakura's booking modal) -->
+      <div class="bk-pane" data-pane="1">
+        <h3 class="bk-pane-title"><span class="step-badge">STEP 1</span>Book your lesson</h3>
+        <p class="note">Choose a course and a lesson at least 72 hours in
+        advance. Times are shown in your timezone, with Japan time (JST)
+        as a reference.</p>
+        <h4 class="bk-sub">Course</h4>
+        <div class="choice-grid" id="bk-courses"></div>
+        <div class="bk-mode" id="bk-mode">
+          <button type="button" class="bk-mode-btn selected" data-mode="single">单次预约 · Single lesson</button>
+          <button type="button" class="bk-mode-btn" data-mode="package">课时包 · 每周固定时间</button>
+        </div>
+        <div id="bk-single">
+        <div class="bk-cols">
+          <div class="bk-col">
+            <h4 class="bk-sub">01 · Choose a date</h4>
+            <div id="bk-cal"></div>
+            <p class="note">Closed Saturdays &amp; Sundays. Calendar days are Japan dates; times are shown in your timezone.</p>
+          </div>
+          <div class="bk-col">
+            <h4 class="bk-sub">02 · Choose a start time</h4>
+            <div class="field">Lesson duration
+              <div class="dur-chips" id="bk-duration" role="group" aria-label="Lesson duration"></div></div>
+            <div id="bk-times"></div>
+            <div class="bk-selected" id="bk-selected">Selected: choose a date and a time</div>
+            <div class="bk-total" id="bk-total"></div>
+          </div>
+        </div>
+        </div><!-- /#bk-single -->
+        <div id="bk-package" class="hidden">
+          <h4 class="bk-sub">课时包 · Lesson package</h4>
+          <p class="note">先选好每周固定的上课时间，一次买下一整包课时，
+          系统会自动把每一节课都排好。推荐每周固定 1–3 节，节奏稳定效果好。</p>
+          <div class="field">Lesson duration
+            <div class="dur-chips" id="bk-pkg-duration" role="group" aria-label="Lesson duration"></div></div>
+          <h4 class="bk-sub">选择课时包 · Package size</h4>
+          <div class="choice-grid" id="bk-pkg-sizes"></div>
+          <h4 class="bk-sub">每周几节 · Lessons per week</h4>
+          <div class="choice-grid" id="bk-pkg-freq"></div>
+          <div id="bk-pkg-slots"></div>
+          <div class="bk-selected" id="bk-pkg-summary">请选择每周固定的上课时间</div>
+          <div class="bk-total" id="bk-pkg-total"></div>
+        </div>
+        <p class="msg" id="bk-msg-1"></p>
+        <div class="bk-nav"><span></span>
+          <button class="btn" id="bk-to-2" disabled>Continue →</button></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="bk-pane hidden" data-pane="2">
+        <h3 class="bk-pane-title"><span class="step-badge">STEP 2</span>Your details</h3>
+        <label class="field">Your name
+          <input type="text" id="bk-name" autocomplete="name" placeholder="e.g. Alex Smith" /></label>
+        <label class="field">Email (for confirmation &amp; managing your booking)
+          <input type="email" id="bk-email" autocomplete="email" placeholder="you@example.com" /></label>
+        <label class="field">Anything you'd like me to know? (goals, level, topics — optional)
+          <textarea id="bk-notes" rows="3"></textarea></label>
+        <p class="msg" id="bk-msg-2"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="1">← Back</button>
+          <button class="btn" id="bk-to-3">Review &amp; pay →</button></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bk-pane hidden" data-pane="3">
+        <h3 class="bk-pane-title"><span class="step-badge">STEP 3</span>Review &amp; payment</h3>
+        <table class="summary" id="bk-summary"></table>
+        <div class="test-banner">TEST MODE — this checkout is a demo. No real
+        payment is taken; use any card details to try the flow.</div>
+        <label class="field">Card number
+          <input type="text" id="pay-card" inputmode="numeric" placeholder="4242 4242 4242 4242" /></label>
+        <div class="field-row">
+          <label class="field">Expiry
+            <input type="text" id="pay-exp" placeholder="12 / 34" /></label>
+          <label class="field">CVC
+            <input type="text" id="pay-cvc" inputmode="numeric" placeholder="123" /></label>
+        </div>
+        <p class="note">Payments are processed securely through Stripe.
+        Major credit and debit cards are accepted (Visa, Mastercard, American Express).</p>
+        <p class="msg" id="bk-msg-3"></p>
+        <div class="bk-nav">
+          <button class="btn btn-ghost" data-back="2">← Back</button>
+          <button class="btn" id="bk-pay">Pay now</button></div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="bk-pane hidden" data-pane="4">
+        <h3 class="bk-pane-title"><span class="step-badge">STEP 4</span>🎉 You're booked!</h3>
+        <table class="summary" id="bk-done"></table>
+        <div id="bk-done-extra"></div>
+        <p>Lessons are held online — your meeting link is in the table above,
+        or your teacher will send it before the lesson. A confirmation has
+        been sent to your email.</p>
+        <p class="note">You can reschedule or cancel anytime in
+        <a href="/account">My Account</a> — just sign in with Google using
+        this email (signing in creates your account if you don't have
+        one yet, and this booking will appear automatically). Cancelling
+        and rescheduling follow the policy in the FAQ.</p>
+        <div class="bk-nav"><span></span>
+          <a class="btn" href="/account">Go to My Account</a></div>
+      </div>
+    </div>
+    </div>
+  </div>
+<script src="app.js"></script>
+<script src="account.js"></script>
+</body>
+</html>

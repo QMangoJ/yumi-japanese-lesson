@@ -1136,3 +1136,68 @@ button { font-family: inherit; }
   /* Never stack the bar under the open booking modal. */
   body:has(#book-modal:not(.hidden)) .sticky-book { display: none; }
 }
+
+/* ---------- Account page (/account) ----------
+ * Sakura-style single column of stacked cards, narrower than the
+ * marketing sections. Booking/package cards inside are the shared
+ * .my-card components rendered by app.js. */
+.acct-col { max-width: 860px; margin: 0 auto; }
+.acct-title {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-size: clamp(26px, 3.4vw, 34px);
+  margin: 0 0 8px;
+}
+.acct-head { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 26px; }
+.acct-head-text { flex: 1; min-width: 0; }
+.acct-head-text .eyebrow { margin: 6px 0 8px; }
+.acct-head-text .note { margin: 0; }
+.acct-head .btn { flex-shrink: 0; margin-top: 6px; }
+.acct-avatar-img {
+  width: 64px; height: 64px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+}
+.acct-avatar-initial {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-soft); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800;
+}
+.acct-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px; margin: 0 0 36px;
+}
+.acct-stat {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px; min-width: 0;
+}
+.acct-stat-num { font-size: 30px; font-weight: 800; color: var(--accent); line-height: 1.15; }
+.acct-stat-num.is-email {
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+  overflow-wrap: anywhere; padding-top: 7px;
+}
+.acct-stat-label {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.12em;
+  color: var(--sub); text-transform: uppercase; margin-top: 6px;
+}
+.acct-stat-sub { font-size: 13px; color: var(--sub); }
+.acct-sec { margin: 0 0 36px; }
+.acct-sec-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px; margin: 0 0 14px;
+}
+.acct-sec-head h2 { font-family: inherit; font-size: 20px; margin: 0; }
+.acct-sec-link { font-weight: 700; text-decoration: none; white-space: nowrap; font-size: 14.5px; }
+.acct-sec-link:hover { text-decoration: underline; }
+.profile-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 22px 24px;
+}
+.profile-card .note { margin-top: 0; }
+.lvl-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* Past activity reads as history: same cards, visually quieter. */
+#my-history .my-card { opacity: 0.72; background: #fbf8f6; }
+@media (max-width: 700px) {
+  .acct-stats { grid-template-columns: minmax(0, 1fr); }
+  .acct-head { flex-wrap: wrap; }
+  .profile-card { padding: 18px; }
+}

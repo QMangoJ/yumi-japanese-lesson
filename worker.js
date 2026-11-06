@@ -2197,6 +2197,13 @@ export default {
       assetUrl.search = "";
       return env.ASSETS.fetch(new Request(assetUrl, request));
     }
+    // The student account page lives at /account (asset: account.html).
+    if (path === "/account" || path === "/account/") {
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = "/account.html";
+      assetUrl.search = "";
+      return env.ASSETS.fetch(new Request(assetUrl, request));
+    }
     return env.ASSETS.fetch(request);
   },
 };

@@ -974,6 +974,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderAuthForms() {
     const box = $("#my-auth");
+    if (!box) return; // pages without a My Bookings section (e.g. /account)
     if (!state.config?.googleAuth) {
       box.innerHTML = `
       <div class="lookup-box">
@@ -1011,12 +1012,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderAccountBar() {
     renderNavAdmin();
     const box = $("#my-auth");
+    if (!box) return; // /account renders its own account bar (account.js)
     if (!authUser) { renderAuthForms(); return; }
     box.innerHTML = `
       <p class="note">${authUser.picture
         ? `<img class="auth-avatar" src="${escHtml(authUser.picture)}" alt="" referrerpolicy="no-referrer" />`
         : ""}Logged in as <strong>${escHtml(authUser.name)}</strong>
       (${escHtml(authUser.email)}) ·
+      <a href="/account">Go to My Account →</a> ·
       <a href="#my" id="auth-logout">Log out</a></p>`;
     $("#auth-logout").onclick = async (e) => {
       e.preventDefault();
@@ -1110,6 +1113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function loadMyBookings() {
     const box = $("#my-result");
+    if (!box) return;
     try {
       const data = await api("/api/my/bookings");
       renderMyBookings(data);
@@ -1123,11 +1127,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     const section = (title, list, render) => list.length ? `
       <h3 class="my-section-title">${title}</h3>
       ${list.map(render).join("")}` : "";
-    box.innerHTML = `
+    // The /account page splits the two lists into separate sections:
+    // upcoming stays in #my-result, history goes to #my-history, and
+    // the page supplies its own section headings (cards only here).
+    // The homepage has no #my-history and renders exactly as before.
+    const histBox = $("#my-history");
+    if (histBox) {
+      box.innerHTML = `
+      <p class="msg" id="my-action-msg"></p>
+      ${upcoming.length
+        ? upcoming.map((b) => myCard(b, true)).join("")
+        : `<p class="note">You have no upcoming lessons.</p>`}`;
+      histBox.innerHTML = history.length
+        ? history.map((b) => myCard(b, false)).join("")
+        : `<p class="note">No past bookings yet.</p>`;
+    } else {
+      box.innerHTML = `
       <p class="msg" id="my-action-msg"></p>
       ${section("Upcoming lessons", upcoming, (b) => myCard(b, true))}
       ${section("Lesson history", history, (b) => myCard(b, false))}
       ${!upcoming.length && !history.length ? "<p class='note'>No bookings found.</p>" : ""}`;
+    }
     if (myActionMsg) setMsg("#my-action-msg", myActionMsg, true);
     upcoming.forEach((b) => wireMyCard(b));
   }
