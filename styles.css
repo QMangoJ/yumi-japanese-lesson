@@ -123,6 +123,17 @@ a { color: var(--accent); }
 .hero-stats strong { font-size: 21px; color: var(--accent); }
 .hero-stats span { font-size: 13px; color: var(--sub); }
 
+.hero-langs { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 18px 0 0; padding: 0; }
+.hero-langs li {
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.hero-langs span { color: var(--sub); }
+
 .hero-photo { text-align: center; }
 .hero-photo img {
   width: min(320px, 80vw);
