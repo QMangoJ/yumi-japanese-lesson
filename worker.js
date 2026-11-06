@@ -18,9 +18,11 @@
  *
  * Runtime settings live in KV under `meta:settings` (weekly hours, blocked
  * dates, the fixed online-meeting link, Resend email config, teacher
- * notification email) and are edited through the admin page (admin.html,
- * guarded by the key in KV `meta:admin_key`). When no settings are stored,
- * DEFAULT_SETTINGS below reproduce the original hardcoded schedule.
+ * notification email) and are edited through the admin page (admin.html).
+ * Admin access has two channels: the key in KV `meta:admin_key`, or a
+ * site session whose account email is on settings.adminEmails. When no
+ * settings are stored, DEFAULT_SETTINGS below reproduce the original
+ * hardcoded schedule.
  *
  * Emails are never faked: every booking event writes an outbox record to KV
  * (`email:<id>`, status "queued"); only when a Resend API key + sender are
@@ -116,9 +118,12 @@ const DEFAULT_SETTINGS = {
   // names, so it is never exposed outside the admin page.
   calendarKey: "",
   // Site accounts whose email is on this list see an "Admin" entry in
-  // the top nav (a shortcut link to /admin). It grants nothing by
-  // itself: /admin and its APIs stay behind the X-Admin-Key gate.
-  adminEmails: ["yumi.japan2026@gmail.com"],
+  // the top nav (a shortcut link to /admin), and a session for one of
+  // these accounts authorizes /admin and its APIs on its own (Daniel's
+  // decision 2026-11-06: whitelisted Google sign-ins enter the admin
+  // without the key — both Yumi's project account and Daniel's own
+  // Gmail). The X-Admin-Key gate stays as the fallback channel.
+  adminEmails: ["yumi.japan2026@gmail.com", "danieljj2026@gmail.com"],
   // Per-date availability overrides, on top of the weekly template:
   // dateOverrides["YYYY-MM-DD"] = null closes that specific day, and
   // {start, end} gives it special hours (even on a normally-closed
@@ -468,14 +473,26 @@ function computeSlots(settings, dateStr, minutes, taken) {
   return { closed: false, slots };
 }
 
+/** Admin gate for every /api/admin/* route, with two channels:
+ *  1. the shared admin key in KV `meta:admin_key` (X-Admin-Key header) —
+ *     the original channel, unchanged;
+ *  2. a site session whose account email is on the admin whitelist
+ *     (settings.adminEmails) — a whitelisted Google sign-in is itself
+ *     the credential (Daniel's decision 2026-11-06). Reuses the normal
+ *     session validation; the whitelist decision is made only here,
+ *     server-side. Anything else is denied. */
 async function adminAuthorized(env, request) {
   const raw = await env.BOOKINGS.get("meta:admin_key");
-  if (!raw) return false;
-  // Tolerate a key stored with surrounding quotes/whitespace (e.g. written
-  // through a JSON-bodied API helper).
-  const key = raw.trim().replace(/^"+|"+$/g, "");
-  if (!key) return false;
-  return (request.headers.get("X-Admin-Key") || "") === key;
+  if (raw) {
+    // Tolerate a key stored with surrounding quotes/whitespace (e.g. written
+    // through a JSON-bodied API helper).
+    const key = raw.trim().replace(/^"+|"+$/g, "");
+    if (key && (request.headers.get("X-Admin-Key") || "") === key) return true;
+  }
+  const me = await sessionUser(env, request);
+  if (!me) return false;
+  const settings = await getSettings(env);
+  return isAdminEmail(settings, me.email);
 }
 
 /* ---------------- Student accounts & sessions ----------------
@@ -550,8 +567,9 @@ async function sessionUser(env, request) {
 }
 
 /** The student object the frontend keeps: identity plus whether this
- *  account is on the admin whitelist. `isAdmin` only drives the nav
- *  Admin shortcut's visibility — it unlocks nothing server-side. */
+ *  account is on the admin whitelist. `isAdmin` drives the nav Admin
+ *  shortcut's visibility; the actual admin authorization for such a
+ *  session is re-checked server-side in adminAuthorized. */
 async function publicUser(env, user) {
   const settings = await getSettings(env);
   return { name: user.name, email: user.email,
