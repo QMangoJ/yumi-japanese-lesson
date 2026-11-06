@@ -2074,6 +2074,44 @@ export default {
 
     if (path.startsWith("/api/")) return json({ error: "Not found" }, 404);
 
+    // SEO: sitemap.xml + robots.txt are served by the worker so they
+    // always match the canonical origin. (There is no static
+    // robots.txt asset; without this route Cloudflare answered the
+    // path with a content-signals boilerplate carrying no crawl
+    // rules at all.)
+    if (path === "/sitemap.xml") {
+      const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        "  <url>",
+        "    <loc>https://yumi.ki-toko.com/</loc>",
+        "    <changefreq>weekly</changefreq>",
+        "    <priority>1.0</priority>",
+        "  </url>",
+        "</urlset>",
+        "",
+      ].join("\n");
+      return new Response(xml, {
+        headers: { "Content-Type": "application/xml; charset=utf-8",
+          "Cache-Control": "public, max-age=3600" },
+      });
+    }
+    if (path === "/robots.txt") {
+      const txt = [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin",
+        "Disallow: /api/",
+        "",
+        "Sitemap: https://yumi.ki-toko.com/sitemap.xml",
+        "",
+      ].join("\n");
+      return new Response(txt, {
+        headers: { "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "public, max-age=3600" },
+      });
+    }
+
     // The admin page lives at /admin (the asset itself stays admin.html).
     if (path === "/admin" || path === "/admin/") {
       const assetUrl = new URL(request.url);
