@@ -830,69 +830,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   /* ---------- My Bookings (account-based) ----------
-   * Students log in with email + password; bookings are matched to the
-   * account by email and split into "Upcoming lessons" (manageable) and
+   * Students sign in with Google; bookings are matched to the account
+   * by email and split into "Upcoming lessons" (manageable) and
    * "Lesson history" (completed + cancelled, read-only, newest first).
    * Lessons booked as a guest appear automatically once the student
-   * creates an account with the same email. */
+   * signs in with the same email. */
 
   let myActionMsg = "";
 
-  function renderAuthForms(mode) {
-    const box = $("#my-auth");
-    if (mode === "register") {
-      box.innerHTML = `
-      <div class="lookup-box">
-        <label class="field">Your name
-          <input type="text" id="auth-name" autocomplete="name" /></label>
-        <label class="field">Email
-          <input type="email" id="auth-email" autocomplete="email" /></label>
-        <label class="field">Password (at least 8 characters)
-          <input type="password" id="auth-password" autocomplete="new-password" /></label>
-        <button class="btn" id="auth-submit">Create account</button>
-        <p class="msg" id="auth-msg"></p>
-        <p class="note">Already have an account?
-          <a href="#my" id="auth-switch">Log in</a></p>
-      </div>`;
-      $("#auth-switch").onclick = (e) => { e.preventDefault(); renderAuthForms("login"); };
-      $("#auth-submit").onclick = () => submitAuth("register");
-    } else {
-      box.innerHTML = `
-      <div class="lookup-box">
-        <label class="field">Email
-          <input type="email" id="auth-email" autocomplete="email" /></label>
-        <label class="field">Password
-          <input type="password" id="auth-password" autocomplete="current-password" /></label>
-        <button class="btn" id="auth-submit">Log in</button>
-        <p class="msg" id="auth-msg"></p>
-        <p class="note">New here? You can book a lesson first and create
-          the account afterwards with the same email — your bookings will
-          show up here automatically.
-          <a href="#my" id="auth-switch">Create an account</a></p>
-      </div>`;
-      $("#auth-switch").onclick = (e) => { e.preventDefault(); renderAuthForms("register"); };
-      $("#auth-submit").onclick = () => submitAuth("login");
-    }
-  }
+  /* Sign-in is Google-only (Sakura-style): one button, no password
+   * forms anywhere. Until the teacher configures the Google OAuth
+   * client (worker settings.google), /api/config reports
+   * googleAuth=false and this area shows a neutral note instead of a
+   * dead button. */
+  let loginErrorPending = false;
 
-  async function submitAuth(kind) {
-    const email = $("#auth-email").value.trim();
-    const password = $("#auth-password").value;
-    const payload = { email, password };
-    if (kind === "register") payload.name = $("#auth-name").value.trim();
-    setMsg("#auth-msg", kind === "register" ? "Creating your account…" : "Logging in…", true);
-    try {
-      const data = await api(`/api/auth/${kind}`, {
-        method: "POST", body: JSON.stringify(payload),
-      });
-      authUser = data.user;
-      applyAuthToForm();
-      myActionMsg = kind === "register" ? "Account created — welcome! 🌸" : "";
-      renderAccountBar();
-      await loadMyBookings();
-      await loadMySubscriptions();
-    } catch (e) {
-      setMsg("#auth-msg", e.message, false);
+  function renderAuthForms() {
+    const box = $("#my-auth");
+    if (!state.config?.googleAuth) {
+      box.innerHTML = `
+      <div class="lookup-box">
+        <p class="note">Sign-in will be available soon. You can still book
+        lessons as a guest — just book with the email you will sign in
+        with later, and your bookings will show up here automatically.</p>
+      </div>`;
+      return;
+    }
+    box.innerHTML = `
+    <div class="lookup-box auth-google">
+      <a class="google-btn" href="/api/auth/google?next=${encodeURIComponent("/#my")}">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+        <span>Continue with Google</span></a>
+      <p class="note">New here? Sign in with Google to create your account.
+      Booked as a guest before? Sign in with the same email and your
+      bookings appear here automatically.</p>
+      <p class="msg" id="auth-msg"></p>
+    </div>`;
+    if (loginErrorPending) {
+      loginErrorPending = false;
+      setMsg("#auth-msg",
+        "Google sign-in didn't complete — please try again.", false);
     }
   }
 
@@ -907,9 +884,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderAccountBar() {
     renderNavAdmin();
     const box = $("#my-auth");
-    if (!authUser) { renderAuthForms("login"); return; }
+    if (!authUser) { renderAuthForms(); return; }
     box.innerHTML = `
-      <p class="note">Logged in as <strong>${escHtml(authUser.name)}</strong>
+      <p class="note">${authUser.picture
+        ? `<img class="auth-avatar" src="${escHtml(authUser.picture)}" alt="" referrerpolicy="no-referrer" />`
+        : ""}Logged in as <strong>${escHtml(authUser.name)}</strong>
       (${escHtml(authUser.email)}) ·
       <a href="#my" id="auth-logout">Log out</a></p>`;
     $("#auth-logout").onclick = async (e) => {
@@ -1124,7 +1103,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* Session restore: if the student is already logged in, show their
-   * bookings right away; otherwise show the login form. */
+   * bookings right away; otherwise show the sign-in area. A failed
+   * Google round-trip lands back here with ?login_error=google. */
+  if (new URLSearchParams(location.search).has("login_error")) {
+    loginErrorPending = true;
+    history.replaceState(null, "",
+      location.pathname + location.hash);
+  }
   try {
     const data = await api("/api/auth/me");
     authUser = data.user;

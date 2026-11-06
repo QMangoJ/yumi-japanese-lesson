@@ -854,6 +854,11 @@ function fillForm(s) {
   $("#adm-replyto").value = s.replyTo || "";
   $("#adm-calendar-key").value = s.calendarKey || "";
   $("#adm-admin-emails").value = (s.adminEmails || []).join("\n");
+  $("#adm-google-id").value = s.google?.clientId || "";
+  $("#adm-google-secret").value = "";
+  $("#adm-google-state").textContent = s.google?.clientSecretSet
+    ? "A Google Client Secret is saved — Google sign-in is enabled."
+    : "No Client Secret saved yet — Google sign-in is disabled.";
   updateFeedUrl();
   savedSnapshot = snapshot();
   refreshDirty();
@@ -884,6 +889,8 @@ function collect() {
     calendarKey: $("#adm-calendar-key").value.trim(),
     adminEmails: $("#adm-admin-emails").value.split(/[\s,]+/)
       .map((x) => x.trim()).filter(Boolean),
+    google: { clientId: $("#adm-google-id").value.trim(),
+      clientSecret: $("#adm-google-secret").value },
     dateOverrides: draft ? draft.dateOverrides : {},
     blockedHours: draft ? draft.blockedHours : {},
   };
@@ -891,8 +898,10 @@ function collect() {
 
 function snapshot() {
   const c = collect();
-  // The API key input is blank when unchanged — normalize for comparison.
-  return JSON.stringify({ ...c, resend: { from: c.resend.from, apiKey: c.resend.apiKey ? "•" : "" } });
+  // Secret inputs are blank when unchanged — normalize for comparison.
+  return JSON.stringify({ ...c,
+    resend: { from: c.resend.from, apiKey: c.resend.apiKey ? "•" : "" },
+    google: { clientId: c.google.clientId, clientSecret: c.google.clientSecret ? "•" : "" } });
 }
 
 function refreshDirty() {

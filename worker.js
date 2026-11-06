@@ -95,6 +95,10 @@ const DEFAULT_SETTINGS = {
   // and subscriptions snapshot the price at creation, so edits here
   // only affect new purchases.
   pricing: { "30": 15, "50": 25, "80": 40, "120": 60 },
+  // Google sign-in (the site's only login): OAuth client credentials,
+  // admin-editable like the Resend key. Both empty = sign-in disabled
+  // and the frontend hides every sign-in entry point.
+  google: { clientId: "", clientSecret: "" },
   blockedDates: [],
   meeting: { type: "fixed", url: "" },
   // Daniel's decision: sending is via Resend, sender
@@ -252,6 +256,12 @@ function normalizeSettings(raw) {
       }
     }
   }
+  if (raw.google && typeof raw.google === "object") {
+    s.google = {
+      clientId: String(raw.google.clientId || "").slice(0, 300),
+      clientSecret: String(raw.google.clientSecret || "").slice(0, 300),
+    };
+  }
   if (Array.isArray(raw.blockedDates)) {
     s.blockedDates = [...new Set(raw.blockedDates.filter((x) => DATE_RE.test(x || "")))].sort();
   }
@@ -312,6 +322,7 @@ function publicSettings(s) {
     weekly: s.weekly,
     weeklyHours: s.weeklyHours,
     pricing: s.pricing,
+    google: { clientId: s.google.clientId, clientSecretSet: !!s.google.clientSecret },
     blockedDates: s.blockedDates,
     meeting: s.meeting,
     resend: { from: s.resend.from, apiKeySet: !!s.resend.apiKey },
@@ -534,7 +545,8 @@ async function sessionUser(env, request) {
   try { sess = JSON.parse(raw); } catch { return null; }
   const user = await getUser(env, sess.email);
   if (!user) return null;
-  return { name: user.name, email: sess.email };
+  return { name: user.name, email: sess.email,
+    picture: user.googlePicture || "" };
 }
 
 /** The student object the frontend keeps: identity plus whether this
@@ -543,7 +555,60 @@ async function sessionUser(env, request) {
 async function publicUser(env, user) {
   const settings = await getSettings(env);
   return { name: user.name, email: user.email,
+    picture: user.picture || "",
     isAdmin: isAdminEmail(settings, user.email) };
+}
+
+/* ---------------- Google sign-in (the only login) ----------------
+ * Hand-rolled OAuth 2.0, mirroring Daniel's japanese-learning
+ * project: state kept in a short-lived KV record + cookie, code
+ * exchange at Google's token endpoint, userinfo fetch, upsert BY
+ * EMAIL into the existing user store, then a normal session through
+ * the existing mechanism. Password-era accounts stay in KV
+ * (dormant): a Google sign-in with the same verified email lands in
+ * the same account, so bookings and packages unify. */
+
+const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+const OAUTH_STATE_TTL = 600; // seconds
+
+function googleConfigured(settings) {
+  return !!(settings.google && settings.google.clientId &&
+    settings.google.clientSecret);
+}
+function randomHex(bytes) {
+  const buf = new Uint8Array(bytes);
+  crypto.getRandomValues(buf);
+  return [...buf].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+/** Only same-site paths may be OAuth landing targets. */
+function safeNextPath(value) {
+  if (!value || typeof value !== "string") return "/";
+  if (!value.startsWith("/") || value.startsWith("//") ||
+      value.includes("://")) return "/";
+  return value;
+}
+function readCookieValue(request, name) {
+  const header = request.headers.get("Cookie") || "";
+  const m = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return m ? m[1] : null;
+}
+function redirectTo(location, cookies = []) {
+  const headers = new Headers({ Location: location });
+  for (const c of cookies) headers.append("Set-Cookie", c);
+  return new Response(null, { status: 302, headers });
+}
+function htmlPage(html, status = 200) {
+  return new Response(html, {
+    status, headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 /* ---------------- Bookings storage ---------------- */
@@ -1216,6 +1281,10 @@ export default {
         if (incoming.resend && !incoming.resend.apiKey) {
           incoming.resend = { ...incoming.resend, apiKey: current.resend.apiKey };
         }
+        // Same rule for the Google client secret.
+        if (incoming.google && !incoming.google.clientSecret) {
+          incoming.google = { ...incoming.google, clientSecret: current.google.clientSecret };
+        }
         const merged = normalizeSettings({ ...current, ...incoming });
         await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
         return json({ settings: publicSettings(merged) });
@@ -1308,58 +1377,108 @@ export default {
       return json({ booking: publicBooking(booking, settings, "admin"), refunded: wasPaid });
     }
 
-    /* ----- Student accounts ----- */
+    /* ----- Google sign-in ----- */
+    if (path === "/api/auth/google" && request.method === "GET") {
+      const settings = await getSettings(env);
+      if (!googleConfigured(settings)) {
+        return json({ error: "Google sign-in is not configured" }, 501);
+      }
+      const state = randomHex(24);
+      const next = safeNextPath(url.searchParams.get("next"));
+      await env.BOOKINGS.put(`oauthstate:${state}`,
+        JSON.stringify({ next, createdAt: Date.now() }),
+        { expirationTtl: OAUTH_STATE_TTL });
+      const authUrl = new URL(GOOGLE_AUTH_URL);
+      authUrl.search = new URLSearchParams({
+        client_id: settings.google.clientId,
+        redirect_uri: `${url.origin}/api/auth/google/callback`,
+        response_type: "code",
+        scope: "openid email profile",
+        state,
+        access_type: "online",
+        prompt: "select_account",
+      }).toString();
+      return redirectTo(authUrl.toString(), [
+        `yumi_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${OAUTH_STATE_TTL}`,
+      ]);
+    }
+
+    if (path === "/api/auth/google/callback" && request.method === "GET") {
+      const clearState =
+        "yumi_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+      const fail = () => redirectTo("/?login_error=google", [clearState]);
+      const settings = await getSettings(env);
+      if (!googleConfigured(settings)) return fail();
+      const code = url.searchParams.get("code");
+      const state = url.searchParams.get("state");
+      if (url.searchParams.get("error") || !code || !state) return fail();
+      if (readCookieValue(request, "yumi_oauth_state") !== state) return fail();
+      const rawState = await env.BOOKINGS.get(`oauthstate:${state}`);
+      if (!rawState) return fail();
+      await env.BOOKINGS.delete(`oauthstate:${state}`); // one-time
+      let next = "/";
+      try { next = safeNextPath(JSON.parse(rawState).next); } catch { /* keep "/" */ }
+      try {
+        const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            code,
+            client_id: settings.google.clientId,
+            client_secret: settings.google.clientSecret,
+            redirect_uri: `${url.origin}/api/auth/google/callback`,
+            grant_type: "authorization_code",
+          }),
+        });
+        if (!tokenRes.ok) return fail();
+        const tokenData = await tokenRes.json();
+        if (!tokenData.access_token) return fail();
+        const infoRes = await fetch(GOOGLE_USERINFO_URL, {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        if (!infoRes.ok) return fail();
+        const profile = await infoRes.json();
+        const email = String(profile.email || "").toLowerCase().trim();
+        if (!profile.sub || !EMAIL_RE.test(email) ||
+            profile.email_verified !== true) {
+          return fail();
+        }
+        // Upsert BY EMAIL: an existing account with this verified
+        // email is signed into as-is (bookings/packages stay
+        // attached); only the Google identity is recorded on it.
+        let user = await getUser(env, email);
+        if (user) {
+          user.googleSub = profile.sub;
+          user.googlePicture = profile.picture || user.googlePicture || "";
+          if (!user.name && profile.name) user.name = profile.name;
+        } else {
+          user = {
+            name: profile.name || email.split("@")[0],
+            salt: null, passwordHash: null,
+            googleSub: profile.sub,
+            googlePicture: profile.picture || "",
+            createdAt: new Date().toISOString(),
+          };
+        }
+        await env.BOOKINGS.put(`user:${email}`, JSON.stringify(user));
+        const token = await createSession(env, email);
+        return redirectTo(next, [sessionCookie(token, SESSION_TTL), clearState]);
+      } catch {
+        return fail();
+      }
+    }
+
+    /* ----- Student accounts -----
+     * Password auth is retired (Google-only sign-in): both endpoints
+     * answer 410 Gone. Existing user records and password hashes stay
+     * in KV untouched — a Google sign-in with the same verified email
+     * lands in the same account. */
     if (path === "/api/auth/register" && request.method === "POST") {
-      let body;
-      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-      const name = String(body?.name || "").trim().slice(0, 80);
-      const email = String(body?.email || "").toLowerCase().trim();
-      const password = String(body?.password || "");
-      if (!name) return json({ error: "Name is required" }, 400);
-      if (!EMAIL_RE.test(email)) return json({ error: "A valid email is required" }, 400);
-      if (password.length < 8) {
-        return json({ error: "Password must be at least 8 characters" }, 400);
-      }
-      if (await getUser(env, email)) {
-        return json({ error: "An account with this email already exists — please log in instead" }, 409);
-      }
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const user = {
-        name, salt: bytesToB64(salt),
-        passwordHash: await hashPassword(password, salt),
-        createdAt: new Date().toISOString(),
-      };
-      await env.BOOKINGS.put(`user:${email}`, JSON.stringify(user));
-      const token = await createSession(env, email);
-      return jsonWithHeaders({ user: await publicUser(env, { name, email }) }, 201,
-        { "Set-Cookie": sessionCookie(token, SESSION_TTL) });
+      return json({ error: "Password registration is disabled — please sign in with Google." }, 410);
     }
-
     if (path === "/api/auth/login" && request.method === "POST") {
-      let body;
-      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-      const email = String(body?.email || "").toLowerCase().trim();
-      const password = String(body?.password || "");
-      const failKey = `loginfail:${email}`;
-      const fails = Number(await env.BOOKINGS.get(failKey)) || 0;
-      if (fails >= LOGIN_FAIL_LIMIT) {
-        return json({ error: "Too many failed login attempts. Please try again in 15 minutes." }, 429);
-      }
-      const user = EMAIL_RE.test(email) ? await getUser(env, email) : null;
-      const ok = !!user &&
-        (await hashPassword(password, b64ToBytes(user.salt))) === user.passwordHash;
-      if (!ok) {
-        await env.BOOKINGS.put(failKey, String(fails + 1),
-          { expirationTtl: LOGIN_FAIL_TTL });
-        return json({ error: "Email or password is incorrect" }, 401);
-      }
-      await env.BOOKINGS.delete(failKey);
-      const token = await createSession(env, email);
-      return jsonWithHeaders(
-        { user: await publicUser(env, { name: user.name, email }) }, 200,
-        { "Set-Cookie": sessionCookie(token, SESSION_TTL) });
+      return json({ error: "Password sign-in is disabled — please sign in with Google." }, 410);
     }
-
     if (path === "/api/auth/logout" && request.method === "POST") {
       const token = sessionToken(request);
       if (token) await env.BOOKINGS.delete(`session:${token}`);
@@ -1745,6 +1864,7 @@ export default {
       return json({ courses: CONFIG.courses, durations,
         legacyLessonTypes: CONFIG.legacyLessonTypes,
         currency: CONFIG.currency, policy: CONFIG.policy,
+        googleAuth: googleConfigured(settings),
         openDays });
     }
 
@@ -1961,6 +2081,86 @@ export default {
         defer(checkSubReminderAfterChange(env, settings, booking));
         return json({ booking: publicBooking(booking, settings) });
       }
+    }
+
+    /* ----- One-time Google credentials setup link -----
+     * KV `meta:google_setup` = { hash, createdAt }: only the SHA-256
+     * of the token is stored. The link expires after 48 hours and is
+     * burned by the first successful save. It authorizes writing
+     * settings.google ONLY — nothing else in the system. */
+    if (path === "/setup/google" &&
+        (request.method === "GET" || request.method === "POST")) {
+      const SETUP_TTL_MS = 48 * 3600_000;
+      const setupPage = (inner) => htmlPage(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Google sign-in setup — Yumi Japanese Lessons</title>
+<style>
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#faf7f5;color:#2b2226;line-height:1.55}
+  main{max-width:520px;margin:8vh auto;padding:0 20px}
+  .card{background:#fff;border:1px solid #ead9de;border-radius:14px;padding:26px 28px}
+  h1{font-size:20px;margin:0 0 6px}
+  p{color:#6d5d63;font-size:14px}
+  label{display:block;font-size:13px;font-weight:600;margin:16px 0 0}
+  input{width:100%;box-sizing:border-box;margin-top:6px;padding:10px 12px;border:1px solid #d9c6cc;border-radius:8px;font:inherit;font-size:14px}
+  code{display:block;background:#faf3f5;border:1px solid #ead9de;border-radius:8px;padding:9px 12px;font-size:12.5px;word-break:break-all;margin-top:6px}
+  button{margin-top:22px;background:#d4577a;color:#fff;border:none;border-radius:9px;padding:11px 22px;font:inherit;font-weight:650;cursor:pointer;width:100%}
+  .err{color:#b3261e;font-weight:600}
+</style></head><body><main><div class="card">${inner}</div></main></body></html>`);
+      const expiredPage = () => setupPage(`
+        <h1>🌸 This setup link has expired</h1>
+        <p>Setup links work for 48 hours and only once. Please ask for a
+        new one — no settings were changed.</p>`);
+      const validSetup = async (token) => {
+        if (!token) return false;
+        const raw = await env.BOOKINGS.get("meta:google_setup");
+        if (!raw) return false;
+        let rec;
+        try { rec = JSON.parse(raw); } catch { return false; }
+        if (!rec.hash || !rec.createdAt) return false;
+        if (Date.now() - rec.createdAt > SETUP_TTL_MS) return false;
+        return (await sha256Hex(token)) === rec.hash;
+      };
+      if (request.method === "GET") {
+        const token = url.searchParams.get("t") || "";
+        if (!(await validSetup(token))) return expiredPage();
+        return setupPage(`
+          <h1>🌸 Google sign-in setup</h1>
+          <p>Enter the Google Cloud OAuth client for
+          <strong>yumi.ki-toko.com</strong>. Double-check the Authorized
+          redirect URI in Google Cloud matches this exactly:</p>
+          <code>https://yumi.ki-toko.com/api/auth/google/callback</code>
+          <form method="POST" action="/setup/google">
+            <input type="hidden" name="t" value="${token.replace(/"/g, "&quot;")}" />
+            <label>Google Client ID
+              <input name="clientId" autocomplete="off" required /></label>
+            <label>Google Client Secret
+              <input name="clientSecret" type="password" autocomplete="off" required /></label>
+            <button type="submit">Save — enable Google sign-in</button>
+          </form>`);
+      }
+      // POST: validate, write settings.google only, burn the token.
+      const form = await request.formData().catch(() => null);
+      const token = String(form?.get("t") || "");
+      if (!(await validSetup(token))) return expiredPage();
+      const clientId = String(form?.get("clientId") || "").trim();
+      const clientSecret = String(form?.get("clientSecret") || "").trim();
+      if (!clientId || !clientSecret) {
+        return setupPage(`
+          <h1>🌸 Almost there</h1>
+          <p class="err">Both the Client ID and the Client Secret are
+          required — the link still works, please go back and fill in
+          both fields.</p>`);
+      }
+      const current = await getSettings(env);
+      const merged = normalizeSettings({
+        ...current, google: { clientId, clientSecret } });
+      await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+      await env.BOOKINGS.delete("meta:google_setup"); // burn after use
+      return setupPage(`
+        <h1>🌸 Google sign-in is configured</h1>
+        <p>Done — students can now sign in with Google on
+        yumi.ki-toko.com. You can close this page.</p>`);
     }
 
     if (path.startsWith("/api/")) return json({ error: "Not found" }, 404);
