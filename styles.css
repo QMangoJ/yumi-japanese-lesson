@@ -610,3 +610,56 @@ a { color: var(--accent); }
   .field-row { grid-template-columns: 1fr; }
   .summary th { width: 120px; }
 }
+
+/* ---------- Mobile density: review carousel + sticky booking bar ----------
+   Both features live at the site's existing mobile breakpoint (860px,
+   where the nav collapses and grids stack). Desktop is untouched. */
+
+/* The bar markup is always in the page; it only appears on mobile. */
+.sticky-book { display: none; }
+
+@media (max-width: 860px) {
+  /* Reviews: horizontal swipe carousel (was a stacked 1-column grid).
+     Cards are ~82vw so the next card peeks in from the right edge. */
+  .voices {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .voices::-webkit-scrollbar { display: none; }
+  .voices blockquote {
+    flex: 0 0 82vw;
+    max-width: 430px;
+    scroll-snap-align: start;
+  }
+
+  /* Sticky booking bar: trust line + the same .open-booking button the
+     header/hero use, so it opens the booking modal via the shared wiring. */
+  .sticky-book {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50; /* below the booking modal overlay (z-index 60) */
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 20px rgba(51, 40, 38, 0.08);
+  }
+  .sticky-book-text { font-weight: 700; font-size: 14.5px; white-space: nowrap; }
+  .sticky-book .btn { flex: none; }
+
+  /* Keep page content (footer) clear of the fixed bar. */
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+
+  /* Never stack the bar under the open booking modal. */
+  body:has(#book-modal:not(.hidden)) .sticky-book { display: none; }
+}
