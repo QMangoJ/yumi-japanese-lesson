@@ -745,6 +745,38 @@ function resolvePurchase(body, settings) {
   return null;
 }
 
+/* ---------------- Learning profile (KV `profile:<email>`) ----------------
+ * The student's self-described Japanese level + learning goals, edited
+ * on /account (Sakura's Learning profile). Stored apart from the user
+ * record — same pattern as `studentnote:<email>` — so the admin
+ * students aggregate can attach it without touching accounts. Level
+ * is one of PROFILE_LEVELS ("" = not set); goals is free text, capped
+ * like the other student-written text fields. */
+
+const PROFILE_LEVELS = [
+  "Complete beginner", "JLPT N5", "JLPT N4", "JLPT N3",
+  "JLPT N2", "JLPT N1", "Not sure",
+];
+
+async function getProfile(env, email) {
+  const raw = await env.BOOKINGS.get(`profile:${email}`);
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw);
+    return {
+      level: PROFILE_LEVELS.includes(p.level) ? p.level : "",
+      goals: String(p.goals || "").slice(0, 2000),
+      updatedAt: p.updatedAt || null,
+    };
+  } catch { return null; }
+}
+
+async function saveProfile(env, email, { level, goals }) {
+  const rec = { level, goals, updatedAt: new Date().toISOString() };
+  await env.BOOKINGS.put(`profile:${email}`, JSON.stringify(rec));
+  return rec;
+}
+
 /* ---------------- Email outbox (KV `email:<id>`) ---------------- */
 
 function courseNameOf(b) {
@@ -1509,6 +1541,29 @@ export default {
       return json({ subscriptions: out });
     }
 
+    /* ----- Learning profile (login required) ----- */
+    if (path === "/api/account/profile") {
+      const me = await sessionUser(env, request);
+      if (!me) return json({ error: "Please log in to see your profile" }, 401);
+      const em = me.email.toLowerCase();
+      if (request.method === "GET") {
+        const p = await getProfile(env, em);
+        return json({ profile: p ? { level: p.level, goals: p.goals } : null });
+      }
+      if (request.method === "PUT") {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+        const level = String(body?.level ?? "");
+        if (level !== "" && !PROFILE_LEVELS.includes(level)) {
+          return json({ error: "Unknown level" }, 400);
+        }
+        const goals = String(body?.goals ?? "").slice(0, 2000);
+        const rec = await saveProfile(env, em, { level, goals });
+        return json({ profile: { level: rec.level, goals: rec.goals } });
+      }
+      return json({ error: "Method not allowed" }, 405);
+    }
+
     /* ----- Lesson packages: create (pending) ----- */
     if (path === "/api/packages" && request.method === "POST") {
       let body;
@@ -1682,6 +1737,27 @@ export default {
       }
       const all = await listAllBookings(env);
       const remarks = await resolveRemarks(env, all);
+      // Learning profiles (`profile:<email>`), attached to a student
+      // only when one was actually saved with content.
+      const profiles = new Map();
+      {
+        let cursor;
+        do {
+          const list = await env.BOOKINGS.list({ prefix: "profile:", cursor, limit: 100 });
+          for (const key of list.keys) {
+            const raw = await env.BOOKINGS.get(key.name);
+            if (!raw) continue;
+            try {
+              const p = JSON.parse(raw);
+              profiles.set(key.name.slice("profile:".length).toLowerCase(), {
+                level: PROFILE_LEVELS.includes(p.level) ? p.level : "",
+                goals: String(p.goals || "").slice(0, 2000),
+              });
+            } catch { /* skip malformed record */ }
+          }
+          cursor = list.list_complete ? undefined : list.cursor;
+        } while (cursor);
+      }
       const subs = await listAllSubscriptions(env);
       const users = new Map();
       {
@@ -1775,6 +1851,8 @@ export default {
       }
       const students = [...byEmail.values()].map((s) => {
         if (!s.name) s.name = s.email.split("@")[0];
+        const prof = profiles.get(s.email);
+        if (prof && (prof.level || prof.goals)) s.profile = prof;
         s.totalSpent = Math.round(s.totalSpent * 100) / 100;
         s.dormant = !s.nextLesson &&
           (!s.lastLessonDate || s.lastLessonDate < dormantCutoff);
