@@ -81,6 +81,13 @@ const DEFAULT_SETTINGS = {
     5: { start: "08:00", end: "22:00" },
     6: null,
   },
+  // Hour-set weekly template (Task: block-grid editor): weekday ->
+  // sorted array of available start-hours (integers 0–23). {} means
+  // "not set": the engine then derives the set from the legacy weekly
+  // ranges above (see weeklyHoursFor), so pre-existing settings keep
+  // behaving identically. Once the admin saves from the grid editor,
+  // all seven weekdays are present and this is the source of truth.
+  weeklyHours: {},
   blockedDates: [],
   meeting: { type: "fixed", url: "" },
   // Daniel's decision: sending is via Resend, sender
@@ -199,6 +206,15 @@ function normalizeSettings(raw) {
       }
     }
   }
+  if (raw.weeklyHours && typeof raw.weeklyHours === "object") {
+    for (let d = 0; d <= 6; d++) {
+      const v = raw.weeklyHours[String(d)];
+      if (!Array.isArray(v)) continue;
+      s.weeklyHours[String(d)] = [...new Set(
+        v.map(Number).filter((h) => Number.isInteger(h) && h >= 0 && h <= 23)
+      )].sort((a, b) => a - b);
+    }
+  }
   if (Array.isArray(raw.blockedDates)) {
     s.blockedDates = [...new Set(raw.blockedDates.filter((x) => DATE_RE.test(x || "")))].sort();
   }
@@ -257,6 +273,7 @@ async function getSettings(env) {
 function publicSettings(s) {
   return {
     weekly: s.weekly,
+    weeklyHours: s.weeklyHours,
     blockedDates: s.blockedDates,
     meeting: s.meeting,
     resend: { from: s.resend.from, apiKeySet: !!s.resend.apiKey },
@@ -279,48 +296,94 @@ function isAdminEmail(settings, email) {
     (x) => String(x || "").toLowerCase().trim() === e);
 }
 
-/** The hours that actually apply on a date: a per-date override wins
- *  (null = closed that day), then the blocked-dates list, then the
- *  weekly template. Returns {start, end} or null when closed. */
-function effectiveHours(settings, dateStr) {
-  if (Object.prototype.hasOwnProperty.call(settings.dateOverrides, dateStr)) {
-    return settings.dateOverrides[dateStr];
+/** Available start-hours (integers 0–23, sorted) for a weekday from
+ *  the hour-set template (settings.weeklyHours). When the template has
+ *  no entry for the weekday, derive the set from the legacy weekly
+ *  range: every hour block [h:00, h+1:00) fully inside [start, end) —
+ *  for Mon–Fri 08:00–22:00 that is exactly [8..21]. */
+function weeklyHoursFor(settings, weekday) {
+  const wh = settings.weeklyHours || {};
+  const v = wh[String(weekday)];
+  if (Array.isArray(v)) return [...v].sort((a, b) => a - b);
+  const range = settings.weekly ? settings.weekly[weekday] : null;
+  if (!range) return [];
+  const out = [];
+  for (let h = 0; h < 24; h++) {
+    if (h * 60 >= toMin(range.start) && (h + 1) * 60 <= toMin(range.end)) out.push(h);
   }
-  if (settings.blockedDates.includes(dateStr)) return null;
-  return settings.weekly[jstWeekday(dateStr)];
+  return out;
+}
+
+/** Open intervals [startMin, endMin) that apply on a date, merged and
+ *  ordered: a per-date override wins (null = closed, a range = one
+ *  interval), then the blocked-dates list, then the weekly hour-set
+ *  template (consecutive selected hours merge into one interval).
+ *  This is the single resolution behind every availability check. */
+function openIntervals(settings, dateStr) {
+  if (Object.prototype.hasOwnProperty.call(settings.dateOverrides, dateStr)) {
+    const o = settings.dateOverrides[dateStr];
+    return o ? [[toMin(o.start), toMin(o.end)]] : [];
+  }
+  if (settings.blockedDates.includes(dateStr)) return [];
+  const out = [];
+  for (const h of weeklyHoursFor(settings, jstWeekday(dateStr))) {
+    const start = h * 60, end = start + 60;
+    const last = out[out.length - 1];
+    if (last && last[1] === start) last[1] = end;
+    else out.push([start, end]);
+  }
+  return out;
+}
+
+/** True when [startMin, startMin+minutes) fits inside one open interval. */
+function intervalCovers(intervals, startMin, minutes) {
+  return intervals.some(([a, b]) => startMin >= a && startMin + minutes <= b);
+}
+
+/** Bounding range {start, end} of the day's open intervals, or null
+ *  when closed. Kept for callers that only need the outer bounds;
+ *  precise checks go through openIntervals/intervalCovers. */
+function effectiveHours(settings, dateStr) {
+  const iv = openIntervals(settings, dateStr);
+  if (!iv.length) return null;
+  return { start: toHHMM(iv[0][0]), end: toHHMM(iv[iv.length - 1][1]) };
 }
 
 /** Hourly candidate start times ("HH:MM") for a date, or null when
- *  closed. Per-hour blocks (settings.blockedHours) are removed. */
+ *  closed: every hour step inside the open intervals. Per-hour blocks
+ *  (settings.blockedHours) are removed. */
 function candidateStarts(settings, dateStr) {
-  const hours = effectiveHours(settings, dateStr);
-  if (!hours) return null;
+  const iv = openIntervals(settings, dateStr);
+  if (!iv.length) return null;
   const blocked = new Set(settings.blockedHours[dateStr] || []);
   const out = [];
-  for (let t = toMin(hours.start); t < toMin(hours.end); t += 60) {
-    const hm = toHHMM(t);
-    if (!blocked.has(hm)) out.push(hm);
+  for (const [a, b] of iv) {
+    for (let t = a; t < b; t += 60) {
+      const hm = toHHMM(t);
+      if (!blocked.has(hm)) out.push(hm);
+    }
   }
   return out;
 }
 
 /** Slot list for one date at a lesson length: closed per the full
- *  settings resolution (weekly + dateOverrides + blockedDates), each
- *  start checked against the lead-time rule, the end-of-hours rule and
- *  existing bookings (`taken` intervals in bookingsOn's shape). One
- *  source of truth shared by /api/availability and
+ *  settings resolution (weeklyHours/weekly + dateOverrides +
+ *  blockedDates), each start checked against the lead-time rule, the
+ *  interval-coverage rule (the whole lesson must fit inside selected
+ *  hours) and existing bookings (`taken` intervals in bookingsOn's
+ *  shape). One source of truth shared by /api/availability and
  *  /api/availability/month. */
 function computeSlots(settings, dateStr, minutes, taken) {
-  const hours = effectiveHours(settings, dateStr);
   const starts = candidateStarts(settings, dateStr);
   if (!starts) return { closed: true, slots: [] };
+  const intervals = openIntervals(settings, dateStr);
   const slots = starts.map((time) => {
     const start = toMin(time);
     const tooSoon = slotInstant(dateStr, Number(time.slice(0, 2))) - new Date() <
       CONFIG.policy.bookAheadHours * 3600_000;
-    const endsLate = start + minutes > toMin(hours.end);
+    const covered = intervalCovers(intervals, start, minutes);
     return { time, endTime: toHHMM(start + minutes),
-      available: !tooSoon && !endsLate && !overlaps(start, minutes, taken) };
+      available: !tooSoon && covered && !overlaps(start, minutes, taken) };
   });
   return { closed: false, slots };
 }
@@ -523,8 +586,8 @@ async function bookingsSplitForEmail(env, settings, email) {
 
 function validateSlot(settings, dateStr, time, minutes) {
   if (!DATE_RE.test(dateStr || "")) return "Invalid date";
-  const hours = effectiveHours(settings, dateStr);
-  if (!hours) {
+  const intervals = openIntervals(settings, dateStr);
+  if (!intervals.length) {
     return settings.blockedDates.includes(dateStr) ||
       settings.dateOverrides[dateStr] === null
       ? "Not available on that date"
@@ -535,8 +598,11 @@ function validateSlot(settings, dateStr, time, minutes) {
   }
   const starts = candidateStarts(settings, dateStr) || [];
   if (!starts.includes(time)) return "Invalid time";
-  if (toMin(time) + minutes > toMin(hours.end)) {
-    return `That lesson would end after closing time (${hours.end} JST)`;
+  if (!intervalCovers(intervals, toMin(time), minutes)) {
+    const startMin = toMin(time);
+    const containing = intervals.find(([a, b]) => startMin >= a && startMin < b);
+    const end = containing ? containing[1] : intervals[intervals.length - 1][1];
+    return `That lesson would end after closing time (${toHHMM(end)} JST)`;
   }
   const hour = Number(time.slice(0, 2));
   const aheadMs = slotInstant(dateStr, hour) - new Date();
@@ -731,14 +797,14 @@ const DAY_NAMES = ["Sundays", "Mondays", "Tuesdays", "Wednesdays",
  *  they only need to be inside the teacher's hours (incl. per-date
  *  overrides and blocked hours) — no lead-time rule. */
 function checkOccurrence(settings, dateStr, time, minutes) {
-  const hours = effectiveHours(settings, dateStr);
-  if (!hours) return "the teacher is not available that day";
+  const intervals = openIntervals(settings, dateStr);
+  if (!intervals.length) return "the teacher is not available that day";
   if ((settings.blockedHours[dateStr] || []).includes(time)) {
     return "that start time is blocked that day";
   }
   const starts = candidateStarts(settings, dateStr) || [];
   if (!starts.includes(time)) return "that start time is outside the teacher's hours";
-  if (toMin(time) + minutes > toMin(hours.end)) {
+  if (!intervalCovers(intervals, toMin(time), minutes)) {
     return "the lesson would end after closing time";
   }
   return null;
@@ -1468,7 +1534,8 @@ export default {
 
     if (path === "/api/config" && request.method === "GET") {
       const settings = await getSettings(env);
-      const openDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => settings.weekly[d]);
+      const openDays = [0, 1, 2, 3, 4, 5, 6].filter(
+        (d) => weeklyHoursFor(settings, d).length > 0);
       return json({ courses: CONFIG.courses, durations: CONFIG.durations,
         legacyLessonTypes: CONFIG.legacyLessonTypes,
         currency: CONFIG.currency, policy: CONFIG.policy,

@@ -254,6 +254,22 @@
   @media (max-width: 560px) {
     .adm-cal .cal-day { min-height: 50px; }
   }
+
+/* ---------- weekly hour-block grid ---------- */
+.wh-scroll{overflow-x:auto}
+.wh-paint{touch-action:none;user-select:none;-webkit-user-select:none}
+table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
+.wh-grid th,.wh-grid td{padding:0;text-align:center;border:none}
+.wh-corner{width:46px}
+.wh-day-head{min-width:78px;padding:2px 2px 4px!important;vertical-align:top}
+.wh-day-name{font-weight:650;font-size:13px}
+.wh-all{display:block;margin:5px auto 3px;font:inherit;font-size:11.5px;padding:2px 12px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
+.wh-all:hover{border-color:var(--accent);color:var(--accent)}
+.wh-day-sum{display:block;font-size:10.5px;color:var(--muted);line-height:1.4;min-height:29px;font-variant-numeric:tabular-nums}
+.wh-hour-label{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;padding-right:7px!important;text-align:right!important;white-space:nowrap}
+.wh-cell{width:100%;height:26px;border:1px solid var(--adm-line);background:#f4f2f0;border-radius:5px;cursor:pointer;font-size:11px;color:#cfc8c3;padding:0}
+.wh-cell:hover{border-color:var(--accent)}
+.wh-cell.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -396,9 +412,10 @@
         <section class="view hidden" data-view="availability">
           <div class="panel">
             <h2>Weekly hours (Japan time) · 每周时间</h2>
-            <p class="note">Lessons start on the hour. A lesson must end by the
-            day's closing time. Untick a day to close it. Specific dates can be
-            adjusted in the availability calendar below.</p>
+            <p class="note">点格子切换那一小时是否可约（粉色 = 可约，灰色 = 不可约）；
+            按住鼠标拖动可以连续涂抹，手机上逐格点按。每列顶部的「全天」可以一键
+            全选/清空当天，下方小字是当天已选时段的汇总。课程在整点开始，且整节课
+            必须落在已选小时内。具体某一天可以在下面的可约日历里单独调整。</p>
             <div id="adm-weekly"></div>
           </div>
 
@@ -592,46 +609,134 @@ function toast(text) {
 
 /* ---------- settings form <-> draft ---------- */
 
+/* ---------- weekly hour-block grid ---------- */
+
+const GRID_DAYS = [1, 2, 3, 4, 5, 6, 0];
+const GRID_BASE_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+
+/** Mirror of the worker's derivation: hour blocks fully inside a
+ *  legacy weekly range. */
+function hoursFromRange(range) {
+  if (!range) return [];
+  const out = [];
+  for (let h = 0; h < 24; h++) {
+    if (h * 60 >= toMin(range.start) && (h + 1) * 60 <= toMin(range.end)) out.push(h);
+  }
+  return out;
+}
+
+function whRowHtml(h) {
+  return `<tr data-hour="${h}"><td class="wh-hour-label">${pad(h)}:00</td>` +
+    GRID_DAYS.map((d) =>
+      `<td><button type="button" class="wh-cell" data-day="${d}" data-hour="${h}">—</button></td>`).join("") +
+    `</tr>`;
+}
+
+function ensureHourRow(h) {
+  const tbody = $("#adm-weekly tbody");
+  if (!tbody || tbody.querySelector(`tr[data-hour="${h}"]`)) return;
+  const tpl = document.createElement("template");
+  tpl.innerHTML = whRowHtml(h).trim();
+  const tr = tpl.content.firstElementChild;
+  const after = [...tbody.querySelectorAll("tr")]
+    .find((r) => Number(r.dataset.hour) > h);
+  tbody.insertBefore(tr, after || null);
+}
+
+function gridCells(day) {
+  return [...document.querySelectorAll(`#adm-weekly .wh-cell[data-day="${day}"]`)];
+}
+function gridHours(day) {
+  return gridCells(day).filter((c) => c.classList.contains("on"))
+    .map((c) => Number(c.dataset.hour)).sort((a, b) => a - b);
+}
+function runsText(hours) {
+  if (!hours.length) return "休息";
+  const runs = [];
+  let s = hours[0], p = hours[0];
+  for (const h of hours.slice(1)) {
+    if (h === p + 1) { p = h; continue; }
+    runs.push(`${pad(s)}:00–${pad(p + 1)}:00`); s = h; p = h;
+  }
+  runs.push(`${pad(s)}:00–${pad(p + 1)}:00`);
+  return runs.join(", ");
+}
+function updateDaySummary(day) {
+  const el = document.querySelector(`#adm-weekly [data-sum="${day}"]`);
+  if (el) el.textContent = runsText(gridHours(day));
+}
+function setGridDay(day, hours) {
+  for (const h of hours) ensureHourRow(h);
+  const set = new Set(hours);
+  gridCells(day).forEach((c) =>
+    c.classList.toggle("on", set.has(Number(c.dataset.hour))));
+  updateDaySummary(day);
+}
+
 function buildWeekly() {
   const box = $("#adm-weekly");
-  box.innerHTML = "";
-  for (const d of [1, 2, 3, 4, 5, 6, 0]) {
-    const row = document.createElement("div");
-    row.className = "day-row";
-    row.dataset.day = d;
-    row.innerHTML = `
-      <span class="day-name">${DAY_NAMES[d]}</span>
-      <label><input type="checkbox" class="wk-open" /> Open</label>
-      <input type="time" class="wk-start" step="3600" />
-      <span>–</span>
-      <input type="time" class="wk-end" step="3600" />
-      <span class="closed-note"></span>`;
-    box.appendChild(row);
-    const sync = () => {
-      const open = row.querySelector(".wk-open").checked;
-      row.querySelector(".wk-start").disabled = !open;
-      row.querySelector(".wk-end").disabled = !open;
-      row.querySelector(".closed-note").textContent = open ? "" : "Closed";
-    };
-    row.querySelector(".wk-open").addEventListener("change", () => { sync(); afterChange(true); });
-    row.querySelectorAll("input[type=time]").forEach((i) =>
-      i.addEventListener("change", () => afterChange(true)));
-    row._sync = sync;
-  }
+  const head = GRID_DAYS.map((d) => `
+    <th class="wh-day-head">
+      <div class="wh-day-name">周${DAY_CN[d]} ${DAY_NAMES[d].slice(0, 3)}</div>
+      <button type="button" class="wh-all" data-all="${d}">全天</button>
+      <span class="wh-day-sum" data-sum="${d}"></span>
+    </th>`).join("");
+  box.innerHTML = `
+    <div class="wh-scroll wh-paint">
+      <table class="wh-grid">
+        <thead><tr><th class="wh-corner"></th>${head}</tr></thead>
+        <tbody>${GRID_BASE_HOURS.map(whRowHtml).join("")}</tbody>
+      </table>
+    </div>`;
+  box.querySelectorAll(".wh-all").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const d = Number(btn.dataset.all);
+      const cells = gridCells(d);
+      const allOn = cells.length > 0 && cells.every((c) => c.classList.contains("on"));
+      cells.forEach((c) => c.classList.toggle("on", !allOn));
+      updateDaySummary(d);
+      afterChange(true);
+    });
+  });
+  // Drag painting: pointerdown picks the paint value from the first
+  // cell, pointerover applies it to entered cells, pointerup ends
+  // the stroke and refreshes the mirrors once. Plain tap/click works
+  // through the same pointerdown path.
+  let painting = null;
+  box.addEventListener("pointerdown", (e) => {
+    const cell = e.target.closest(".wh-cell");
+    if (!cell) return;
+    e.preventDefault();
+    painting = !cell.classList.contains("on");
+    cell.classList.toggle("on", painting);
+    updateDaySummary(Number(cell.dataset.day));
+  });
+  box.addEventListener("pointerover", (e) => {
+    if (painting === null) return;
+    const cell = e.target.closest(".wh-cell");
+    if (!cell) return;
+    if (cell.classList.contains("on") !== painting) {
+      cell.classList.toggle("on", painting);
+      updateDaySummary(Number(cell.dataset.day));
+    }
+  });
+  window.addEventListener("pointerup", () => {
+    if (painting !== null) { painting = null; afterChange(true); }
+  });
 }
 
 function fillForm(s) {
   draft = JSON.parse(JSON.stringify({
+    weekly: s.weekly || {},
     dateOverrides: s.dateOverrides || {},
     blockedHours: s.blockedHours || {},
   }));
-  document.querySelectorAll("#adm-weekly .day-row").forEach((row) => {
-    const w = s.weekly[String(row.dataset.day)];
-    row.querySelector(".wk-open").checked = !!w;
-    row.querySelector(".wk-start").value = w ? w.start : "08:00";
-    row.querySelector(".wk-end").value = w ? w.end : "22:00";
-    row._sync();
-  });
+  for (let d = 0; d <= 6; d++) {
+    const hours = s.weeklyHours && Array.isArray(s.weeklyHours[String(d)])
+      ? s.weeklyHours[String(d)]
+      : hoursFromRange(s.weekly ? s.weekly[String(d)] : null);
+    setGridDay(d, hours);
+  }
   $("#adm-blocked").value = (s.blockedDates || []).join("\n");
   $("#adm-meeting").value = s.meeting?.url || "";
   $("#adm-resend-from").value = s.resend?.from || "";
@@ -649,19 +754,17 @@ function fillForm(s) {
 }
 
 function collect() {
-  const weekly = {};
-  document.querySelectorAll("#adm-weekly .day-row").forEach((row) => {
-    const open = row.querySelector(".wk-open").checked;
-    weekly[row.dataset.day] = open
-      ? { start: row.querySelector(".wk-start").value || "08:00",
-          end: row.querySelector(".wk-end").value || "22:00" }
-      : null;
-  });
+  const weeklyHours = {};
+  for (let d = 0; d <= 6; d++) weeklyHours[String(d)] = gridHours(d);
   const blockedDates = [...new Set(
     $("#adm-blocked").value.split(/\s+/).map((x) => x.trim())
       .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)))].sort();
   return {
-    weekly, blockedDates,
+    // Legacy ranges are no longer edited here; the stored values are
+    // sent back untouched (the worker keeps them as the fallback the
+    // hour sets were derived from). weeklyHours is the template now.
+    weekly: draft && draft.weekly ? draft.weekly : {},
+    weeklyHours, blockedDates,
     meeting: { type: "fixed", url: $("#adm-meeting").value.trim() },
     resend: { from: $("#adm-resend-from").value.trim(), apiKey: $("#adm-resend-key").value },
     teacherEmail: $("#adm-teacher").value.trim(),
@@ -699,18 +802,52 @@ function afterChange(availabilityToo) {
 
 /* ---------- availability logic (mirror of worker.js) ---------- */
 
-function effectiveHours(s, dateStr) {
+/** Mirror of the worker's openIntervals: the same resolution
+ *  (override → blockedDates → weekly hour set) for calendar display. */
+function mirrorOpenIntervals(s, dateStr) {
   if (Object.prototype.hasOwnProperty.call(s.dateOverrides, dateStr)) {
-    return s.dateOverrides[dateStr]; // null = closed, or {start, end}
+    const o = s.dateOverrides[dateStr];
+    return o ? [[toMin(o.start), toMin(o.end)]] : [];
   }
-  if (s.blockedDates.includes(dateStr)) return null;
+  if ((s.blockedDates || []).includes(dateStr)) return [];
   const wd = new Date(dateStr + "T00:00:00Z").getUTCDay();
-  return s.weekly[String(wd)] || null;
+  const hours = s.weeklyHours && Array.isArray(s.weeklyHours[String(wd)])
+    ? s.weeklyHours[String(wd)]
+    : hoursFromRange(s.weekly ? s.weekly[String(wd)] : null);
+  const out = [];
+  for (const h of hours) {
+    const st = h * 60, en = st + 60;
+    const last = out[out.length - 1];
+    if (last && last[1] === st) last[1] = en; else out.push([st, en]);
+  }
+  return out;
+}
+
+function effectiveHours(s, dateStr) {
+  const iv = mirrorOpenIntervals(s, dateStr);
+  if (!iv.length) return null;
+  return { start: fromMin(iv[0][0]), end: fromMin(iv[iv.length - 1][1]) };
+}
+
+/** Every hour-step start inside the day's open intervals (blocked
+ *  hours included — the day editor chips mark those themselves). */
+function allIntervalStarts(s, dateStr) {
+  const out = [];
+  for (const [a, b] of mirrorOpenIntervals(s, dateStr)) {
+    for (let t = a; t < b; t += 60) out.push(fromMin(t));
+  }
+  return out;
 }
 
 function compactHours(range) {
   const f = (t) => t.endsWith(":00") ? t.slice(0, -3) : t;
   return `${f(range.start)}–${f(range.end)}`;
+}
+
+/** Compact run label for a template day, e.g. "8–12·13–22". */
+function compactRuns(s, dateStr) {
+  return mirrorOpenIntervals(s, dateStr)
+    .map(([a, b]) => `${Math.floor(a / 60)}–${Math.floor(b / 60)}`).join("·");
 }
 
 /* ---------- availability calendar + schedule board (shared cells) ---------- */
@@ -756,7 +893,7 @@ function buildCalendarHtml(cursor, selected, lessonsFor, s, idPrefix) {
     if (special) cls.push("is-special");
     if (ds === selected) cls.push("selected");
     if (ds === today) cls.push("today");
-    const sub = !hours ? "休" : compactHours(hours);
+    const sub = !hours ? "休" : (isOverride ? compactHours(hours) : compactRuns(s, ds));
     const miniRows = lessons.slice(0, 2).map((b) => {
       const done = b.effectiveStatus === "completed";
       const tip = `${b.time} ${b.name} — ${courseNames[b.courseId] || b.courseId || ""}` +
@@ -912,7 +1049,8 @@ function renderDayEditor() {
   const override = hasOverride ? s.dateOverrides[ds] : undefined;
   const mode = !hasOverride ? "follow" : (override === null ? "closed" : "special");
   const hours = effectiveHours(s, ds);
-  const weekly = s.weekly[String(wd)];
+  const followRuns = mirrorOpenIntervals(s, ds)
+    .map(([a, b]) => `${fromMin(a)}–${fromMin(b)}`).join(", ");
   const lessons = lessonsOn(ds);
 
   const lessonsHtml = lessonsListHtml(lessons);
@@ -921,8 +1059,7 @@ function renderDayEditor() {
   let chipsHtml = "";
   if (hours) {
     const blocked = s.blockedHours[ds] || [];
-    const starts = [];
-    for (let t = toMin(hours.start); t + 60 <= toMin(hours.end); t += 60) starts.push(fromMin(t));
+    const starts = allIntervalStarts(s, ds);
     chipsHtml = `
       <h4 class="bk-sub">屏蔽单个时间 · Block single hours</h4>
       <p class="note">点一下某个时间就能屏蔽它（比如临时有事）；再点一次恢复。</p>
@@ -940,7 +1077,7 @@ function renderDayEditor() {
       <button type="button" data-mode="closed" class="${mode === "closed" ? "active" : ""}">这天休息</button>
       <button type="button" data-mode="special" class="${mode === "special" ? "active" : ""}">特殊时段</button>
     </div>
-    ${mode === "follow" ? `<p class="note">每周安排：${weekly ? `${weekly.start}–${weekly.end}` : "这天休息（每周模板里就是关的）"}</p>` : ""}
+    ${mode === "follow" ? `<p class="note">每周安排：${followRuns || "这天休息（每周模板里就是关的）"}</p>` : ""}
     ${mode === "special" ? `
     <div class="de-special">
       <label class="field">Start <select id="de-start">${hourOptions(override.start)}</select></label>
