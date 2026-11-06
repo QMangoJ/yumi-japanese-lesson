@@ -345,8 +345,31 @@ button { font-family: inherit; }
   border-left: 4px solid var(--accent);
   border-radius: 12px;
   padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
 }
 .voices blockquote p { margin: 0 0 10px; }
+/* Long reviews: only the text scrolls — the star row above and the
+ * reviewer row below stay put (the reviewer row is pinned to the
+ * card's bottom edge, so cards in a grid row line up). The cap
+ * (~9 lines) bounds every card's height, so the desktop pager's
+ * 2-row grid never grows because one review is long. */
+.voices blockquote p:not(.stars) {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 14.5em;
+  line-height: 1.6;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #eecdd7 transparent;
+}
+.voices blockquote p:not(.stars)::-webkit-scrollbar { width: 6px; }
+.voices blockquote p:not(.stars)::-webkit-scrollbar-thumb {
+  background: #eecdd7;
+  border-radius: 3px;
+}
+.voices blockquote p:not(.stars)::-webkit-scrollbar-track { background: transparent; }
+.voices footer.reviewer { margin-top: auto; }
 .voices footer { color: var(--sub); font-size: 14px; }
 
 /* Per-card star row inside each review blockquote. */
