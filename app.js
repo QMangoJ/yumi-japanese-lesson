@@ -223,8 +223,9 @@ function fetchMonthAvail(month, minutes) {
 }
 
 /* ---------- Date + start-time picker (Sakura-style) ----------
- * Builds a month calendar element and an "Available times" dropdown element;
- * the caller places them. onPick(date, time) fires whenever either changes.
+ * Builds a month calendar element and an "Available times" chip-grid
+ * element; the caller places them. onPick(date, time) fires whenever
+ * either changes.
  * Day enable/disable comes from the server's month map (full settings
  * resolution: one-off opened/closed days and real bookings included);
  * while that fetch is in flight the weekly template renders as fallback.
@@ -242,11 +243,20 @@ function createPicker({ getMinutes, onPick }) {
   calEl.className = "cal";
   const timesEl = document.createElement("div");
   timesEl.innerHTML = `
-    <label class="field">Available times
-      <select disabled><option>Choose a date first</option></select></label>
+    <div class="field">Available times
+      <div class="time-grid"><p class="time-hint">Choose a date first</p></div>
+    </div>
     <p class="note picker-note"></p>`;
-  const select = timesEl.querySelector("select");
+  const grid = timesEl.querySelector(".time-grid");
   const note = timesEl.querySelector(".picker-note");
+
+  function markSelectedChip() {
+    grid.querySelectorAll(".time-chip").forEach((chip) => {
+      const on = !chip.disabled && chip.dataset.time === time;
+      chip.classList.toggle("selected", on);
+      chip.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
 
   const minDate = () => addDays(jstToday(), 3); // 72-hour rule, at date level
   const maxMonth = () => {
@@ -317,41 +327,56 @@ function createPicker({ getMinutes, onPick }) {
     const token = ++loadToken;
     time = null;
     onPick(date, time);
-    select.innerHTML = "<option>Checking availability…</option>";
-    select.disabled = true;
+    grid.innerHTML = `<p class="time-hint">Checking availability…</p>`;
     note.textContent = "Checking availability…";
     try {
       const data = await api(`/api/availability?date=${date}&duration=${getMinutes()}`);
       if (token !== loadToken) return;
       if (data.closed) {
-        select.innerHTML = "<option>Closed on this day</option>";
+        grid.innerHTML = `<p class="time-hint">Closed on this day</p>`;
         note.textContent = data.blocked
           ? "Not available on this date — please pick another day."
           : "Closed on this day.";
         return;
       }
-      const open = data.slots.filter((s) => s.available);
-      if (!open.length) {
-        select.innerHTML = "<option>No times available</option>";
+      if (!data.slots.length) {
+        grid.innerHTML = `<p class="time-hint">No times available</p>`;
         note.textContent = "No times are available on this date.";
         return;
       }
+      const open = data.slots.filter((s) => s.available);
+      // Sakura-style: pre-select the first available start time.
+      time = open.length ? open[0].time : null;
       const minutes = getMinutes();
-      select.innerHTML = open.map((s) => {
+      grid.innerHTML = "";
+      for (const s of data.slots) {
         const lr = localRange(date, s.time, minutes);
         // Show the local date too when it differs from the JST calendar day
         // (e.g. an 08:00 JST Monday slot is Sunday evening in the Americas).
         const dayPrefix = jstDateOfMs(lr.start) !== date ? `${fmtLocalDate(lr.start)} · ` : "";
-        return `<option value="${s.time}">${dayPrefix}${lr.text} ${tzAbbr(lr.start)} · JST ${s.time}</option>`;
-      }).join("");
-      select.disabled = false;
-      time = open[0].time; // Sakura pre-selects the first available start time
-      select.value = time;
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "time-chip";
+        chip.dataset.time = s.time;
+        chip.disabled = !s.available;
+        chip.innerHTML = `
+          <span class="tc-main">${dayPrefix}${lr.text} ${tzAbbr(lr.start)}</span>
+          <span class="tc-sub">JST ${rangeText(toMin(s.time), minutes)}</span>`;
+        if (s.available) {
+          chip.onclick = () => { time = s.time; markSelectedChip(); onPick(date, time); };
+        }
+        grid.appendChild(chip);
+      }
+      markSelectedChip();
+      if (!open.length) {
+        note.textContent = "No times are available on this date.";
+        return;
+      }
       note.textContent = `${open.length} start time${open.length === 1 ? "" : "s"} available`;
       onPick(date, time);
     } catch (e) {
       if (token !== loadToken) return;
-      select.innerHTML = "<option>Could not load times</option>";
+      grid.innerHTML = `<p class="time-hint">Could not load times</p>`;
       note.textContent = e.message;
     }
   }
@@ -361,11 +386,6 @@ function createPicker({ getMinutes, onPick }) {
     renderCal();
     loadTimes();
   }
-
-  select.addEventListener("change", () => {
-    time = select.value || null;
-    onPick(date, time);
-  });
 
   renderCal();
   loadMonth();
@@ -461,11 +481,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /* Duration pickers are chip groups (no native selects): both the
+   * single-lesson and package containers render the same options
+   * with the CONFIGURED prices, and stay in sync. */
   function renderDurations() {
-    const opts = state.config.durations.map((d) =>
-      `<option value="${d.id}"${d.id === state.durationId ? " selected" : ""}>${d.minutes} min lesson</option>`).join("");
-    $("#bk-duration").innerHTML = opts;
-    $("#bk-pkg-duration").innerHTML = opts;
+    for (const [sel, fromPackage] of [["#bk-duration", false], ["#bk-pkg-duration", true]]) {
+      const box = $(sel);
+      box.innerHTML = "";
+      for (const d of state.config.durations) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "dur-chip" + (d.id === state.durationId ? " selected" : "");
+        b.setAttribute("aria-pressed", d.id === state.durationId ? "true" : "false");
+        b.innerHTML = `<span class="dur-min">${d.minutes} min</span>` +
+          `<span class="dur-price">${money(d.price)}</span>`;
+        b.onclick = () => applyDuration(d.id, fromPackage);
+        box.appendChild(b);
+      }
+    }
+  }
+
+  function applyDuration(id, fromPackage) {
+    state.durationId = id;
+    renderDurations();
+    if (!fromPackage) picker.setMinutes();
+    renderPkgSizes();
+    renderPkgSlots();
+    refreshSummary();
   }
 
   function refreshSummary() {
@@ -590,38 +632,69 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderPkgSlots() {
     const box = $("#bk-pkg-slots");
     box.innerHTML = "";
+    const WD_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     pkg.slots.forEach((slot, i) => {
       const row = document.createElement("div");
       row.className = "pkg-slot";
       row.innerHTML = `
         <span class="pkg-slot-title">固定时间 ${i + 1} · Weekly slot ${i + 1}</span>
-        <label class="field">星期 · Weekday
-          <select class="pkg-weekday">
-            <option value="">选择星期…</option>
-            ${WEEKDAY_LABELS.map((label, wd) =>
-              `<option value="${wd}"${String(wd) === String(slot.weekday) ? " selected" : ""}>${label}</option>`).join("")}
-          </select></label>
-        <label class="field">开始时间 (JST) · Start time
-          <select class="pkg-time"><option value="">先选星期…</option></select></label>`;
+        <div class="field">星期 · Weekday
+          <div class="wd-chips" role="group" aria-label="Weekday"></div></div>
+        <div class="field">开始时间 (JST) · Start time
+          <div class="time-chips-sm"><p class="time-hint">先选星期…</p></div></div>`;
       box.appendChild(row);
-      const wdSel = row.querySelector(".pkg-weekday");
-      const timeSel = row.querySelector(".pkg-time");
+      const wdBox = row.querySelector(".wd-chips");
+      const timeBox = row.querySelector(".time-chips-sm");
+      WEEKDAY_LABELS.forEach((label, wd) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "wd-chip" + (String(wd) === String(slot.weekday) ? " selected" : "");
+        b.setAttribute("aria-pressed", String(wd) === String(slot.weekday) ? "true" : "false");
+        b.textContent = `${WD_SHORT[wd]} ${WEEKDAY_CN[wd]}`;
+        b.title = label;
+        b.onclick = () => {
+          slot.weekday = String(wd);
+          slot.time = "";
+          wdBox.querySelectorAll(".wd-chip").forEach((c, ci) => {
+            c.classList.toggle("selected", ci === wd);
+            c.setAttribute("aria-pressed", ci === wd ? "true" : "false");
+          });
+          fillTimes();
+        };
+        wdBox.appendChild(b);
+      });
       const fillTimes = async () => {
-        if (slot.weekday === "") { timeSel.innerHTML = `<option value="">先选星期…</option>`; return; }
-        timeSel.innerHTML = `<option value="">加载中…</option>`;
+        if (slot.weekday === "") {
+          timeBox.innerHTML = `<p class="time-hint">先选星期…</p>`;
+          return;
+        }
+        timeBox.innerHTML = `<p class="time-hint">加载中…</p>`;
         const minutes = durationOf(state.durationId)?.minutes || 50;
         const times = await pkgSlotTimes(Number(slot.weekday), minutes);
-        timeSel.innerHTML = times.length
-          ? `<option value="">选择时间…</option>` + times.map((t) =>
-              `<option value="${t}"${t === slot.time ? " selected" : ""}>${t} JST</option>`).join("")
-          : `<option value="">这一天暂时没有可约时间</option>`;
         if (slot.time && !times.includes(slot.time)) slot.time = "";
-        renderPkgSummary();
-        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
-      };
-      wdSel.onchange = () => { slot.weekday = wdSel.value; slot.time = ""; fillTimes(); };
-      timeSel.onchange = () => {
-        slot.time = timeSel.value;
+        if (!times.length) {
+          timeBox.innerHTML = `<p class="time-hint">这一天暂时没有可约时间</p>`;
+        } else {
+          timeBox.innerHTML = "";
+          for (const t of times) {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "time-chip sm" + (t === slot.time ? " selected" : "");
+            chip.setAttribute("aria-pressed", t === slot.time ? "true" : "false");
+            chip.innerHTML = `<span class="tc-main">${t}</span><span class="tc-sub">JST</span>`;
+            chip.onclick = () => {
+              slot.time = t;
+              timeBox.querySelectorAll(".time-chip").forEach((c) => {
+                const on = c === chip;
+                c.classList.toggle("selected", on);
+                c.setAttribute("aria-pressed", on ? "true" : "false");
+              });
+              renderPkgSummary();
+              $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+            };
+            timeBox.appendChild(chip);
+          }
+        }
         renderPkgSummary();
         $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
       };
@@ -660,14 +733,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelectorAll(".bk-mode-btn").forEach((b) => {
     b.addEventListener("click", () => setMode(b.dataset.mode));
   });
-  $("#bk-pkg-duration").addEventListener("change", (e) => {
-    state.durationId = e.target.value;
-    $("#bk-duration").value = state.durationId;
-    renderPkgSizes();
-    renderPkgSlots();
-    renderPkgSummary();
-  });
-
   state.durationId = state.config.durations.find((d) => d.minutes === 50)?.id || state.config.durations[0].id;
   renderCourses();
   renderDurations();
@@ -675,15 +740,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderPkgFreq();
   renderPkgSlots();
   refreshSummary();
-
-  $("#bk-duration").addEventListener("change", (e) => {
-    state.durationId = e.target.value;
-    $("#bk-pkg-duration").value = state.durationId;
-    picker.setMinutes();
-    renderPkgSizes();
-    renderPkgSlots();
-    refreshSummary();
-  });
 
   document.querySelectorAll(".book-course").forEach((btn) => {
     btn.addEventListener("click", () => {
