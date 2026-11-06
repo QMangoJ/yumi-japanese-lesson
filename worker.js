@@ -1541,6 +1541,131 @@ export default {
       return json({ subscription: publicSubscription(sub), ...result });
     }
 
+    /* ----- Admin: students board (one aggregate, no N+1) ----- */
+    if (path === "/api/admin/students" && request.method === "GET") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      const all = await listAllBookings(env);
+      const remarks = await resolveRemarks(env, all);
+      const subs = await listAllSubscriptions(env);
+      const users = new Map();
+      {
+        let cursor;
+        do {
+          const list = await env.BOOKINGS.list({ prefix: "user:", cursor, limit: 100 });
+          for (const key of list.keys) {
+            const raw = await env.BOOKINGS.get(key.name);
+            if (!raw) continue;
+            try {
+              users.set(key.name.slice("user:".length).toLowerCase(), JSON.parse(raw));
+            } catch { /* skip malformed record */ }
+          }
+          cursor = list.list_complete ? undefined : list.cursor;
+        } while (cursor);
+      }
+      const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+      const monthStart = today.slice(0, 8) + "01";
+      const dormantCutoff = addDaysStr(today, -30);
+      const byEmail = new Map();
+      const ensure = (email) => {
+        const em = String(email || "").toLowerCase();
+        if (!byEmail.has(em)) {
+          const u = users.get(em);
+          const r = remarks.get(em) || { note: "", isDefault: false };
+          byEmail.set(em, {
+            email: em,
+            name: (u && u.name) || "",
+            hasAccount: !!u,
+            accountType: u ? (u.googleSub ? "google" : "registered") : "guest",
+            picture: (u && (u.googlePicture || u.picture)) || "",
+            studentRemark: r.note, remarkIsDefault: r.isDefault,
+            totalLessons: 0, completedLessons: 0, totalSpent: 0,
+            nextLesson: null, activePackageRemaining: 0, hasActivePackage: false,
+            lastLessonDate: null, lastActivityAt: null, firstSeen: null,
+            lessons: [], packages: [],
+          });
+        }
+        return byEmail.get(em);
+      };
+      for (const em of users.keys()) ensure(em);
+      const byStart = [...all].sort((a, b) =>
+        (a.date + a.time).localeCompare(b.date + b.time));
+      for (const b of byStart) {
+        const s = ensure(b.email);
+        if (!s.name && b.name) s.name = b.name;
+        const st = effectiveStatus(b);
+        s.lessons.push({
+          id: b.id, date: b.date, time: b.time,
+          durationMinutes: minutesOfBooking(b),
+          courseId: b.courseId || null, lessonTypeId: b.lessonTypeId || null,
+          status: st, amount: b.amount || 0,
+          subscriptionId: b.subscriptionId || null,
+        });
+        if (b.status !== "cancelled") {
+          s.totalLessons++;
+          if (st === "completed") {
+            s.completedLessons++;
+            if (!s.lastLessonDate || b.date > s.lastLessonDate) s.lastLessonDate = b.date;
+          }
+          if (st === "upcoming" && !s.nextLesson) {
+            s.nextLesson = { date: b.date, time: b.time };
+          }
+        }
+        if (b.status === "paid") {
+          s.totalSpent += (b.amount || 0) - (b.refundAmount || 0);
+        }
+        if (b.createdAt) {
+          if (!s.firstSeen || b.createdAt < s.firstSeen) s.firstSeen = b.createdAt;
+          if (!s.lastActivityAt || b.createdAt > s.lastActivityAt) s.lastActivityAt = b.createdAt;
+        }
+      }
+      for (const sub of subs) {
+        const s = ensure(sub.email);
+        const remaining = sub.status === "active" ? await remainingOf(env, sub) : 0;
+        s.packages.push({
+          id: sub.id, courseId: sub.courseId,
+          durationMinutes: sub.durationMinutes,
+          totalLessons: sub.totalLessons, remainingLessons: remaining,
+          slots: sub.slots || [], status: sub.status,
+          totalPrice: sub.totalPrice || 0, pricePerLesson: sub.pricePerLesson || 0,
+        });
+        if (sub.status === "active" && remaining > 0) {
+          s.hasActivePackage = true;
+          s.activePackageRemaining += remaining;
+        }
+        if (sub.createdAt) {
+          if (!s.firstSeen || sub.createdAt < s.firstSeen) s.firstSeen = sub.createdAt;
+          if (!s.lastActivityAt || sub.createdAt > s.lastActivityAt) s.lastActivityAt = sub.createdAt;
+        }
+      }
+      const students = [...byEmail.values()].map((s) => {
+        if (!s.name) s.name = s.email.split("@")[0];
+        s.totalSpent = Math.round(s.totalSpent * 100) / 100;
+        s.dormant = !s.nextLesson &&
+          (!s.lastLessonDate || s.lastLessonDate < dormantCutoff);
+        const up = s.lessons.filter(
+          (l) => l.status === "upcoming" || l.status === "pending_payment");
+        const rest = s.lessons.filter(
+          (l) => !(l.status === "upcoming" || l.status === "pending_payment"));
+        s.lessons = [...up, ...rest.reverse()];
+        return s;
+      });
+      students.sort((a, b) => {
+        const an = a.nextLesson ? a.nextLesson.date + a.nextLesson.time : "9999";
+        const bn = b.nextLesson ? b.nextLesson.date + b.nextLesson.time : "9999";
+        return an.localeCompare(bn) || a.name.localeCompare(b.name);
+      });
+      const summary = {
+        total: students.length,
+        withUpcoming: students.filter((s) => s.nextLesson).length,
+        withActivePackage: students.filter((s) => s.hasActivePackage).length,
+        newThisMonth: students.filter((s) =>
+          s.firstSeen && s.firstSeen.slice(0, 10) >= monthStart).length,
+      };
+      return json({ summary, students });
+    }
+
     /* ----- Teacher's Google Calendar feed (ICS subscription) ----- */
     if (path === "/api/calendar.ics" && request.method === "GET") {
       const settings = await getSettings(env);

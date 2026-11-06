@@ -271,6 +271,35 @@ table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
 .wh-cell:hover{border-color:var(--accent)}
 .wh-cell.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 
+/* ---------- students board ---------- */
+.stu-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
+.stu-controls input[type="search"]{flex:1 1 220px}
+.chip-filters{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
+.fchip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.stu-sort{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px;margin-top:10px}
+.stu-card{background:#fff;border:1px solid var(--adm-line);border-radius:12px;padding:14px;cursor:pointer;text-align:left}
+.stu-card:hover{border-color:var(--accent)}
+.stu-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 38px}
+.avatar-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 38px}
+.stu-name{font-weight:650;font-size:14.5px}
+.pill-acct{background:#eef2f7;color:#3c5a78}
+.stu-lines{font-size:12.5px;color:var(--muted);line-height:1.55}
+.stu-lines strong{color:var(--ink);font-weight:600}
+.remark-snippet{margin-top:7px;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(35,25,22,.38);z-index:65}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,94vw);background:#fff;z-index:70;box-shadow:-8px 0 28px rgba(60,30,40,.18);padding:20px;overflow-y:auto}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.drawer-head h3{margin:0;font-size:17px}
+.stu-facts{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:13px;color:var(--muted);margin:10px 0}
+.stu-facts strong{color:var(--ink)}
+.pkg-card{border:1px solid var(--adm-line);border-radius:9px;padding:9px 11px;margin:7px 0}
+.tl-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--adm-line);font-size:13px}
+.tl-date{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tl-what{flex:1;color:var(--muted)}
+
 /* ---------- prices card ---------- */
 .price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
 .price-input{display:flex;align-items:center;gap:6px}
@@ -305,6 +334,9 @@ table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
       <a href="#/dashboard" data-route="dashboard">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
         <span>Dashboard</span><span class="nav-cn">概览</span></a>
+      <a href="#/students" data-route="students">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Students</span><span class="nav-cn">学生</span></a>
       <a href="#/bookings" data-route="bookings">
         <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="0.5"/><circle cx="4" cy="12" r="0.5"/><circle cx="4" cy="18" r="0.5"/></svg>
         <span>Bookings</span><span class="nav-cn">预约管理</span></a>
@@ -370,6 +402,37 @@ table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
           </div>
         </div>
         <p class="msg" id="dash-msg"></p>
+      </section>
+
+      <!-- ===== Students ===== -->
+      <section class="view hidden" data-view="students">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-num" id="stu-stat-total">–</div><div class="stat-label">学生总数 · Students</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-upcoming">–</div><div class="stat-label">有待上课程 · With upcoming</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-package">–</div><div class="stat-label">有活跃课时包 · With package</div></div>
+          <div class="stat-card"><div class="stat-num" id="stu-stat-new">–</div><div class="stat-label">本月新学生 · New this month</div></div>
+        </div>
+        <div class="panel">
+          <div class="stu-controls">
+            <input type="search" id="stu-q" placeholder="搜索姓名或邮箱 · Search name or email" />
+            <div class="chip-filters" id="stu-chips">
+              <button type="button" class="fchip active" data-filter="all">全部 All</button>
+              <button type="button" class="fchip" data-filter="upcoming">有待上课</button>
+              <button type="button" class="fchip" data-filter="package">有课时包</button>
+              <button type="button" class="fchip" data-filter="dormant">沉睡 Dormant</button>
+            </div>
+            <label class="stu-sort">排序
+              <select id="stu-sort">
+                <option value="next">下节课</option>
+                <option value="lessons">总课时</option>
+                <option value="spent">总消费</option>
+                <option value="activity">最近活跃</option>
+              </select></label>
+          </div>
+          <p class="note" id="stu-msg"></p>
+          <div class="stu-grid" id="stu-grid"></div>
+          <p class="note hidden" id="stu-empty">还没有学生记录。</p>
+        </div>
       </section>
 
       <!-- ===== Bookings ===== -->
@@ -574,6 +637,15 @@ table.wh-grid{border-collapse:separate;border-spacing:3px;min-width:660px}
     </div>
   </div>
 </div>
+
+<div class="drawer-backdrop hidden" id="stu-backdrop"></div>
+<aside class="drawer hidden" id="stu-drawer" aria-label="Student detail">
+  <div class="drawer-head">
+    <h3 id="stu-detail-title">Student</h3>
+    <button type="button" class="btn btn-ghost btn-small" id="stu-close">关闭 ✕</button>
+  </div>
+  <div id="stu-detail"></div>
+</aside>
 
 <div class="toast hidden" id="adm-toast" role="status"></div>
 
@@ -1033,7 +1105,7 @@ function wireRemarkBoxes(root) {
         await api("/api/admin/student-note", {
           method: "POST", body: JSON.stringify({ email, note: ta.value }),
         });
-        for (const b of [...monthBookings, ...allBookings, ...schBookings]) {
+        for (const b of [...monthBookings, ...allBookings, ...schBookings, ...studentsCache]) {
           if (b.email.toLowerCase() === email.toLowerCase()) {
             b.studentRemark = ta.value; b.remarkIsDefault = false;
           }
@@ -1421,10 +1493,169 @@ async function loadDashboard(force) {
   }
 }
 
+/* ---------- students board （学生看板，卡片） ---------- */
+
+let studentsCache = [], stuLoadedAt = 0, stuFilter = "all";
+const ACCT_BADGE = { google: "Google", registered: "Registered", guest: "Guest" };
+
+function fmtDay(ds) {
+  return new Date(ds + "T00:00:00Z").toLocaleDateString("en-US",
+    { month: "short", day: "numeric", timeZone: "UTC" });
+}
+function avatarHtml(s) {
+  if (s.picture) {
+    return `<img class="avatar-img" src="${esc(s.picture)}" alt="" referrerpolicy="no-referrer">`;
+  }
+  const ch = (s.name || s.email || "?").trim().charAt(0).toUpperCase() || "?";
+  return `<span class="avatar-circle">${esc(ch)}</span>`;
+}
+
+async function loadStudents(force) {
+  if (!adminKey) return;
+  if (!force && studentsCache.length && Date.now() - stuLoadedAt < 60_000) {
+    renderStudents();
+    return;
+  }
+  try {
+    const data = await api("/api/admin/students");
+    studentsCache = data.students || [];
+    stuLoadedAt = Date.now();
+    $("#stu-stat-total").textContent = data.summary.total;
+    $("#stu-stat-upcoming").textContent = data.summary.withUpcoming;
+    $("#stu-stat-package").textContent = data.summary.withActivePackage;
+    $("#stu-stat-new").textContent = data.summary.newThisMonth;
+    renderStudents();
+  } catch (e) {
+    $("#stu-msg").textContent = e.message;
+  }
+}
+
+function stuVisible() {
+  const q = $("#stu-q").value.trim().toLowerCase();
+  let list = studentsCache.filter((s) => {
+    if (q && !`${s.name} ${s.email}`.toLowerCase().includes(q)) return false;
+    if (stuFilter === "upcoming") return !!s.nextLesson;
+    if (stuFilter === "package") return !!s.hasActivePackage;
+    if (stuFilter === "dormant") return !!s.dormant;
+    return true;
+  });
+  const sort = $("#stu-sort").value;
+  const byNext = (a, b) => {
+    const an = a.nextLesson ? a.nextLesson.date + a.nextLesson.time : "9999";
+    const bn = b.nextLesson ? b.nextLesson.date + b.nextLesson.time : "9999";
+    return an.localeCompare(bn);
+  };
+  if (sort === "lessons") list.sort((a, b) => b.totalLessons - a.totalLessons || byNext(a, b));
+  else if (sort === "spent") list.sort((a, b) => b.totalSpent - a.totalSpent || byNext(a, b));
+  else if (sort === "activity") list.sort((a, b) =>
+    String(b.lastActivityAt || "").localeCompare(String(a.lastActivityAt || "")));
+  else list.sort(byNext);
+  return list;
+}
+
+function renderStudents() {
+  const list = stuVisible();
+  $("#stu-msg").textContent = studentsCache.length
+    ? `显示 ${list.length} / ${studentsCache.length} 位学生` : "";
+  $("#stu-empty").classList.toggle("hidden", studentsCache.length > 0);
+  $("#stu-grid").innerHTML = list.map((s) => `
+    <article class="stu-card" data-student="${esc(s.email)}" tabindex="0" role="button">
+      <div class="stu-top">${avatarHtml(s)}
+        <div>
+          <div class="stu-name">${esc(s.name)}</div>
+          <span class="pill pill-acct">${ACCT_BADGE[s.accountType] || "Guest"}</span>
+        </div>
+      </div>
+      <div class="stu-lines">
+        <div>${esc(s.email)}</div>
+        <div>Next: <strong>${s.nextLesson ? `${fmtDay(s.nextLesson.date)} · ${s.nextLesson.time}` : "—"}</strong></div>
+        <div>Package: <strong>${s.hasActivePackage ? `${s.activePackageRemaining} left` : "—"}</strong>
+          · Lessons: <strong>${s.totalLessons}</strong>（完成 ${s.completedLessons}）</div>
+        <div>Spent: <strong>${money(s.totalSpent)}</strong>
+          · Last: <strong>${s.lastLessonDate ? fmtDay(s.lastLessonDate) : "—"}</strong></div>
+      </div>
+      ${s.studentRemark ? `<div class="remark-snippet" title="${esc(s.studentRemark)}">备注：${esc(s.studentRemark)}</div>` : ""}
+    </article>`).join("");
+  $("#stu-grid").querySelectorAll("[data-student]").forEach((card) => {
+    card.addEventListener("click", () => openStudent(card.dataset.student));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") openStudent(card.dataset.student);
+    });
+  });
+}
+$("#stu-q").addEventListener("input", renderStudents);
+$("#stu-sort").addEventListener("change", renderStudents);
+$("#stu-chips").querySelectorAll("[data-filter]").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    stuFilter = chip.dataset.filter;
+    $("#stu-chips").querySelectorAll("[data-filter]").forEach((c) =>
+      c.classList.toggle("active", c === chip));
+    renderStudents();
+  });
+});
+
+function closeStudentDrawer() {
+  $("#stu-drawer").classList.add("hidden");
+  $("#stu-backdrop").classList.add("hidden");
+  renderStudents();
+}
+$("#stu-close").addEventListener("click", closeStudentDrawer);
+$("#stu-backdrop").addEventListener("click", closeStudentDrawer);
+
+function openStudent(email) {
+  const s = studentsCache.find((x) => x.email === email);
+  if (!s) return;
+  $("#stu-detail-title").textContent = s.name;
+  const pkgHtml = s.packages.length ? s.packages.map((p) => `
+    <div class="pkg-card">
+      <div class="lr-head">${esc(courseNames[p.courseId] || p.courseId || "Package")} · ${p.durationMinutes} min</div>
+      <div class="lr-sub">${p.totalLessons} 节课 · 剩 ${p.remainingLessons} 节 · ${p.status}` +
+        (p.slots && p.slots.length
+          ? ` · ${p.slots.map((sl) => `周${DAY_CN[sl.weekday]} ${sl.time}`).join(" · ")}` : "") +
+        ` · ${money(p.totalPrice)}</div>
+    </div>`).join("") : `<p class="note">没有课时包。</p>`;
+  const tlHtml = s.lessons.length ? s.lessons.map((l) => `
+    <div class="tl-row">
+      <span class="tl-date">${l.date} ${l.time}</span>
+      <span class="tl-what">${esc(courseNames[l.courseId] || legacyNames[l.lessonTypeId] || "Lesson")} · ${l.durationMinutes} min</span>
+      <span class="pill pill-${l.status}">${STATUS_LABEL[l.status] || l.status}</span>
+    </div>`).join("") : `<p class="note">还没有课程。</p>`;
+  $("#stu-detail").innerHTML = `
+    <div class="stu-top">${avatarHtml(s)}
+      <div>
+        <div class="stu-name">${esc(s.name)}</div>
+        <div class="cell-sub">${esc(s.email)} · ${ACCT_BADGE[s.accountType] || "Guest"}</div>
+      </div>
+    </div>
+    <div class="stu-facts">
+      <div>总课时 <strong>${s.totalLessons}</strong>（已完成 ${s.completedLessons}）</div>
+      <div>总消费 <strong>${money(s.totalSpent)}</strong></div>
+      <div>下节课 <strong>${s.nextLesson ? `${s.nextLesson.date} ${s.nextLesson.time}` : "—"}</strong></div>
+      <div>上节课 <strong>${s.lastLessonDate || "—"}</strong></div>
+    </div>
+    <h4 class="bk-sub">课时包 · Packages</h4>
+    ${pkgHtml}
+    <h4 class="bk-sub">课程时间线 · Timeline</h4>
+    ${tlHtml}
+    <h4 class="bk-sub">老师备注 · Teacher's remark</h4>
+    ${remarkBoxHtml(s.email, s.studentRemark, s.remarkIsDefault)}
+    <p style="margin-top:14px"><button type="button" class="btn" id="stu-view-bookings">查看该学生的预约 →</button></p>`;
+  wireRemarkBoxes($("#stu-detail"));
+  $("#stu-view-bookings").onclick = () => {
+    closeStudentDrawer();
+    $("#adm-bk-q").value = s.email;
+    location.hash = "#/bookings";
+    loadBookings().catch(() => {});
+  };
+  $("#stu-drawer").classList.remove("hidden");
+  $("#stu-backdrop").classList.remove("hidden");
+}
+
 /* ---------- router / shell ---------- */
 
 const ROUTES = {
   dashboard: "Dashboard · 概览",
+  students: "Students · 学生看板",
   bookings: "Bookings · 预约管理",
   schedule: "Schedule · 课表",
   availability: "Availability · 可约时间",
@@ -1451,6 +1682,7 @@ function applyRoute() {
   closeSidebar();
   $("#adm-content").scrollTop = 0;
   if (r === "dashboard") loadDashboard(false);
+  if (r === "students") loadStudents(false);
 }
 window.addEventListener("hashchange", applyRoute);
 $("#adm-burger").addEventListener("click", () => {
