@@ -279,11 +279,15 @@
   #adm-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   #adm-save:disabled { opacity: .55; cursor: wait; transform: none; box-shadow: none; }
 
-  /* toast */
-  .toast { position: fixed; right: 22px; bottom: 22px; z-index: 90; background: #33302e; color: #fff;
+  /* toast — upper-center of the page (Daniel: 保存成功的toast
+     放到页面中间偏上). One shared mechanism (#adm-toast + toast()),
+     so every admin success toast lands here. 76px clears the
+     sticky topbar and sits in the upper area of the viewport. */
+  .toast { position: fixed; top: 76px; left: 50%; z-index: 90; background: #33302e; color: #fff;
     padding: 11px 18px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
-    opacity: 0; transform: translateY(6px); transition: opacity .22s, transform .22s; pointer-events: none; }
-  .toast.show { opacity: 1; transform: none; }
+    max-width: min(92vw, 560px); text-align: center;
+    opacity: 0; transform: translate(-50%, -6px); transition: opacity .22s, transform .22s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
   /* ============ dashboard ============ */
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
