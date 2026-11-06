@@ -1171,6 +1171,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     authUser = data.user;
     applyAuthToForm();
   } catch { authUser = null; }
+  /* Nav "My Bookings": signed-out visitors go straight into Google
+   * sign-in and land back on #my afterwards; signed-in users keep the
+   * plain anchor scroll to the section. */
+  const navMy = document.querySelector('.site-header nav a[href="#my"]');
+  if (navMy) navMy.addEventListener("click", (e) => {
+    if (!authUser && state.config?.googleAuth) {
+      e.preventDefault();
+      location.href = "/api/auth/google?next=" +
+        encodeURIComponent("/#my");
+    }
+  });
   renderAccountBar();
   if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
 });
