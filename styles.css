@@ -1023,6 +1023,11 @@ button { font-family: inherit; }
 }
 .modal-close:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Steps + close wrapper: transparent on desktop (display: contents —
+ * the close button keeps its absolute top-right corner position and
+ * the steps keep their own row), a real flex row on phones. */
+.modal-top { display: contents; }
+
 @media (max-width: 640px) {
   /* Near-fullscreen sheet on phones: same pinned header/footer with
      the internal scroll, edge to edge. */
@@ -1033,6 +1038,40 @@ button { font-family: inherit; }
     height: 100dvh;
     border-radius: 0;
   }
+  /* Steps bar + close on ONE flex row: the close button becomes a
+   * flex item (flex-shrink: 0) instead of an absolutely-positioned
+   * overlay, so it can never cover the "Done" pill; the pills shrink
+   * (12px, tight padding, nowrap, no wrap) so all four fit at 360px. */
+  .modal-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .modal-top .steps {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+  .modal-top .steps li {
+    font-size: 12px;
+    padding: 5px 9px;
+    white-space: nowrap;
+  }
+  .modal-top .modal-close {
+    position: static;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+  /* Mode switch （单次/课时包）: smaller type so both bilingual labels
+   * fit their half at 360px without ugly wrapping. */
+  .bk-mode-btn { font-size: 13px; padding: 9px 2px; line-height: 1.35; }
+  /* Keep the pinned nav row's buttons fully visible at 360px. */
+  .bk-nav .btn { flex-shrink: 0; }
 }
 
 @media (max-width: 760px) {

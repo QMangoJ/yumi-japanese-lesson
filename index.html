@@ -802,13 +802,15 @@
   <!-- BOOKING MODAL (Sakura-style pop-up) -->
   <div class="modal-overlay hidden" id="book-modal" role="dialog" aria-modal="true">
     <div class="modal-card">
-      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">×</button>
+    <div class="modal-top">
     <ol class="steps" id="bk-steps">
       <li data-step="1" class="active">Lesson</li>
       <li data-step="2">Your Details</li>
       <li data-step="3">Payment</li>
       <li data-step="4">Done</li>
     </ol>
+      <button type="button" class="modal-close" id="book-modal-close" aria-label="Close">×</button>
+    </div>
 
     <div class="booking-box">
       <!-- Step 1: course, duration, date & time (one pane, like Sakura's booking modal) -->
