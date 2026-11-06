@@ -326,6 +326,46 @@ a { color: var(--accent); }
 .reviewer-meta { display: flex; flex-direction: column; line-height: 1.35; }
 .reviewer-meta small { color: var(--sub); }
 
+/* Reviews pager: one control row under the cards — arrows + dots +
+   a page counter on desktop; on mobile the dots track the carousel. */
+.voices-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+.vp-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.vp-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.vp-btn:disabled { opacity: 0.35; cursor: default; }
+.vp-dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.vp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--line);
+  cursor: pointer;
+}
+.vp-dot.active { background: var(--accent); }
+.vp-count { color: var(--sub); font-size: 13px; font-variant-numeric: tabular-nums; min-width: 34px; }
+@keyframes vpFade { from { opacity: 0.25; } to { opacity: 1; } }
+.voices.vp-fade { animation: vpFade 0.25s ease; }
+@media (min-width: 861px) {
+  .voices blockquote.vp-off { display: none; }
+}
+
 .faq details {
   background: var(--card);
   border: 1px solid var(--line);

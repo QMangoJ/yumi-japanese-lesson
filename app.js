@@ -1133,3 +1133,207 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderAccountBar();
   if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
 });
+
+/* ---------- Student voices: all 16 reviews, paged ----------
+ * Data: verbatim capture of Yumi's Preply reviews (newest first);
+ * texts are display-only — no links back to Preply anywhere.
+ * Desktop (>=861px): card grid, 6 per page, prev/next + dots + count.
+ * Mobile (<=860px): the same cards in the scroll-snap carousel,
+ * dots track the scroll position, arrows scroll by one card. */
+const REVIEWS = [
+  {
+    "name": "Philippe",
+    "date": "October 29, 2026",
+    "text": "Friendly and very helpful!",
+    "avatar": "images/reviews/philippe.jpg"
+  },
+  {
+    "name": "Monique",
+    "date": "October 28, 2026",
+    "text": "Yumi is very patient and attentive to your progress. I really appreciate how she encourages and challenges you throughout the learning process, introducing new topics at just the right pace. Highly recommended",
+    "avatar": "images/reviews/monique.jpg"
+  },
+  {
+    "name": "Charles",
+    "date": "October 2, 2026",
+    "text": "Yumi is a great tutor. She is patient and kind. She gives clear answers to any questions I have. She also educates not only on language, but also the culture. All in all, I've had a great experience with her teaching.",
+    "avatar": "images/reviews/charles.jpg"
+  },
+  {
+    "name": "Maryarver",
+    "date": "September 9, 2026",
+    "text": "I have been living in Japan for two and a half years and studied for 2 years at a Japanese school in Tokyo; however, my level of knowledge of Japanese for business is quite limited. After working for 1 year for a Japanese company and now changing careers and companies within Japan to a larger, international company, learning Japanese for interviews, sales, communication with clients, presentations, team interactions, and all that has become extremely necessary. Yumi is helping me to be prepared for my selection processes, expand my vocabulary, understanding, and perspective on how to present myself and communicate my experience in interviews and everything that comes after. We are learning with classes designed for my goal, 100% personalized for the companies where I have advanced in my selection process. I am very grateful and happy with my classes. I am learning 4 times a week with her. I highly recommend her.",
+    "avatar": "images/reviews/maryarver.jpg"
+  },
+  {
+    "name": "Sandra",
+    "date": "August 28, 2026",
+    "text": "Yumi is very helpful and supportive. She is patient and kind and the lessons are well structured and fun.",
+    "avatar": "images/reviews/sandra.jpg"
+  },
+  {
+    "name": "Anonymous",
+    "date": "August 24, 2026",
+    "text": "Yumi is a fantastic tutor. I started learning with very little knowledge and she knew exactly where to start. Very patient, can answer every question I have, and goes at a pace that works for me. I recommend her for anyone wanting to start to learn Japanese from little to no experience.",
+    "avatar": null
+  },
+  {
+    "name": "yc",
+    "date": "August 11, 2026",
+    "text": "The teaching is meticulous and patient.",
+    "avatar": "images/reviews/yc.jpg"
+  },
+  {
+    "name": "Alexis",
+    "date": "August 5, 2026",
+    "text": "Yumi is a great teacher! She is always on time and ready for every class, as well as kind and helpful! I feel like I learn a lot during every lesson and she works at a good pace for beginners! I definitely recommend taking classes with Yumi!",
+    "avatar": "images/reviews/alexis.jpg"
+  },
+  {
+    "name": "Sabrina",
+    "date": "July 30, 2026",
+    "text": "She is very help full and willing to repeat things so you understand. I enjoy working with her.",
+    "avatar": "images/reviews/sabrina.jpg"
+  },
+  {
+    "name": "Daniel",
+    "date": "July 29, 2026",
+    "text": "Have got much progress! Thanks teacher. Don't pick my schedule, guys. Thanks.",
+    "avatar": "images/reviews/daniel.jpg"
+  },
+  {
+    "name": "Joshua",
+    "date": "April 14, 2026",
+    "text": "Yumi has been a great teacher and very accommodating to our specific learning goals. Classes have always been fun and engaging. Her explanations are clear and focused on daily Japanese rather than textbook Japanese which is exactly what we need.",
+    "avatar": "images/reviews/joshua.jpg"
+  },
+  {
+    "name": "Connor",
+    "date": "April 4, 2026",
+    "text": "Yumi is an excellent Japanese tutor who makes learning enjoyable and effective. She explains concepts clearly, is very patient, and always adapts lessons to match my pace and goals. I especially appreciate how she balances grammar, writing, conversation practice, and cultural insights, which makes each session feel well-rounded and engaging. I highly recommend Yumi to anyone looking to learn Japanese, whether you're a complete beginner or trying to improve your fluency.",
+    "avatar": "images/reviews/connor.jpg"
+  },
+  {
+    "name": "フリーダ",
+    "date": "March 19, 2026",
+    "text": "I highly recommend this tutor! She manages to make every lesson engaging and fun while maintaining a very clear and structured plan for the following classes. I never feel lost because she is really patient and takes her time to thoroughly answer every question, no matter how small. ゆみ先生ありがとうございます😊",
+    "avatar": "images/reviews/furida.jpg"
+  },
+  {
+    "name": "Pilou",
+    "date": "February 24, 2026",
+    "text": "Yumi is a fantastic Japanese tutor !! She is patient, helpful and has a great personality. I've learned many things so far ! Thank you !!",
+    "avatar": "images/reviews/pilou.jpg"
+  },
+  {
+    "name": "Jason",
+    "date": "February 21, 2026",
+    "text": "Yumi is so patient and friendly to students. She could make the class so active and interesting. Every time when you join her class， you can get relaxed rather than be stressed，so I strongly recommend her，thanks.",
+    "avatar": null
+  },
+  {
+    "name": "Chris",
+    "date": "February 17, 2026",
+    "text": "Really well prepared follow up lesson - Clear and will walk you though the way it should be pronounced - good follow up questions to combine words for everyday use",
+    "avatar": null
+  }
+];
+
+document.addEventListener("DOMContentLoaded", () => {
+  const grid = document.getElementById("voices-grid");
+  if (!grid) return;
+  const esc = (s) => String(s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  grid.innerHTML = REVIEWS.map((r) => `
+    <blockquote>
+      <p class="stars" aria-label="5 out of 5 stars">★★★★★</p>
+      <p>“${esc(r.text)}”</p>
+      <footer class="reviewer">
+        ${r.avatar
+          ? `<img class="reviewer-avatar" src="${r.avatar}" alt="${esc(r.name)}" width="44" height="44" loading="lazy" />`
+          : `<span class="reviewer-avatar reviewer-initial" aria-hidden="true">${esc(r.name.charAt(0).toUpperCase())}</span>`}
+        <span class="reviewer-meta"><strong>${esc(r.name)}</strong><small>${esc(r.date)}</small></span>
+      </footer>
+    </blockquote>`).join("");
+  const cards = [...grid.querySelectorAll("blockquote")];
+  const dotsBox = document.getElementById("vp-dots");
+  const count = document.getElementById("vp-count");
+  const prevBtn = document.getElementById("vp-prev");
+  const nextBtn = document.getElementById("vp-next");
+  const PAGE = 6;
+  const PAGES = Math.ceil(REVIEWS.length / PAGE);
+  let page = 0;
+  const mq = window.matchMedia("(max-width: 860px)");
+
+  function setDots(n, active) {
+    dotsBox.innerHTML = "";
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement("button");
+      d.type = "button";
+      d.className = "vp-dot" + (i === active ? " active" : "");
+      d.setAttribute("aria-label", "Go to " + (i + 1));
+      d.addEventListener("click", () => {
+        if (mq.matches) scrollToCard(i);
+        else applyPage(i);
+      });
+      dotsBox.appendChild(d);
+    }
+  }
+  function markDot(i) {
+    [...dotsBox.children].forEach((d, j) => d.classList.toggle("active", j === i));
+  }
+  function applyPage(p) {
+    page = Math.max(0, Math.min(PAGES - 1, p));
+    cards.forEach((c, i) =>
+      c.classList.toggle("vp-off", i < page * PAGE || i >= (page + 1) * PAGE));
+    count.textContent = `${page + 1} / ${PAGES}`;
+    prevBtn.disabled = page === 0;
+    nextBtn.disabled = page === PAGES - 1;
+    setDots(PAGES, page);
+    grid.classList.remove("vp-fade");
+    void grid.offsetWidth;
+    grid.classList.add("vp-fade");
+  }
+  function cardStep() {
+    const c = cards[0];
+    return c ? c.offsetWidth + 14 : 300;
+  }
+  function scrollToCard(i) {
+    grid.scrollTo({ left: i * cardStep(), behavior: "smooth" });
+    markDot(i);
+  }
+  let scrollTick = false;
+  grid.addEventListener("scroll", () => {
+    if (!mq.matches || scrollTick) return;
+    scrollTick = true;
+    requestAnimationFrame(() => {
+      scrollTick = false;
+      markDot(Math.max(0, Math.min(REVIEWS.length - 1,
+        Math.round(grid.scrollLeft / cardStep()))));
+    });
+  }, { passive: true });
+  function setup() {
+    if (mq.matches) {
+      cards.forEach((c) => c.classList.remove("vp-off"));
+      count.textContent = "";
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+      setDots(REVIEWS.length,
+        Math.round(grid.scrollLeft / cardStep()));
+    } else {
+      applyPage(page);
+    }
+  }
+  prevBtn.addEventListener("click", () => {
+    if (mq.matches) {
+      grid.scrollBy({ left: -cardStep(), behavior: "smooth" });
+    } else applyPage(page - 1);
+  });
+  nextBtn.addEventListener("click", () => {
+    if (mq.matches) {
+      grid.scrollBy({ left: cardStep(), behavior: "smooth" });
+    } else applyPage(page + 1);
+  });
+  mq.addEventListener("change", setup);
+  setup();
+});
