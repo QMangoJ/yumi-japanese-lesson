@@ -655,26 +655,76 @@ button { font-family: inherit; }
 
 .hidden { display: none !important; }
 
+/* Booking progress: a classic stepper, NOT a button row — numbered
+ * round nodes joined by a track line, cursor: default, no hover.
+ * State classes come from showPane in app.js (unchanged): .done for
+ * steps behind, .active for the current step, neither for todo.
+ * .done swaps the number for a ✓ (pure CSS); the track segment
+ * BEFORE a step fills pink once that step is done or current, so the
+ * filled line always reaches exactly the current step. */
 .steps {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   list-style: none;
   margin: 0 0 22px;
   padding: 0;
-  counter-reset: step;
+  cursor: default;
 }
 .steps li {
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: #fff;
-  border: 1px solid var(--line);
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
   color: var(--sub);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
 }
-.steps li.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.steps li.done { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--accent); }
+.steps li::before {
+  content: "";
+  position: absolute;
+  top: 15px; /* centred on the 32px dot */
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--line);
+}
+.steps li:first-child::before { display: none; }
+.steps li.done::before, .steps li.active::before { background: var(--accent); }
+.step-dot {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: #fff;
+  color: var(--sub);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.steps li.active .step-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 5px var(--accent-soft); /* restrained halo */
+}
+.steps li.done .step-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 0; /* hide the number; the ✓ below replaces it */
+}
+.steps li.done .step-dot::after { content: "✓"; font-size: 15px; font-weight: 800; }
+.step-label { white-space: nowrap; }
+.steps li.active .step-label { color: var(--ink); font-weight: 800; }
+.steps li.done .step-label { color: var(--accent); }
 
 .booking-box, .lookup-box {
   background: var(--card);
@@ -1038,10 +1088,11 @@ button { font-family: inherit; }
     height: 100dvh;
     border-radius: 0;
   }
-  /* Steps bar + close on ONE flex row: the close button becomes a
+  /* Stepper + close on ONE flex row: the close button becomes a
    * flex item (flex-shrink: 0) instead of an absolutely-positioned
-   * overlay, so it can never cover the "Done" pill; the pills shrink
-   * (12px, tight padding, nowrap, no wrap) so all four fit at 360px. */
+   * overlay, so it can never cover the stepper; the stepper shrinks
+   * (26px dots, 11px nowrap labels, equal columns) so all four steps
+   * fit at 360px without wrapping. */
   .modal-top {
     display: flex;
     align-items: flex-start;
@@ -1051,15 +1102,12 @@ button { font-family: inherit; }
   .modal-top .steps {
     flex: 1 1 auto;
     min-width: 0;
-    flex-wrap: nowrap;
-    gap: 6px;
     margin-bottom: 0;
   }
-  .modal-top .steps li {
-    font-size: 12px;
-    padding: 5px 9px;
-    white-space: nowrap;
-  }
+  .modal-top .steps li { font-size: 11px; }
+  .modal-top .steps li::before { top: 12px; /* centred on the 26px dot */ }
+  .modal-top .step-dot { width: 26px; height: 26px; font-size: 12px; }
+  .modal-top .steps li.done .step-dot::after { font-size: 13px; }
   .modal-top .modal-close {
     position: static;
     flex-shrink: 0;
