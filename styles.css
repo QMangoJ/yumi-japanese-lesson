@@ -378,10 +378,6 @@ button { font-family: inherit; }
 .price-eyebrow { color: var(--accent); font-size: 14px; font-weight: 800; letter-spacing: 0.14em; margin: 0 0 8px; }
 .price-title { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: clamp(24px, 3vw, 32px); margin: 0 0 10px; }
 .price-sub { color: var(--sub); margin: 0; max-width: 560px; }
-.price-year {
-  flex: none; background: var(--accent); color: #fff; font-weight: 800; font-size: 14px;
-  padding: 6px 16px; border-radius: 999px; letter-spacing: 0.06em;
-}
 .price-grid { margin-top: 28px; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .price-grid-head, .price-row {
   display: grid; grid-template-columns: 1.1fr 1fr 1.2fr auto; gap: 16px; align-items: center;
