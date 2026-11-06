@@ -8,34 +8,66 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
 <style>
-  /* ============ admin base ============ */
-  body { background: #f6f6f7; font-size: 14.5px; line-height: 1.55; }
-  :root { --adm-line: #e7e0dc; --adm-line-strong: #d9d0cb; }
+  /* ============ admin design system ============
+   * Tokens: body 14px/1.5; view title 18px, panel title 15.5px,
+   * labels 12.5px/600, captions 12.5px muted; form controls 36px
+   * tall, 1px neutral border, 8px radius, soft pink focus ring;
+   * buttons 36px primary / 32px small; spacing on an 8px rhythm
+   * (4/8/12/16/20/24/32); hairline borders over shadows; the sakura
+   * pink appears only as the accent. */
+  body { background: #f6f6f7; font-size: 14px; line-height: 1.5; }
+  :root {
+    --adm-line: #e8e1dd;
+    --adm-line-strong: #d3c8c2;
+    --adm-faint: #a79a94;
+    --adm-inset: #faf8f7;
+    --adm-ring: 0 0 0 3px var(--accent-soft);
+  }
   button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
-  .shell :is(a, button, input, select, textarea):focus-visible,
-  .login-wrap :is(a, button, input, select, textarea):focus-visible {
+  .shell :is(a, button):focus-visible,
+  .login-wrap :is(a, button):focus-visible {
     outline: 2px solid var(--accent); outline-offset: 1px;
   }
-  .shell .field input, .shell .field select, .shell .field textarea,
-  .login-wrap .field input {
-    border-color: var(--adm-line-strong); border-radius: 8px; padding: 9px 11px;
+  /* Unified form controls: EVERY input/select/textarea in the admin
+     gets the same box, whether or not it sits inside a .field. */
+  .shell :is(input, select, textarea),
+  .login-wrap :is(input, select, textarea) {
+    border: 1px solid var(--adm-line-strong); border-radius: 8px;
+    background: #fff; color: var(--ink); font-size: 14px;
+    padding: 0 10px; min-height: 36px;
+  }
+  .shell textarea, .login-wrap textarea {
+    padding: 9px 11px; min-height: 0; line-height: 1.5;
+  }
+  .shell :is(input, select, textarea):focus,
+  .login-wrap :is(input, select, textarea):focus {
+    outline: none; border-color: var(--accent); box-shadow: var(--adm-ring);
+  }
+  .shell :is(input, select, textarea)::placeholder,
+  .login-wrap :is(input, select, textarea)::placeholder { color: var(--adm-faint); }
+  .shell .field, .login-wrap .field {
+    font-size: 12.5px; font-weight: 600; margin-bottom: 14px;
+  }
+  .shell .note, .login-wrap .note {
+    font-size: 13px; color: var(--sub); line-height: 1.55;
   }
   .shell .btn, .login-wrap .btn {
-    border-radius: 9px; box-shadow: none; padding: 9px 18px; font-size: 14px;
+    border-radius: 8px; box-shadow: none; padding: 8px 16px;
+    font-size: 13.5px; font-weight: 600; min-height: 36px;
   }
-  .shell .btn:hover, .login-wrap .btn:hover { transform: none; box-shadow: 0 2px 8px rgba(212,87,122,.25); }
-  .shell .btn-ghost { border-color: var(--adm-line-strong); color: var(--ink); background: #fff; }
+  .shell .btn:hover, .login-wrap .btn:hover { transform: none; box-shadow: 0 2px 8px rgba(212,87,122,.22); }
+  .shell .btn-ghost { border: 1px solid var(--adm-line-strong); color: var(--ink); background: #fff; }
   .shell .btn-ghost:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
-  .shell .btn-small { padding: 6px 12px; font-size: 13px; min-height: 32px; }
+  .shell .btn-small { padding: 5px 11px; font-size: 12.5px; min-height: 32px; }
 
   /* ============ login ============ */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
   .login-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 14px;
-    box-shadow: 0 8px 30px rgba(60, 40, 40, .07); padding: 36px 34px 28px;
+    box-shadow: 0 8px 30px rgba(60, 40, 40, .07); padding: 40px 36px 30px;
     width: 100%; max-width: 400px; text-align: left; }
   .login-logo { font-size: 34px; line-height: 1; }
-  .login-card h1 { font-size: 22px; margin: 10px 0 2px; }
-  .login-sub { color: var(--sub); font-size: 13.5px; margin: 0 0 22px; }
+  .login-card h1 { font-size: 21px; margin: 12px 0 4px; letter-spacing: -.01em; }
+  .login-sub { color: var(--sub); font-size: 13px; margin: 0 0 24px; }
   .login-btn { width: 100%; margin-top: 4px; }
   .login-note { font-size: 12.5px; margin-top: 18px; }
 
@@ -71,17 +103,17 @@
   .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px;
     background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--adm-line); padding: 12px 26px; }
-  .topbar h1 { font-size: 17.5px; margin: 0; }
-  .topbar-env { margin-left: auto; color: var(--sub); font-size: 13px; }
+  .topbar h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  .topbar-env { margin-left: auto; color: var(--sub); font-size: 12.5px; }
   .burger { display: none; border: 1px solid var(--adm-line-strong); background: #fff; border-radius: 8px;
     width: 38px; height: 38px; font-size: 17px; cursor: pointer; color: var(--ink); }
-  .content { flex: 1; padding: 24px 26px 40px; max-width: 1240px; width: 100%; margin: 0 auto; }
+  .content { flex: 1; padding: 26px 28px 44px; max-width: 1240px; width: 100%; margin: 0 auto; }
   .view { animation: view-in .16s ease-out; }
   @keyframes view-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
   .panel { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px;
-    padding: 20px 22px; margin-bottom: 20px; }
-  .panel h2 { margin: 0 0 6px; font-size: 16.5px; }
+    padding: 22px 24px; margin-bottom: 20px; }
+  .panel h2 { margin: 0 0 6px; font-size: 15.5px; font-weight: 650; letter-spacing: -.005em; }
   .panel h2 + .note { margin-top: 0; }
   .panel hr.sep { border: none; border-top: 1px dashed var(--adm-line); margin: 20px 0; }
 
@@ -104,8 +136,9 @@
   /* ============ dashboard ============ */
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
   .stat-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px; padding: 18px 20px; }
-  .stat-label { font-size: 13px; color: var(--sub); font-weight: 600; }
-  .stat-num { font-size: 34px; font-weight: 800; line-height: 1.15; margin: 4px 0 2px; }
+  .stat-label { font-size: 12.5px; color: var(--sub); font-weight: 600; }
+  .stat-num { font-size: 30px; font-weight: 750; line-height: 1.15; margin: 5px 0 2px;
+    font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .stat-sub { font-size: 12.5px; color: var(--sub); }
   .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
   .dash-grid .panel { margin-bottom: 0; }
@@ -120,8 +153,9 @@
 
   /* ============ tables ============ */
   .table-scroll { overflow-x: auto; }
-  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
-  .data-table th, .data-table td { text-align: left; padding: 10px 10px;
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px;
+    font-variant-numeric: tabular-nums; }
+  .data-table th, .data-table td { text-align: left; padding: 11px 12px;
     border-bottom: 1px solid var(--adm-line); vertical-align: top; }
   .data-table th { color: var(--sub); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .05em; font-weight: 700; white-space: nowrap; }
@@ -152,7 +186,7 @@
   textarea.blocked { width: 100%; min-height: 90px; }
   .key-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
   .key-row .field { flex: 1; min-width: 200px; }
-  .bk-sub { font-size: 14px; margin: 18px 0 8px; }
+  .bk-sub { font-size: 13.5px; font-weight: 650; margin: 20px 0 8px; }
 
   /* --- availability calendar (Feature D) --- */
   .adm-cal { max-width: 560px; margin: 0 auto; }
@@ -176,22 +210,22 @@
   .adm-cal .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--adm-line-strong); }
   .adm-cal .cal-day.today::after { display: none; }
 
-  .day-editor { border: 1.5px solid var(--adm-line); border-radius: 12px;
-    padding: 16px; background: #fff; }
-  .seg { display: flex; border: 1.5px solid var(--adm-line-strong); border-radius: 999px;
+  .day-editor { border: 1px solid var(--adm-line); border-radius: 12px;
+    padding: 18px; background: #fff; }
+  .seg { display: flex; border: 1px solid var(--adm-line-strong); border-radius: 10px;
     overflow: hidden; margin-bottom: 14px; }
   .seg button { flex: 1; border: none; background: #fff; font: inherit;
-    font-size: 14px; padding: 9px 2px; cursor: pointer; color: var(--sub);
-    min-height: 42px; }
-  .seg button + button { border-left: 1.5px solid var(--adm-line-strong); }
-  .seg button.active { background: var(--accent); color: #fff; font-weight: 700; }
+    font-size: 13.5px; padding: 7px 2px; cursor: pointer; color: var(--sub);
+    min-height: 38px; }
+  .seg button + button { border-left: 1px solid var(--adm-line-strong); }
+  .seg button.active { background: var(--accent); color: #fff; font-weight: 650; }
   .de-special { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 6px; }
   .de-special .field { margin-bottom: 6px; }
   .de-special select { min-width: 110px; }
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
-  .hour-chip { border: 1.5px solid var(--accent); background: var(--accent);
-    color: #fff; border-radius: 999px; padding: 8px 14px; font: inherit;
-    font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
+  .hour-chip { border: 1px solid var(--accent); background: var(--accent);
+    color: #fff; border-radius: 999px; padding: 6px 13px; font: inherit;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; min-height: 36px; }
   .hour-chip.blocked { background: #fff; color: var(--sub);
     border-color: var(--adm-line-strong); text-decoration: line-through; font-weight: 400; }
   .vac-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 18px;
@@ -219,16 +253,20 @@
   .adm-cal .cal-day.selected .d-lesson.done,
   .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
   .lesson-row { border: 1px solid var(--adm-line); border-radius: 10px;
-    padding: 10px 12px; margin-bottom: 10px; background: #fff; }
+    padding: 12px 14px; margin-bottom: 10px; background: #fff; }
   .lesson-row.is-cancelled { opacity: .55; }
-  .lesson-row .lr-head { font-weight: 700; font-size: 14.5px; }
+  .lesson-row .lr-head { font-weight: 650; font-size: 14.5px; }
   .lesson-row .lr-sub { color: var(--sub); font-size: 13px; margin-top: 2px;
     word-break: break-all; }
-  .remark-box { margin-top: 8px; border-top: 1px dashed var(--adm-line); padding-top: 8px; }
-  .remark-box label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  /* The remark editor: one quiet label, a roomy textarea on the
+     unified control style, and the save button aligned to the right
+     edge of the field. */
+  .remark-box { margin-top: 10px; border-top: 1px solid var(--adm-line);
+    padding-top: 10px; display: flex; flex-direction: column; }
+  .remark-box label { font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 6px; }
   .remark-box label .default-tag { color: var(--sub); font-weight: 400; }
-  .remark-box textarea { width: 100%; min-height: 52px; font: inherit; font-size: 14px; }
-  .remark-box .btn { margin-top: 6px; padding: 6px 14px; min-height: 36px; }
+  .remark-box textarea { width: 100%; min-height: 84px; resize: vertical; }
+  .remark-box .btn { margin-top: 8px; align-self: flex-end; min-height: 34px; }
   .remark-row td { background: #fffafc; }
   .sch-grid { display: grid; grid-template-columns: minmax(320px, 600px) 1fr; gap: 20px; align-items: start; }
   .sch-grid .adm-cal { max-width: 600px; margin: 0; }
@@ -281,28 +319,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .stu-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
 .stu-controls input[type="search"]{flex:1 1 220px}
 .chip-filters{display:flex;gap:6px;flex-wrap:wrap}
-.fchip{font:inherit;font-size:12.5px;padding:5px 12px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
+.fchip{font:inherit;font-size:13px;padding:6px 13px;min-height:32px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
 .fchip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.stu-sort{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
-.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px;margin-top:10px}
-.stu-card{background:#fff;border:1px solid var(--adm-line);border-radius:12px;padding:14px;cursor:pointer;text-align:left}
-.stu-card:hover{border-color:var(--accent)}
+.stu-sort{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:6px;font-weight:600}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px;margin-top:12px}
+.stu-card{background:#fff;border:1px solid var(--adm-line);border-radius:12px;padding:16px;cursor:pointer;text-align:left;transition:border-color .15s,box-shadow .15s}
+.stu-card:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(60,30,40,.06)}
 .stu-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 38px}
 .avatar-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 38px}
-.stu-name{font-weight:650;font-size:14.5px}
+.stu-name{font-weight:650;font-size:15px}
 .pill-acct{background:#eef2f7;color:#3c5a78}
-.stu-lines{font-size:12.5px;color:var(--muted);line-height:1.55}
+.stu-lines{font-size:13px;color:var(--sub);line-height:1.6}
 .stu-lines strong{color:var(--ink);font-weight:600}
-.remark-snippet{margin-top:7px;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.remark-snippet{margin-top:8px;font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drawer-backdrop{position:fixed;inset:0;background:rgba(35,25,22,.38);z-index:65}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,94vw);background:#fff;z-index:70;box-shadow:-8px 0 28px rgba(60,30,40,.18);padding:20px;overflow-y:auto}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.drawer-head h3{margin:0;font-size:17px}
-.stu-facts{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:13px;color:var(--muted);margin:10px 0}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,94vw);background:#fff;z-index:70;box-shadow:-8px 0 28px rgba(60,30,40,.18);padding:24px;overflow-y:auto}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.drawer-head h3{margin:0;font-size:18px;font-weight:650;letter-spacing:-.01em}
+.stu-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;color:var(--sub);margin:12px 0}
 .stu-facts strong{color:var(--ink)}
-.pkg-card{border:1px solid var(--adm-line);border-radius:9px;padding:9px 11px;margin:7px 0}
-.tl-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--adm-line);font-size:13px}
+.pkg-card{border:1px solid var(--adm-line);border-radius:10px;padding:11px 13px;margin:8px 0}
+.tl-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--adm-line);font-size:13px}
 .tl-date{font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-what{flex:1;color:var(--muted)}
 
@@ -1653,7 +1691,6 @@ function openStudent(email) {
     ${pkgHtml}
     <h4 class="bk-sub">课程时间线 · Timeline</h4>
     ${tlHtml}
-    <h4 class="bk-sub">老师备注 · Teacher's remark</h4>
     ${remarkBoxHtml(s.email, s.studentRemark, s.remarkIsDefault)}
     <p style="margin-top:14px"><button type="button" class="btn" id="stu-view-bookings">查看该学生的预约 →</button></p>`;
   wireRemarkBoxes($("#stu-detail"));
