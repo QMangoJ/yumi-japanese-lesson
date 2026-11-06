@@ -75,10 +75,10 @@ const DEFAULT_SETTINGS = {
   blockedDates: [],
   meeting: { type: "fixed", url: "" },
   // Daniel's decision: sending is via Resend, sender
-  // "Yumi Japanese Lessons <lesson-booking@yumi-japan.com>" (domain to
-  // verify in Resend: yumi-japan.com). The API key stays empty until he
-  // provides it — until then the outbox only queues.
-  resend: { apiKey: "", from: "lesson-booking@yumi-japan.com" },
+  // "Yumi Japanese Lessons <yumi-lesson@ki-toko.com>" (his own domain
+  // ki-toko.com, already on Cloudflare; verify it in Resend). The API
+  // key stays empty until he provides it — until then the outbox only queues.
+  resend: { apiKey: "", from: "yumi-lesson@ki-toko.com" },
   teacherEmail: "",
 };
 
@@ -357,7 +357,7 @@ async function queueEmail(env, settings, { to, subject, body, bookingRef, kind }
   };
   await env.BOOKINGS.put(`email:${id}`, JSON.stringify(rec));
   if (settings.resend.apiKey && settings.resend.from && to) {
-    // Sender identity: "Yumi Japanese Lessons <lesson-booking@yumi-japan.com>".
+    // Sender identity: "Yumi Japanese Lessons <yumi-lesson@ki-toko.com>".
     // settings.resend.from holds the bare address; a value that already
     // carries a display name ("Name <addr>") is used as-is.
     const fromHeader = settings.resend.from.includes("<")
