@@ -189,8 +189,10 @@ a { color: var(--accent); }
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   max-width: none;
+  padding-left: 0;
+  padding-right: 0;
 }
-.section-alt > * { max-width: 1080px; margin-left: auto; margin-right: auto; }
+.section-alt > * { max-width: 1080px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
 
 .section h2, .cta h2 {
   font-size: clamp(26px, 3.4vw, 36px);
