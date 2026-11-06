@@ -144,7 +144,7 @@ function closeBooking() {
 }
 
 /* ---------- student account (drives My Bookings) ---------- */
-let authUser = null; // {name, email} once /api/auth/me resolves
+let authUser = null; // {name, email, isAdmin} once /api/auth/me resolves
 
 /** Prefill + lock the booking form's identity fields while logged in. */
 function applyAuthToForm() {
@@ -872,7 +872,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /* The nav's Admin shortcut shows only for whitelisted accounts
+   * (worker-side settings.adminEmails → user.isAdmin). It is just a
+   * link: /admin itself still asks for the admin key. */
+  function renderNavAdmin() {
+    const link = $("#nav-admin");
+    if (link) link.hidden = !(authUser && authUser.isAdmin);
+  }
+
   function renderAccountBar() {
+    renderNavAdmin();
     const box = $("#my-auth");
     if (!authUser) { renderAuthForms("login"); return; }
     box.innerHTML = `

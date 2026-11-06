@@ -97,6 +97,10 @@ const DEFAULT_SETTINGS = {
   // Empty disables the feed (404). Anyone with the URL can see booking
   // names, so it is never exposed outside the admin page.
   calendarKey: "",
+  // Site accounts whose email is on this list see an "Admin" entry in
+  // the top nav (a shortcut link to /admin). It grants nothing by
+  // itself: /admin and its APIs stay behind the X-Admin-Key gate.
+  adminEmails: ["yumi.japan2026@gmail.com"],
   // Per-date availability overrides, on top of the weekly template:
   // dateOverrides["YYYY-MM-DD"] = null closes that specific day, and
   // {start, end} gives it special hours (even on a normally-closed
@@ -216,6 +220,12 @@ function normalizeSettings(raw) {
   if (typeof raw.calendarKey === "string") {
     s.calendarKey = raw.calendarKey.slice(0, 100);
   }
+  if (Array.isArray(raw.adminEmails)) {
+    const list = raw.adminEmails
+      .map((x) => String(x || "").toLowerCase().trim())
+      .filter((x) => EMAIL_RE.test(x));
+    s.adminEmails = [...new Set(list)].slice(0, 20);
+  }
   if (raw.dateOverrides && typeof raw.dateOverrides === "object") {
     for (const [date, v] of Object.entries(raw.dateOverrides)) {
       if (!DATE_RE.test(date)) continue;
@@ -255,7 +265,18 @@ function publicSettings(s) {
     calendarKey: s.calendarKey,
     dateOverrides: s.dateOverrides,
     blockedHours: s.blockedHours,
+    adminEmails: s.adminEmails,
   };
+}
+
+/** Is this email on the admin whitelist (settings.adminEmails)?
+ *  Case-insensitive and whitespace-tolerant on both sides. The list
+ *  itself is never sent to the client — only this boolean outcome. */
+function isAdminEmail(settings, email) {
+  const e = String(email || "").toLowerCase().trim();
+  if (!e) return false;
+  return (settings.adminEmails || []).some(
+    (x) => String(x || "").toLowerCase().trim() === e);
 }
 
 /** The hours that actually apply on a date: a per-date override wins
@@ -382,6 +403,15 @@ async function sessionUser(env, request) {
   const user = await getUser(env, sess.email);
   if (!user) return null;
   return { name: user.name, email: sess.email };
+}
+
+/** The student object the frontend keeps: identity plus whether this
+ *  account is on the admin whitelist. `isAdmin` only drives the nav
+ *  Admin shortcut's visibility — it unlocks nothing server-side. */
+async function publicUser(env, user) {
+  const settings = await getSettings(env);
+  return { name: user.name, email: user.email,
+    isAdmin: isAdminEmail(settings, user.email) };
 }
 
 /* ---------------- Bookings storage ---------------- */
@@ -1157,7 +1187,7 @@ export default {
       };
       await env.BOOKINGS.put(`user:${email}`, JSON.stringify(user));
       const token = await createSession(env, email);
-      return jsonWithHeaders({ user: { name, email } }, 201,
+      return jsonWithHeaders({ user: await publicUser(env, { name, email }) }, 201,
         { "Set-Cookie": sessionCookie(token, SESSION_TTL) });
     }
 
@@ -1181,7 +1211,8 @@ export default {
       }
       await env.BOOKINGS.delete(failKey);
       const token = await createSession(env, email);
-      return jsonWithHeaders({ user: { name: user.name, email } }, 200,
+      return jsonWithHeaders(
+        { user: await publicUser(env, { name: user.name, email }) }, 200,
         { "Set-Cookie": sessionCookie(token, SESSION_TTL) });
     }
 
@@ -1195,7 +1226,7 @@ export default {
     if (path === "/api/auth/me" && request.method === "GET") {
       const me = await sessionUser(env, request);
       if (!me) return json({ error: "Not logged in" }, 401);
-      return json({ user: me });
+      return json({ user: await publicUser(env, me) });
     }
 
     /* ----- My bookings (login required) ----- */

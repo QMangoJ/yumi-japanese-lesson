@@ -58,6 +58,7 @@ a { color: var(--accent); }
   font-size: 15px;
 }
 .site-header nav a:hover { color: var(--accent); }
+.site-header nav a#nav-admin { color: var(--accent); font-weight: 700; }
 
 .btn {
   display: inline-block;
