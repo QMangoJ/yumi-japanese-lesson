@@ -582,12 +582,6 @@ function randomHex(bytes) {
   crypto.getRandomValues(buf);
   return [...buf].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-async function sha256Hex(text) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256", new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 /** Only same-site paths may be OAuth landing targets. */
 function safeNextPath(value) {
   if (!value || typeof value !== "string") return "/";
@@ -604,11 +598,6 @@ function redirectTo(location, cookies = []) {
   const headers = new Headers({ Location: location });
   for (const c of cookies) headers.append("Set-Cookie", c);
   return new Response(null, { status: 302, headers });
-}
-function htmlPage(html, status = 200) {
-  return new Response(html, {
-    status, headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
 }
 
 /* ---------------- Bookings storage ---------------- */
@@ -2081,86 +2070,6 @@ export default {
         defer(checkSubReminderAfterChange(env, settings, booking));
         return json({ booking: publicBooking(booking, settings) });
       }
-    }
-
-    /* ----- One-time Google credentials setup link -----
-     * KV `meta:google_setup` = { hash, createdAt }: only the SHA-256
-     * of the token is stored. The link expires after 48 hours and is
-     * burned by the first successful save. It authorizes writing
-     * settings.google ONLY — nothing else in the system. */
-    if (path === "/setup/google" &&
-        (request.method === "GET" || request.method === "POST")) {
-      const SETUP_TTL_MS = 48 * 3600_000;
-      const setupPage = (inner) => htmlPage(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Google sign-in setup — Yumi Japanese Lessons</title>
-<style>
-  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#faf7f5;color:#2b2226;line-height:1.55}
-  main{max-width:520px;margin:8vh auto;padding:0 20px}
-  .card{background:#fff;border:1px solid #ead9de;border-radius:14px;padding:26px 28px}
-  h1{font-size:20px;margin:0 0 6px}
-  p{color:#6d5d63;font-size:14px}
-  label{display:block;font-size:13px;font-weight:600;margin:16px 0 0}
-  input{width:100%;box-sizing:border-box;margin-top:6px;padding:10px 12px;border:1px solid #d9c6cc;border-radius:8px;font:inherit;font-size:14px}
-  code{display:block;background:#faf3f5;border:1px solid #ead9de;border-radius:8px;padding:9px 12px;font-size:12.5px;word-break:break-all;margin-top:6px}
-  button{margin-top:22px;background:#d4577a;color:#fff;border:none;border-radius:9px;padding:11px 22px;font:inherit;font-weight:650;cursor:pointer;width:100%}
-  .err{color:#b3261e;font-weight:600}
-</style></head><body><main><div class="card">${inner}</div></main></body></html>`);
-      const expiredPage = () => setupPage(`
-        <h1>🌸 This setup link has expired</h1>
-        <p>Setup links work for 48 hours and only once. Please ask for a
-        new one — no settings were changed.</p>`);
-      const validSetup = async (token) => {
-        if (!token) return false;
-        const raw = await env.BOOKINGS.get("meta:google_setup");
-        if (!raw) return false;
-        let rec;
-        try { rec = JSON.parse(raw); } catch { return false; }
-        if (!rec.hash || !rec.createdAt) return false;
-        if (Date.now() - rec.createdAt > SETUP_TTL_MS) return false;
-        return (await sha256Hex(token)) === rec.hash;
-      };
-      if (request.method === "GET") {
-        const token = url.searchParams.get("t") || "";
-        if (!(await validSetup(token))) return expiredPage();
-        return setupPage(`
-          <h1>🌸 Google sign-in setup</h1>
-          <p>Enter the Google Cloud OAuth client for
-          <strong>yumi.ki-toko.com</strong>. Double-check the Authorized
-          redirect URI in Google Cloud matches this exactly:</p>
-          <code>https://yumi.ki-toko.com/api/auth/google/callback</code>
-          <form method="POST" action="/setup/google">
-            <input type="hidden" name="t" value="${token.replace(/"/g, "&quot;")}" />
-            <label>Google Client ID
-              <input name="clientId" autocomplete="off" required /></label>
-            <label>Google Client Secret
-              <input name="clientSecret" type="password" autocomplete="off" required /></label>
-            <button type="submit">Save — enable Google sign-in</button>
-          </form>`);
-      }
-      // POST: validate, write settings.google only, burn the token.
-      const form = await request.formData().catch(() => null);
-      const token = String(form?.get("t") || "");
-      if (!(await validSetup(token))) return expiredPage();
-      const clientId = String(form?.get("clientId") || "").trim();
-      const clientSecret = String(form?.get("clientSecret") || "").trim();
-      if (!clientId || !clientSecret) {
-        return setupPage(`
-          <h1>🌸 Almost there</h1>
-          <p class="err">Both the Client ID and the Client Secret are
-          required — the link still works, please go back and fill in
-          both fields.</p>`);
-      }
-      const current = await getSettings(env);
-      const merged = normalizeSettings({
-        ...current, google: { clientId, clientSecret } });
-      await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
-      await env.BOOKINGS.delete("meta:google_setup"); // burn after use
-      return setupPage(`
-        <h1>🌸 Google sign-in is configured</h1>
-        <p>Done — students can now sign in with Google on
-        yumi.ki-toko.com. You can close this page.</p>`);
     }
 
     if (path.startsWith("/api/")) return json({ error: "Not found" }, 404);
