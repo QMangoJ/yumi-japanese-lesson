@@ -775,11 +775,30 @@ let dashLoadedAt = 0;      // dashboard cache timestamp
 let courseNames = {};
 let legacyNames = {};
 
+/** Every admin data request is bounded: a fetch that neither
+ *  resolves nor rejects within 10s is aborted and surfaces as a
+ *  normal error, so no view can sit on its skeleton / spinner
+ *  forever — each loader's catch settles it and offers a retry. */
+const API_TIMEOUT_MS = 10_000;
+
 async function api(path, opts = {}) {
-  const res = await fetch(path, {
-    ...opts,
-    headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey, ...(opts.headers || {}) },
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(path, {
+      ...opts,
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey, ...(opts.headers || {}) },
+    });
+  } catch (e) {
+    if (e && e.name === "AbortError") {
+      throw new Error("请求超时，请重试 · Request timed out — please retry");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
@@ -1454,6 +1473,7 @@ async function loadBookings() {
   if (date) params.set("date", date);
   const tbody = $("#adm-bk-table").querySelector("tbody");
   tbody.innerHTML = `<tr><td colspan="6" class="table-loading"><span class="spin"></span>Loading…</td></tr>`;
+  try {
   const data = await api(`/api/admin/bookings?${params}`);
   allBookings = data.bookings || [];
   $("#adm-bk-msg").textContent = `${data.total} booking(s)`;
@@ -1493,6 +1513,12 @@ async function loadBookings() {
       } catch (e) { alert(e.message); btn.disabled = false; }
     };
   });
+  } catch (e) {
+    $("#adm-bk-msg").textContent = "";
+    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">加载失败 · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-bk-retry>重试 · Retry</button></td></tr>`;
+    const rb = tbody.querySelector("[data-bk-retry]");
+    if (rb) rb.onclick = () => loadBookings().catch(() => {});
+  }
 }
 $("#adm-bk-refresh").addEventListener("click", () => loadBookings().catch((e) => alert(e.message)));
 $("#adm-bk-status").addEventListener("change", () => loadBookings().catch(() => {}));
@@ -1506,6 +1532,7 @@ $("#adm-bk-q").addEventListener("keydown", (e) => {
 async function loadSubs() {
   const tbody = $("#adm-subs-table").querySelector("tbody");
   tbody.innerHTML = `<tr><td colspan="6" class="table-loading"><span class="spin"></span>Loading…</td></tr>`;
+  try {
   const data = await api("/api/admin/subscriptions");
   const subs = data.subscriptions || [];
   $("#adm-subs-msg").textContent = subs.length ? `${subs.length} package(s)` : "暂无订阅。";
@@ -1542,6 +1569,12 @@ async function loadSubs() {
       } catch (e) { alert(e.message); btn.disabled = false; }
     };
   });
+  } catch (e) {
+    $("#adm-subs-msg").textContent = "";
+    tbody.innerHTML = `<tr><td colspan="6" class="table-loading">加载失败 · ${esc(e.message)} <button type="button" class="btn btn-ghost btn-small" data-subs-retry>重试 · Retry</button></td></tr>`;
+    const rb = tbody.querySelector("[data-subs-retry]");
+    if (rb) rb.onclick = () => loadSubs().catch(() => {});
+  }
 }
 
 /* ---------- dashboard （概览，全部派生自现有 admin API) ---------- */
@@ -1564,7 +1597,11 @@ function addDaysStr(ds, n) {
 }
 
 async function loadDashboard(force) {
-  if (!adminKey) return;
+  // Gate on "we got in" (either channel), NOT on the key itself:
+  // in session mode adminKey stays "" for the whole visit, and the
+  // old key-only guard here (and in loadStudents) silently
+  // swallowed every load — no fetch, no catch, skeletons forever.
+  if (!authVia) return;
   if (!force && Date.now() - dashLoadedAt < 60_000) return;
   dashLoadedAt = Date.now();
   const today = jstTodayStr();
@@ -1615,7 +1652,9 @@ async function loadDashboard(force) {
     settleSkl($("#dash-subs-sub"), "—");
     settleSkl($("#dash-today-list"), `<p class="note">—</p>`);
     settleSkl($("#dash-next-list"), `<p class="note">—</p>`);
-    $("#dash-msg").textContent = e.message;
+    $("#dash-msg").innerHTML = `${esc(e.message)} ` +
+      `<button type="button" class="btn btn-ghost btn-small" id="dash-retry">重试 · Retry</button>`;
+    $("#dash-retry").onclick = () => loadDashboard(true);
   }
 }
 
@@ -1637,7 +1676,8 @@ function avatarHtml(s) {
 }
 
 async function loadStudents(force) {
-  if (!adminKey) return;
+  if (!authVia) return; // same session-mode trap as loadDashboard
+
   if (!force && studentsCache.length && Date.now() - stuLoadedAt < 60_000) {
     renderStudents();
     return;
@@ -1655,7 +1695,9 @@ async function loadStudents(force) {
     ["#stu-stat-total", "#stu-stat-upcoming", "#stu-stat-package", "#stu-stat-new"]
       .forEach((s) => settleSkl($(s), "–"));
     settleSkl($("#stu-grid"), "");
-    $("#stu-msg").textContent = e.message;
+    $("#stu-msg").innerHTML = `${esc(e.message)} ` +
+      `<button type="button" class="btn btn-ghost btn-small" id="stu-retry">重试 · Retry</button>`;
+    $("#stu-retry").onclick = () => loadStudents(true);
   }
 }
 
@@ -1901,9 +1943,15 @@ async function savedKeyEntry() {
 async function sessionEntryAttempt() {
   let me = null;
   try {
-    const meRes = await fetch("/api/auth/me");
-    if (meRes.ok) me = await meRes.json().catch(() => null);
-  } catch { /* network error: indistinguishable from signed-out */ }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+    try {
+      const meRes = await fetch("/api/auth/me", { signal: ctrl.signal });
+      if (meRes.ok) me = await meRes.json().catch(() => null);
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch { /* network error / timeout: indistinguishable from signed-out */ }
   if (!me || !me.user) return { status: "anon" };
   try {
     const data = await api("/api/admin/settings");
