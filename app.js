@@ -184,9 +184,27 @@ function money(n) {
   return `$${n}`;
 }
 
+/* Page-session cache of /api/availability/month responses, keyed
+ * "YYYY-MM|<minutes>" -> Promise<Map<date, dayInfo>>. Shared by every
+ * picker on the page (booking + reschedule), so a month is fetched at
+ * most once per duration per page visit. */
+const monthAvailCache = new Map();
+function fetchMonthAvail(month, minutes) {
+  const key = `${month}|${minutes}`;
+  if (!monthAvailCache.has(key)) {
+    monthAvailCache.set(key, api(`/api/availability/month?month=${month}&duration=${minutes}`)
+      .then((data) => new Map(data.days.map((d) => [d.date, d])))
+      .catch((e) => { monthAvailCache.delete(key); throw e; }));
+  }
+  return monthAvailCache.get(key);
+}
+
 /* ---------- Date + start-time picker (Sakura-style) ----------
  * Builds a month calendar element and an "Available times" dropdown element;
  * the caller places them. onPick(date, time) fires whenever either changes.
+ * Day enable/disable comes from the server's month map (full settings
+ * resolution: one-off opened/closed days and real bookings included);
+ * while that fetch is in flight the weekly template renders as fallback.
  */
 function createPicker({ getMinutes, onPick }) {
   const todayStr = jstToday();
@@ -194,6 +212,8 @@ function createPicker({ getMinutes, onPick }) {
   let date = null;
   let time = null;
   let loadToken = 0;
+  let monthMap = null; // Map<date, {closed, hasAvailableSlot}> for view+duration
+  let monthToken = 0;
 
   const calEl = document.createElement("div");
   calEl.className = "cal";
@@ -227,7 +247,10 @@ function createPicker({ getMinutes, onPick }) {
     for (let i = 0; i < first; i++) cells += "<span></span>";
     for (let d = 1; d <= days; d++) {
       const ds = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const off = ds < min || !state.config.openDays.includes(weekdayOf(ds));
+      const entry = monthMap && monthMap.get(ds);
+      const off = ds < min || (entry
+        ? entry.closed || !entry.hasAvailableSlot
+        : !state.config.openDays.includes(weekdayOf(ds)));
       cells += `<button type="button" class="cal-day${ds === date ? " selected" : ""}${ds === today ? " today" : ""}"
         data-date="${ds}" ${off ? "disabled" : ""} aria-label="${dateLong(ds)}">${d}</button>`;
     }
@@ -244,11 +267,27 @@ function createPicker({ getMinutes, onPick }) {
         const idx = view.y * 12 + (view.m - 1) + Number(b.dataset.nav);
         view = { y: Math.floor(idx / 12), m: (idx % 12) + 1 };
         renderCal();
+        loadMonth();
       };
     });
     calEl.querySelectorAll(".cal-day").forEach((b) => {
       b.onclick = () => pickDate(b.dataset.date);
     });
+  }
+
+  /* Fetch the viewed month's real availability (per duration) and
+   * re-render with it. Until it lands, renderCal uses the weekly
+   * template as the instant fallback. */
+  async function loadMonth() {
+    const token = ++monthToken;
+    const month = `${view.y}-${String(view.m).padStart(2, "0")}`;
+    monthMap = null;
+    try {
+      const map = await fetchMonthAvail(month, getMinutes());
+      if (token !== monthToken) return;
+      monthMap = map;
+      renderCal();
+    } catch { /* keep the weekly-template rendering */ }
   }
 
   async function loadTimes() {
@@ -306,9 +345,10 @@ function createPicker({ getMinutes, onPick }) {
   });
 
   renderCal();
+  loadMonth();
   return {
     calEl, timesEl,
-    setMinutes() { if (date) loadTimes(); },
+    setMinutes() { if (date) loadTimes(); loadMonth(); },
     get date() { return date; },
     get time() { return time; },
   };

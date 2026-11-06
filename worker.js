@@ -283,6 +283,27 @@ function candidateStarts(settings, dateStr) {
   return out;
 }
 
+/** Slot list for one date at a lesson length: closed per the full
+ *  settings resolution (weekly + dateOverrides + blockedDates), each
+ *  start checked against the lead-time rule, the end-of-hours rule and
+ *  existing bookings (`taken` intervals in bookingsOn's shape). One
+ *  source of truth shared by /api/availability and
+ *  /api/availability/month. */
+function computeSlots(settings, dateStr, minutes, taken) {
+  const hours = effectiveHours(settings, dateStr);
+  const starts = candidateStarts(settings, dateStr);
+  if (!starts) return { closed: true, slots: [] };
+  const slots = starts.map((time) => {
+    const start = toMin(time);
+    const tooSoon = slotInstant(dateStr, Number(time.slice(0, 2))) - new Date() <
+      CONFIG.policy.bookAheadHours * 3600_000;
+    const endsLate = start + minutes > toMin(hours.end);
+    return { time, endTime: toHHMM(start + minutes),
+      available: !tooSoon && !endsLate && !overlaps(start, minutes, taken) };
+  });
+  return { closed: false, slots };
+}
+
 async function adminAuthorized(env, request) {
   const raw = await env.BOOKINGS.get("meta:admin_key");
   if (!raw) return false;
@@ -1436,20 +1457,51 @@ export default {
       const settings = await getSettings(env);
       const blocked = settings.blockedDates.includes(date) ||
         settings.dateOverrides[date] === null;
-      const hours = effectiveHours(settings, date);
-      const starts = candidateStarts(settings, date);
-      const closed = !starts;
-      const taken = closed ? [] : await bookingsOn(env, date);
-      const slots = (starts || []).map((time) => {
-        const start = toMin(time);
-        const tooSoon = slotInstant(date, Number(time.slice(0, 2))) - new Date() <
-          CONFIG.policy.bookAheadHours * 3600_000;
-        const endsLate = start + minutes > toMin(hours.end);
-        return { time, endTime: toHHMM(start + minutes),
-          available: !tooSoon && !endsLate && !overlaps(start, minutes, taken) };
-      });
+      const taken = candidateStarts(settings, date) ? await bookingsOn(env, date) : [];
+      const { closed, slots } = computeSlots(settings, date, minutes, taken);
       return json({ date, closed, blocked, duration: minutes,
         timezone: "Asia/Tokyo (JST)", slots });
+    }
+
+    /* ----- Month availability for the student calendar: per date, is
+       the day closed (full settings resolution), and is at least one
+       start time bookable at this duration? Lets the picker enable
+       one-off openings (e.g. a Saturday opened by dateOverride) that
+       the weekly template alone would grey out. ----- */
+    if (path === "/api/availability/month" && request.method === "GET") {
+      const month = url.searchParams.get("month") || "";
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+        return json({ error: "month is required (YYYY-MM)" }, 400);
+      }
+      const minutes = Number(url.searchParams.get("duration")) || 60;
+      if (!CONFIG.durations.some((d) => d.minutes === minutes) &&
+          !CONFIG.legacyLessonTypes.some((t) => t.minutes === minutes)) {
+        return json({ error: "Unknown duration" }, 400);
+      }
+      const settings = await getSettings(env);
+      // One scan for the whole month, grouped into bookingsOn-shaped
+      // intervals per date (same pending_payment/paid filter).
+      const takenByDate = new Map();
+      for (const b of await listAllBookings(env)) {
+        if (!b.date || !b.date.startsWith(month)) continue;
+        if (!["pending_payment", "paid"].includes(b.status)) continue;
+        const start = toMin(b.time);
+        if (!takenByDate.has(b.date)) takenByDate.set(b.date, []);
+        takenByDate.get(b.date).push(
+          { id: b.id, start, end: start + minutesOfBooking(b) });
+      }
+      const [yy, mm] = month.split("-").map(Number);
+      const dayCount = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+      const days = [];
+      for (let d = 1; d <= dayCount; d++) {
+        const date = `${month}-${String(d).padStart(2, "0")}`;
+        const { closed, slots } = computeSlots(
+          settings, date, minutes, takenByDate.get(date) || []);
+        days.push({ date, closed,
+          hasAvailableSlot: !closed && slots.some((s) => s.available) });
+      }
+      return json({ month, duration: minutes,
+        timezone: "Asia/Tokyo (JST)", days });
     }
 
     if (path === "/api/bookings" && request.method === "POST") {
