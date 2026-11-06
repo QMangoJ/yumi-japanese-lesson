@@ -1262,17 +1262,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     authUser = data.user;
     applyAuthToForm();
   } catch { authUser = null; }
-  /* Nav "My Bookings": signed-out visitors go straight into Google
-   * sign-in and land back on #my afterwards; signed-in users keep the
-   * plain anchor scroll to the section. */
+  /* Nav "My Bookings" leads to the account page: for signed-in
+   * users the link itself points at /account (plain navigation,
+   * new-tab friendly); signed-out visitors are sent through Google
+   * sign-in first and land on /account afterwards (the OAuth
+   * returnTo carries them there). If Google sign-in is not
+   * configured, the plain #my section anchor stays as fallback. */
   const navMy = document.querySelector('.site-header nav a[href="#my"]');
-  if (navMy) navMy.addEventListener("click", (e) => {
-    if (!authUser && state.config?.googleAuth) {
-      e.preventDefault();
-      location.href = "/api/auth/google?next=" +
-        encodeURIComponent("/#my");
-    }
-  });
+  if (navMy) {
+    if (authUser) navMy.href = "/account";
+    navMy.addEventListener("click", (e) => {
+      if (!authUser && state.config?.googleAuth) {
+        e.preventDefault();
+        location.href = "/api/auth/google?next=" +
+          encodeURIComponent("/account");
+      }
+    });
+  }
   renderAccountBar();
   if (authUser) { await loadMyBookings(); await loadMySubscriptions(); }
 });
