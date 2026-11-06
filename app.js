@@ -1673,6 +1673,38 @@ document.addEventListener("DOMContentLoaded", () => {
     void grid.offsetWidth;
     grid.classList.add("vp-fade");
   }
+  /* Height lock (Daniel: 翻页后保持区域高度不变）: on desktop the
+   * grid's height used to follow whichever 6 (or 4) reviews were
+   * visible — page heights measured 704 / 731 / 678px, shoving the
+   * pager and everything below up and down on every flip. Measure
+   * every page's height once (synchronously, so nothing paints in
+   * between) and pin the grid's min-height to the tallest page.
+   * Re-measured on resize (column widths change text wrapping) and
+   * when webfonts land. Mobile is a horizontal carousel whose
+   * height never depends on paging — the lock clears there. */
+  function lockVoicesHeight() {
+    if (mq.matches) { grid.style.minHeight = ""; return; }
+    const cur = page;
+    grid.style.minHeight = "";
+    let max = 0;
+    for (let p = 0; p < PAGES; p++) {
+      cards.forEach((c, i) =>
+        c.classList.toggle("vp-off", i < p * PAGE || i >= (p + 1) * PAGE));
+      max = Math.max(max, grid.offsetHeight);
+    }
+    cards.forEach((c, i) =>
+      c.classList.toggle("vp-off", i < cur * PAGE || i >= (cur + 1) * PAGE));
+    if (max) grid.style.minHeight = max + "px";
+  }
+  let vpLockRaf = 0;
+  function scheduleVoicesLock() {
+    cancelAnimationFrame(vpLockRaf);
+    vpLockRaf = requestAnimationFrame(lockVoicesHeight);
+  }
+  window.addEventListener("resize", scheduleVoicesLock);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(scheduleVoicesLock);
+  }
   function cardStep() {
     const c = cards[0];
     return c ? c.offsetWidth + 14 : 300;
@@ -1702,6 +1734,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       applyPage(page);
     }
+    lockVoicesHeight();
   }
   prevBtn.addEventListener("click", () => {
     if (mq.matches) {
