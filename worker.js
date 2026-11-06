@@ -40,12 +40,14 @@ const CONFIG = {
     { id: "jlpt", name: "JLPT N5–N4 Preparation", minutes: 60 },
     { id: "travel", name: "Japanese for Travel", minutes: 60 },
     { id: "business", name: "Business Japanese", minutes: 60 },
+    { id: "other", name: "Other", minutes: 60 },
   ],
   // The only choice besides the course: how long the lesson is.
   // MOCK prices follow the old rate of $30 / 60 min, pro-rated.
   durations: [
     { id: "d30", minutes: 30, price: 15 },
     { id: "d50", minutes: 50, price: 25 },
+    { id: "d80", minutes: 80, price: 40 },
     { id: "d120", minutes: 120, price: 60 },
   ],
   // Bookings made before the duration model (kept so My Bookings can still

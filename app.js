@@ -2,7 +2,7 @@
  *
  * Booking pane modeled on sakurajapaneselesson.com: one pane with a month
  * calendar (01 Choose a date), a start-time dropdown (02 Choose a start
- * time), a duration dropdown (30 / 50 / 120 min — the only choice besides
+ * time), a duration dropdown (30 / 50 / 80 / 120 min — the only choice besides
  * the course), and a live summary + checkout total that update as you pick.
  */
 "use strict";
