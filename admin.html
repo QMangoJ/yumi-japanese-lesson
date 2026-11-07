@@ -2043,16 +2043,31 @@ function wireRemarkBoxes(root) {
     btn.onclick = async () => {
       const ta = box.querySelector(".remark-text");
       const email = ta.dataset.email;
+      const note = ta.value;
+      const prevNote = [...monthBookings, ...allBookings, ...schBookings, ...studentsCache]
+        .find((b) => b.email && b.email.toLowerCase() === email.toLowerCase())
+        ?.studentRemark || "";
       btn.disabled = true;
       try {
         await api("/api/admin/student-note", {
-          method: "POST", body: JSON.stringify({ email, note: ta.value }),
+          method: "POST", body: JSON.stringify({ email, note }),
         });
         for (const b of [...monthBookings, ...allBookings, ...schBookings, ...studentsCache]) {
           if (b.email.toLowerCase() === email.toLowerCase()) {
-            b.studentRemark = ta.value; b.remarkIsDefault = false;
+            b.studentRemark = note; b.remarkIsDefault = false;
           }
         }
+        // The same student can have several remark boxes on screen at
+        // once (e.g. two lessons on the same day): sync every sibling
+        // box that still shows the pre-save text, so no stale copy is
+        // left behind. A sibling the teacher has edited but not saved
+        // yet (its text differs from prevNote) is left untouched.
+        document.querySelectorAll(".remark-text").forEach((t) => {
+          if (t !== ta && (t.dataset.email || "").toLowerCase() === email.toLowerCase() &&
+              t.value === prevNote) {
+            t.value = note;
+          }
+        });
         btn.textContent = A("Saved ✓", "保存しました ✓");
         setTimeout(() => { btn.textContent = A("Save note", "メモを保存"); btn.disabled = false; }, 1600);
         renderCalendar();
