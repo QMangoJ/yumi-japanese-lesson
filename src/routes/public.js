@@ -1,11 +1,11 @@
 /* routes/public.js — route blocks split from worker.js (bodies unchanged).
  * Returns a Response, or undefined when no block matches. */
-import { googleConfigured } from "../lib/auth.js";
+import { EMAIL_RE, googleConfigured } from "../lib/auth.js";
 import { candidateStarts, computeSlots, weeklyHoursFor } from "../lib/availability.js";
 import { CONFIG, DATE_RE, JST, json, lessonEndMs, lessonStartMs, minutesOfBooking, toMin } from "../lib/core.js";
-import { courseNameOf, icsEscape, icsFold, icsUtc } from "../lib/notify.js";
+import { courseNameOf, icsEscape, icsFold, icsUtc, queueEmail } from "../lib/notify.js";
 import { getSettings, priceFor } from "../lib/settings.js";
-import { bookingsOn, listAllBookings } from "../lib/store.js";
+import { bookingsOn, listAllBookings, saveMessage } from "../lib/store.js";
 
 export async function handlePublic(c) {
   const { request, env, ctx, url, path, defer } = c;
@@ -63,6 +63,59 @@ export async function handlePublic(c) {
         currency: CONFIG.currency, policy: CONFIG.policy,
         googleAuth: googleConfigured(settings),
         openDays });
+    }
+
+    /* Contact form: archive the message (D1 `messages`, KV fallback),
+     * then notify the teacher by email via the usual Resend outbox.
+     * The archive write is the success criterion — queueEmail never
+     * throws (send failures land on the outbox record), so a mail
+     * outage can never lose a message or fail the submission.
+     * Anti-abuse is deliberately light: a honeypot field (bots that
+     * fill it get a fake success and nothing is stored), length caps
+     * and an email shape check. No captcha. */
+    if (path === "/api/contact" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+      if (String(body?.website || "").trim()) return json({ ok: true }); // honeypot: silent drop
+      const name = String(body?.name || "").trim().slice(0, 100);
+      const email = String(body?.email || "").trim().slice(0, 200);
+      const message = String(body?.message || "").trim().slice(0, 2000);
+      if (!name) return json({ error: "Please enter your name." }, 400);
+      if (!EMAIL_RE.test(email)) return json({ error: "Please enter a valid email address." }, 400);
+      if (!message) return json({ error: "Please write a message." }, 400);
+      if (String(body?.message || "").trim().length > 2000) {
+        return json({ error: "Your message is too long (max. 2000 characters)." }, 400);
+      }
+      const msg = {
+        id: "MSG-" + crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase(),
+        name, email, message, read: false,
+        createdAt: new Date().toISOString(),
+      };
+      await saveMessage(env, msg);
+      const settings = await getSettings(env);
+      if (settings.teacherEmail) {
+        const jst = new Date(Date.now() + 9 * 3600_000).toISOString()
+          .replace("T", " ").slice(0, 16) + " JST";
+        await defer(queueEmail(env, settings, {
+          to: settings.teacherEmail,
+          replyTo: email,
+          kind: "contact",
+          subject: `New message from the website — ${name}`,
+          body: [
+            "You received a new message from the website contact form.",
+            "",
+            `Name: ${name}`,
+            `Email: ${email}`,
+            `Received: ${jst}`,
+            "",
+            "Message:",
+            message,
+            "",
+            "— Reply to this email to answer the visitor directly.",
+          ].join("\n"),
+        }));
+      }
+      return json({ ok: true, id: msg.id }, 201);
     }
 
     if (path === "/api/availability" && request.method === "GET") {

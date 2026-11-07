@@ -86,7 +86,6 @@ window.YUMI_I18N = {
     "03 — LESSONS": "03 — 课程",
     "04 — PRICE": "04 — 价格",
     "05 — BOOK A LESSON": "05 — 预约课程",
-    "06 — MY BOOKINGS": "06 — 我的预约",
     "07 — FAQ": "07 — 常见问题",
     "08 — CONTACT": "08 — 联系我",
     "What Students Say": "学生们怎么说",
@@ -126,7 +125,7 @@ window.YUMI_I18N = {
     "CUSTOM": "定制",
     "Conversational Japanese": "日语会话",
     "Japanese for Complete Beginners": "完全零基础日语",
-    "JLPT N5–N4 Preparation": "JLPT N5–N4 备考",
+    "JLPT Preparation": "JLPT 备考",
     "Japanese for Travel": "旅行日语",
     "Business Japanese": "商务日语",
     "Other": "其他",
@@ -139,7 +138,7 @@ window.YUMI_I18N = {
     "For: first-time learners who want a friendly, supportive start.": "适合：希望在友好耐心的氛围中起步的初学者。",
     "Focused lessons for the JLPT: grammar, vocabulary, reading, and listening, with careful review of your weak points so you can walk into the exam with confidence.":
       "专注 JLPT 的课程：语法、词汇、阅读与听力，仔细梳理你的薄弱环节，让你自信走进考场。",
-    "For: N5–N4 learners preparing for the test.": "适合：备考 N5–N4 的学习者。",
+    "For: learners preparing for the JLPT test.": "适合：备考 JLPT 的学习者。",
     "Practical phrases and conversations for your trip — restaurants, shopping, hotels, transportation, and more — customized to your own travel plans.":
       "为你的旅行准备实用短语和对话——餐厅、购物、酒店、交通等等——按你自己的行程定制。",
     "For: anyone planning a trip to Japan, beginners included.": "适合：计划去日本旅行的任何人，包括初学者。",
@@ -283,8 +282,6 @@ window.YUMI_I18N = {
     "Save profile": "保存档案",
     "Sign in with Google to see your upcoming lessons, your lesson packages and your learning profile — and to reschedule or cancel an upcoming lesson. Booked as a guest before? Sign in with the same email and your bookings appear here automatically.":
       "用 Google 登录，查看你即将开始的课程、课时包和学习档案——还可以改期或取消课程。以前用游客身份订过课？用同一个邮箱登录，预约会自动出现在这里。",
-    "Sign in with Google to see your upcoming lessons and your lesson history — and to reschedule or cancel an upcoming lesson. Booked as a guest? Sign in with the same email and your bookings will appear here automatically.":
-      "用 Google 登录，查看你即将开始的课程和历史课程——还可以改期或取消课程。用游客身份订过课？用同一个邮箱登录，预约会自动出现在这里。",
     "New here? Sign in with Google to create your account. Booked as a guest before? Sign in with the same email and your bookings appear here automatically.":
       "第一次来？用 Google 登录即可创建账户。以前用游客身份订过课？用同一个邮箱登录，预约会自动出现在这里。",
     /* packages (front) */
@@ -410,7 +407,6 @@ window.YUMI_I18N = {
     "03 — LESSONS": "03 — COURS",
     "04 — PRICE": "04 — TARIFS",
     "05 — BOOK A LESSON": "05 — RÉSERVER UN COURS",
-    "06 — MY BOOKINGS": "06 — MES RÉSERVATIONS",
     "07 — FAQ": "07 — FAQ",
     "08 — CONTACT": "08 — CONTACT",
     "What Students Say": "Ce que disent les élèves",
@@ -448,7 +444,7 @@ window.YUMI_I18N = {
     "CUSTOM": "SUR MESURE",
     "Conversational Japanese": "Japonais conversationnel",
     "Japanese for Complete Beginners": "Japonais pour grands débutants",
-    "JLPT N5–N4 Preparation": "Préparation au JLPT N5–N4",
+    "JLPT Preparation": "Préparation au JLPT",
     "Japanese for Travel": "Japonais pour voyager",
     "Business Japanese": "Japonais des affaires",
     "Other": "Autre",
@@ -461,7 +457,7 @@ window.YUMI_I18N = {
     "For: first-time learners who want a friendly, supportive start.": "Pour : les débutants qui veulent un démarrage doux et encourageant.",
     "Focused lessons for the JLPT: grammar, vocabulary, reading, and listening, with careful review of your weak points so you can walk into the exam with confidence.":
       "Des cours ciblés pour le JLPT : grammaire, vocabulaire, lecture et écoute, avec un travail attentif sur vos points faibles pour aborder l'examen en toute confiance.",
-    "For: N5–N4 learners preparing for the test.": "Pour : les apprenants N5–N4 qui préparent l'examen.",
+    "For: learners preparing for the JLPT test.": "Pour : les apprenants qui préparent le JLPT.",
     "Practical phrases and conversations for your trip — restaurants, shopping, hotels, transportation, and more — customized to your own travel plans.":
       "Des phrases et conversations pratiques pour votre voyage — restaurants, shopping, hôtels, transports et bien plus — adaptées à votre propre itinéraire.",
     "For: anyone planning a trip to Japan, beginners included.": "Pour : toute personne qui prépare un voyage au Japon, débutants compris.",
@@ -599,8 +595,6 @@ window.YUMI_I18N = {
     "Save profile": "Enregistrer le profil",
     "Sign in with Google to see your upcoming lessons, your lesson packages and your learning profile — and to reschedule or cancel an upcoming lesson. Booked as a guest before? Sign in with the same email and your bookings appear here automatically.":
       "Connectez-vous avec Google pour voir vos cours à venir, vos forfaits et votre profil d'apprentissage — et pour déplacer ou annuler un cours. Vous aviez réservé en invité ? Connectez-vous avec le même e-mail et vos réservations apparaîtront ici automatiquement.",
-    "Sign in with Google to see your upcoming lessons and your lesson history — and to reschedule or cancel an upcoming lesson. Booked as a guest? Sign in with the same email and your bookings will appear here automatically.":
-      "Connectez-vous avec Google pour voir vos cours à venir et votre historique — et pour déplacer ou annuler un cours. Vous aviez réservé en invité ? Connectez-vous avec le même e-mail et vos réservations apparaîtront ici automatiquement.",
     "New here? Sign in with Google to create your account. Booked as a guest before? Sign in with the same email and your bookings appear here automatically.":
       "Nouveau ici ? Connectez-vous avec Google pour créer votre compte. Vous aviez réservé en invité ? Connectez-vous avec le même e-mail et vos réservations apparaîtront ici automatiquement.",
     "Lesson package": "Forfait de cours",

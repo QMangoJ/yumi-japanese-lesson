@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 CREATE INDEX IF NOT EXISTS idx_subs_email ON subscriptions(email);
 CREATE INDEX IF NOT EXISTS idx_subs_status ON subscriptions(status);
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  read INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  doc TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 `;
 
 const useD1 = (env) => !!env.DB;
@@ -307,6 +315,73 @@ export async function listAllSubscriptions(env) {
 
 export async function lessonsForSubscription(env, subId) {
   return lessonsOfSub(await listAllBookings(env), subId);
+}
+
+/* ---------------- contact messages ----------------
+ * Website contact-form submissions (POST /api/contact). Same dual
+ * backend convention as bookings: a `messages` table in D1 when the
+ * DB binding exists, `message:<id>` documents in KV otherwise. The
+ * full record lives in `doc`; extracted columns serve ordering and
+ * the read flag. */
+
+function messageCols(m) {
+  return {
+    id: m.id,
+    email: String(m.email || "").toLowerCase(),
+    read: m.read ? 1 : 0,
+    created_at: m.createdAt || null,
+    doc: JSON.stringify(m),
+  };
+}
+const MESSAGE_COLS = ["id", "email", "read", "created_at", "doc"];
+const messageVals = (m) => { const c = messageCols(m); return MESSAGE_COLS.map((k) => c[k]); };
+
+export async function saveMessage(env, m) {
+  if (useD1(env)) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO messages (${MESSAGE_COLS.join(", ")})
+       VALUES (${MESSAGE_COLS.map(() => "?").join(", ")})`
+    ).bind(...messageVals(m)).run();
+    return;
+  }
+  await env.BOOKINGS.put(`message:${m.id}`, JSON.stringify(m));
+}
+
+export async function getMessage(env, id) {
+  if (useD1(env)) {
+    const row = await env.DB.prepare(
+      "SELECT doc FROM messages WHERE id = ?").bind(id).first();
+    return row ? JSON.parse(row.doc) : null;
+  }
+  const raw = await env.BOOKINGS.get(`message:${id}`);
+  return raw ? JSON.parse(raw) : null;
+}
+
+/** Every contact message, newest first. */
+export async function listAllMessages(env) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare(
+      "SELECT doc FROM messages ORDER BY created_at DESC").all();
+    return parseDocs(results);
+  }
+  const out = [];
+  let cursor;
+  do {
+    const list = await env.BOOKINGS.list({ prefix: "message:", cursor, limit: 100 });
+    const batch = await mapParallel(list.keys, (key) =>
+      getMessage(env, key.name.slice("message:".length)));
+    for (const m of batch) if (m) out.push(m);
+    cursor = list.list_complete ? undefined : list.cursor;
+  } while (cursor);
+  return out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+}
+
+export async function deleteMessage(env, id) {
+  if (useD1(env)) {
+    await env.DB.prepare("DELETE FROM messages WHERE id = ?").bind(id).run();
+    return;
+  }
+  await env.BOOKINGS.delete(`message:${id}`);
 }
 
 /** One subscription's lessons out of an already-loaded booking list,

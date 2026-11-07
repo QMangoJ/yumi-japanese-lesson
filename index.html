@@ -397,7 +397,7 @@
     <a href="#price">Price</a>
     <a href="#faq">FAQ</a>
     <a href="#contact">Contact</a>
-    <a href="#my">Login</a>
+    <a href="/account">Login</a>
     <a href="/admin" id="nav-admin" hidden>Admin</a>
   </nav>
   <a class="btn btn-small open-booking" href="#book">Book a Lesson</a>
@@ -532,12 +532,12 @@
       </article>
 
       <article class="lesson">
-        <div class="lesson-top"><span class="lesson-icon" aria-hidden="true">📚</span><p class="lesson-label">JLPT N5–N4</p></div>
-        <h3>JLPT N5–N4 Preparation</h3>
+        <div class="lesson-top"><span class="lesson-icon" aria-hidden="true">📚</span><p class="lesson-label">JLPT</p></div>
+        <h3>JLPT Preparation</h3>
         <p>Focused lessons for the JLPT: grammar, vocabulary, reading, and
         listening, with careful review of your weak points so you can walk into
         the exam with confidence.</p>
-        <p class="lesson-for">For: N5–N4 learners preparing for the test.</p>
+        <p class="lesson-for">For: learners preparing for the JLPT test.</p>
         <button class="btn btn-small book-course" data-course="jlpt">Book this course →</button>
       </article>
 
@@ -622,18 +622,6 @@
     your own timezone when you book.</p>
   </section>
 
-  <!-- MY BOOKINGS -->
-  <section class="section section-alt" id="my">
-    <h2 class="eyebrow">06 — MY BOOKINGS</h2>
-    <p class="section-lead">Sign in with Google to see your upcoming
-    lessons and your lesson history — and to reschedule or cancel an
-    upcoming lesson. Booked as a guest? Sign in with the same email and
-    your bookings will appear here automatically.</p>
-    <div id="my-auth"></div>
-    <div id="my-subs"></div>
-    <div id="my-result"></div>
-  </section>
-
   <!-- WHY -->
   <section class="section">
     <p class="eyebrow center">WHY CHOOSE ME</p>
@@ -699,7 +687,7 @@
       <details>
         <summary>When can I cancel or reschedule a lesson?</summary>
         <p>You can cancel a confirmed lesson from
-        <a href="#my">My Bookings</a> at any time before it starts.
+        <a href="/account">My Bookings</a> at any time before it starts.
         Cancel 12 hours or more before the lesson starts and you get a
         full refund — the amount paid goes back to your original payment
         method, no matter whether you rescheduled the lesson before.
@@ -740,19 +728,21 @@
       <div class="contact-left">
         <p class="contact-intro">Questions about lessons, levels, or scheduling?
         No question is too small — I'd love to hear from you.</p>
-        <!-- MOCK contact form: front-end only for now (Daniel: 先mock).
-             The submit handler in app.js validates and shows a success
-             state locally — no network call, no KV write, no email is
-             sent. Wire it to a real endpoint before relying on it. -->
+        <!-- Contact form: posts to /api/contact, which archives the
+             message and emails the teacher. The "Website" field is a
+             honeypot — humans never see or fill it; bots that do are
+             silently dropped server-side. -->
         <form id="contact-form" novalidate>
           <div class="field-row">
             <label class="field">Name
-              <input type="text" id="contact-name" autocomplete="name" placeholder="Your name" /></label>
+              <input type="text" id="contact-name" autocomplete="name" placeholder="Your name" maxlength="100" /></label>
             <label class="field">Email
-              <input type="email" id="contact-email" autocomplete="email" placeholder="you@example.com" /></label>
+              <input type="email" id="contact-email" autocomplete="email" placeholder="you@example.com" maxlength="200" /></label>
           </div>
+          <p class="hp-field" aria-hidden="true"><label>Website
+            <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off" /></label></p>
           <label class="field">Message
-            <textarea id="contact-message" rows="5" placeholder="Hi Yumi, I'd like to ask about…"></textarea></label>
+            <textarea id="contact-message" rows="5" maxlength="2000" placeholder="Hi Yumi, I'd like to ask about…"></textarea></label>
           <p class="msg" id="contact-msg"></p>
           <button type="submit" class="btn contact-submit" id="contact-submit">Send Message →</button>
           <p class="contact-success hidden" id="contact-success">Thank you! Your message has been noted — Yumi will get back to you soon. 🌸</p>
@@ -926,12 +916,12 @@
         or your teacher will send it before the lesson. A confirmation has
         been sent to your email.</p>
         <p class="note">You can reschedule or cancel anytime in
-        <a href="#my">My Bookings</a> — this booking is saved to the
+        <a href="/account">My Bookings</a> — this booking is saved to the
         Google account you signed in with, so it's right there when
         you come back. Cancelling and rescheduling follow the policy
         in the FAQ.</p>
         <div class="bk-nav"><span></span>
-          <a class="btn" href="#my">Go to My Bookings</a></div>
+          <a class="btn" href="/account">Go to My Bookings</a></div>
       </div>
     </div>
     </div>

@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    * label is "Login"; signed-in users get "Account" pointing
    * straight at /account, signed-out visitors are sent through
    * Google sign-in and land back here (same flow as the gate). */
-  const navAcct = document.querySelector('.site-header nav a[href="/#my"]');
+  const navAcct = document.querySelector('.site-header nav a[href="/account"]');
   if (navAcct) {
     if (user) {
       navAcct.textContent = "Account";

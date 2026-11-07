@@ -5,7 +5,7 @@ import { addDaysStr, effectiveStatus, json, mapParallel, minutesOfBooking, publi
 import { checkEndingReminder, notifyBookingEvent, publicSubscription, remainingOf, stopSubscription } from "../lib/packages.js";
 import { PROFILE_LEVELS } from "../lib/profiles.js";
 import { getSettings, normalizeSettings, publicSettings, validatePricing } from "../lib/settings.js";
-import { getBooking, getSubscription, lessonsOfSub, listAllBookings, listAllSubscriptions, nextLessonFrom, refundableFrom, remainingFrom, resolveRemarks, saveBooking } from "../lib/store.js";
+import { deleteMessage, getBooking, getMessage, getSubscription, lessonsOfSub, listAllBookings, listAllMessages, listAllSubscriptions, nextLessonFrom, refundableFrom, remainingFrom, resolveRemarks, saveBooking, saveMessage } from "../lib/store.js";
 
 export async function handleAdmin(c) {
   const { request, env, ctx, url, path, defer } = c;
@@ -141,6 +141,32 @@ export async function handleAdmin(c) {
           remainingFrom(lessons), refundableFrom(lessons)));
       }
       return json({ subscriptions: out });
+    }
+
+    /* ----- Contact messages (website form archive) ----- */
+    if (path === "/api/admin/messages" && request.method === "GET") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      return json({ messages: await listAllMessages(env) });
+    }
+
+    const msgm = path.match(/^\/api\/admin\/messages\/([A-Z0-9-]+)\/(read|delete)$/);
+    if (msgm && request.method === "POST") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      const msg = await getMessage(env, msgm[1]);
+      if (!msg) return json({ error: "Message not found" }, 404);
+      if (msgm[2] === "delete") {
+        await deleteMessage(env, msg.id);
+        return json({ ok: true });
+      }
+      let body = {};
+      try { body = await request.json(); } catch { /* default: mark read */ }
+      msg.read = body && body.read === false ? false : true;
+      await saveMessage(env, msg);
+      return json({ message: msg });
     }
 
     const asm = path.match(/^\/api\/admin\/subscriptions\/([A-Z0-9-]+)\/stop$/);

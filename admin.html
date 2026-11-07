@@ -337,6 +337,22 @@
   .adm-revd-foot { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
   .adm-revd-subtotal { margin-left: auto; font-size: 13.5px; color: var(--sub); text-align: right; }
   .adm-revd-subtotal b { color: var(--ink, inherit); font-size: 14.5px; }
+  /* contact messages view (adm-msgc-*) */
+  .msg-list { margin-top: 12px; }
+  .msgc-row { display: flex; gap: 14px; padding: 13px 6px;
+    border-bottom: 1px solid var(--adm-line); align-items: flex-start; }
+  .msgc-row.unread { background: #fdf3f6; }
+  .msgc-main { flex: 1; min-width: 0; }
+  .msgc-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  .msgc-name { font-weight: 700; }
+  .msgc-email { color: var(--accent); font-size: 13px; word-break: break-all; }
+  .msgc-time { color: var(--sub); font-size: 12.5px; margin-left: auto; white-space: nowrap; }
+  .msgc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    flex: none; align-self: center; }
+  .msgc-body { margin: 5px 0 0; white-space: pre-wrap; word-break: break-word;
+    font-size: 14px; line-height: 1.6; }
+  .msgc-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+  .msgc-empty { color: var(--sub); padding: 18px 6px; }
 
   /* ============ dashboard ============ */
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
@@ -570,13 +586,29 @@
     section[data-view="settings"] > .panel { overflow-y: auto; }
     [data-view="students"] > .panel { display: flex; flex-direction: column; overflow: hidden; }
     #stu-grid { flex: 1; min-height: 0; overflow-y: auto; align-content: start; }
-    #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-revenue-card {
+    #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-revenue-card, #adm-messages-card {
       display: flex; flex-direction: column; overflow: hidden; }
+    #adm-messages-card .msg-list { flex: 1; min-height: 0; overflow-y: auto; }
     #adm-bookings-card .table-scroll, #adm-subs-card .table-scroll { flex: 1; min-height: 0; }
     #adm-schedule-card .sch-grid { flex: 1; min-height: 0; align-items: stretch; }
     #adm-schedule-card .adm-cal { overflow-y: auto; min-height: 0; }
     .sch-lessons { flex: 1; overflow-y: auto; }
-    #adm-revenue-card .rev-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+    /* Revenue: chart + headings + subtotal stay pinned; the DETAIL
+       list is the one scrolling region. (Previously chart + details
+       shared .rev-scroll, so the 168px chart pushed every detail row
+       below the fold of a 231px window and the note paragraph —
+       a sibling after the scroll box — painted over the rows:
+       the drill-down was effectively invisible.) */
+    #adm-revenue-card .rev-scroll { flex: 1; min-height: 0; display: flex;
+      flex-direction: column; overflow: hidden; }
+    #adm-revenue-card .rev-scroll > * { flex: none; }
+    #adm-revenue-card #rev-detail { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    /* The five totals cards go in ONE row on desktop (the auto-fit
+       grid wrapped them 3+2, eating 250px of vertical space), and the
+       chart may shrink toward a 92px floor before the detail list
+       gives up any of its space. */
+    #adm-revenue-card .rev-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    #adm-revenue-card .rev-scroll .rev-chart { flex: 0 1 auto; min-height: 92px; }
   }
 
 /* ---------- weekly hour-block grid ---------- */
@@ -731,6 +763,9 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <a href="#/revenue" data-route="revenue">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
         <span>Revenue</span></a>
+      <a href="#/messages" data-route="messages">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+        <span>Messages</span></a>
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Settings</span></a>
@@ -1058,6 +1093,17 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <p class="msg" id="rev-msg"></p>
       </div>
 
+      <!-- ===== Messages (website contact form) ===== -->
+      <div class="panel view hidden" id="adm-messages-card" data-view="messages">
+        <h2>Messages</h2>
+        <div class="rev-controls">
+          <span class="note" id="adm-msg-count"></span>
+          <button type="button" class="btn btn-ghost btn-small" id="adm-msg-refresh">Refresh</button>
+        </div>
+        <div id="msg-list" class="msg-list"></div>
+        <p class="msg" id="adm-msg-msg"></p>
+      </div>
+
     </main>
 
     <div class="savebar hidden" id="adm-savebar">
@@ -1107,7 +1153,7 @@ function statusLabel(v) {
 const ADM_DICT_JA = {
   "Yumi Admin": "Yumi 管理画面",
   "Dashboard": "ダッシュボード", "Students": "生徒", "Bookings": "予約", "Schedule": "スケジュール",
-  "Availability": "予約可能時間", "Packages": "パッケージ", "Revenue": "収益", "Settings": "設定",
+  "Availability": "予約可能時間", "Packages": "パッケージ", "Revenue": "収益", "Messages": "メッセージ", "Settings": "設定",
   "View site ↗": "サイトを見る ↗", "Logout": "ログアウト",
   "Admin sign-in is not configured.": "管理者ログインが設定されていません。",
   "Continue with Google": "Google でログイン",
@@ -3107,9 +3153,78 @@ $("#rev-next").addEventListener("click", () => {
   loadRevenue(true);
 });
 
+/* ---------- contact messages view ---------- */
+function fmtMsgTime(iso) {
+  const ms = Date.parse(iso || "");
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms).toLocaleString(_revJa() ? "ja-JP" : "en-GB",
+    { timeZone: "Asia/Tokyo", year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: false }) + " JST";
+}
+async function loadMessages() {
+  if (!authVia) return;
+  const list = $("#msg-list");
+  if (!list) return;
+  list.innerHTML = `<p class="msgc-empty"><span class="spin"></span>${A("Loading…", "読み込み中…")}</p>`;
+  try {
+    const data = await api("/api/admin/messages");
+    const msgs = data.messages || [];
+    const unread = msgs.filter((m) => !m.read).length;
+    $("#adm-msg-count").textContent = msgs.length
+      ? A(`${msgs.length} message(s)${unread ? ` · ${unread} unread` : ""}`,
+          `${msgs.length} 件${unread ? `（未読 ${unread} 件）` : ""}`)
+      : "";
+    $("#adm-msg-msg").textContent = "";
+    if (!msgs.length) {
+      list.innerHTML = `<p class="msgc-empty">${A("No messages yet. Messages sent from the website contact form will appear here.", "まだメッセージはありません。サイトのお問い合わせフォームからのメッセージがここに表示されます。")}</p>`;
+      return;
+    }
+    list.innerHTML = msgs.map((m) => `
+      <div class="msgc-row${m.read ? "" : " unread"}">
+        <div class="msgc-main">
+          <div class="msgc-head">
+            ${m.read ? "" : `<span class="msgc-dot" aria-hidden="true"></span>`}
+            <span class="msgc-name">${esc(m.name)}</span>
+            <a class="msgc-email" href="mailto:${esc(m.email)}">${esc(m.email)}</a>
+            <span class="msgc-time">${esc(fmtMsgTime(m.createdAt))}</span>
+          </div>
+          <p class="msgc-body">${esc(m.message)}</p>
+        </div>
+        <div class="msgc-actions">
+          <button type="button" class="btn btn-ghost btn-small" data-msg-read="${esc(m.id)}" data-read="${m.read ? "1" : "0"}">${m.read ? A("Mark as unread", "未読にする") : A("Mark as read", "既読にする")}</button>
+          <button type="button" class="btn btn-ghost btn-small" data-msg-del="${esc(m.id)}">${A("Delete", "削除")}</button>
+        </div>
+      </div>`).join("");
+    list.querySelectorAll("[data-msg-read]").forEach((btn) => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          await api(`/api/admin/messages/${btn.dataset.msgRead}/read`,
+            { method: "POST", body: JSON.stringify({ read: btn.dataset.read !== "1" }) });
+          await loadMessages();
+        } catch (e) { $("#adm-msg-msg").textContent = e.message; btn.disabled = false; }
+      };
+    });
+    list.querySelectorAll("[data-msg-del]").forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirm(A("Delete this message?", "このメッセージを削除しますか？"))) return;
+        btn.disabled = true;
+        try {
+          await api(`/api/admin/messages/${btn.dataset.msgDel}/delete`,
+            { method: "POST", body: "{}" });
+          await loadMessages();
+        } catch (e) { $("#adm-msg-msg").textContent = e.message; btn.disabled = false; }
+      };
+    });
+  } catch (e) {
+    list.innerHTML = `<p class="msgc-empty">${A("Failed to load", "読み込みに失敗しました")} · ${esc(e.message)}</p>`;
+  }
+}
+$("#adm-msg-refresh").addEventListener("click", () => loadMessages());
+
 /* ---------- router / shell ---------- */
 
-const ROUTES = { dashboard: 1, students: 1, bookings: 1, schedule: 1, availability: 1, packages: 1, revenue: 1, settings: 1 };
+const ROUTES = { dashboard: 1, students: 1, bookings: 1, schedule: 1, availability: 1, packages: 1, revenue: 1, messages: 1, settings: 1 };
 function routeTitle(r) {
   return {
     dashboard: A("Dashboard", "ダッシュボード"),
@@ -3119,6 +3234,7 @@ function routeTitle(r) {
     availability: A("Availability", "予約可能時間"),
     packages: A("Packages", "パッケージ"),
     revenue: A("Revenue", "収益"),
+    messages: A("Messages", "メッセージ"),
     settings: A("Settings", "設定"),
   }[r] || "";
 }
@@ -3144,6 +3260,7 @@ function applyRoute() {
   if (r === "dashboard") loadDashboard(false);
   if (r === "students") loadStudents(false);
   if (r === "revenue") loadRevenue(false);
+  if (r === "messages") loadMessages();
 }
 window.addEventListener("hashchange", applyRoute);
 $("#adm-burger").addEventListener("click", () => {

@@ -7,7 +7,7 @@ var CONFIG = {
   courses: [
     { id: "conversation", name: "Conversational Japanese", minutes: 60 },
     { id: "beginners", name: "Japanese for Complete Beginners", minutes: 60 },
-    { id: "jlpt", name: "JLPT N5\u2013N4 Preparation", minutes: 60 },
+    { id: "jlpt", name: "JLPT Preparation", minutes: 60 },
     { id: "travel", name: "Japanese for Travel", minutes: 60 },
     { id: "business", name: "Business Japanese", minutes: 60 },
     { id: "other", name: "Other", minutes: 60 }
@@ -439,6 +439,64 @@ async function listAllSubscriptions(env) {
 }
 async function lessonsForSubscription(env, subId) {
   return lessonsOfSub(await listAllBookings(env), subId);
+}
+function messageCols(m) {
+  return {
+    id: m.id,
+    email: String(m.email || "").toLowerCase(),
+    read: m.read ? 1 : 0,
+    created_at: m.createdAt || null,
+    doc: JSON.stringify(m)
+  };
+}
+var MESSAGE_COLS = ["id", "email", "read", "created_at", "doc"];
+var messageVals = (m) => {
+  const c = messageCols(m);
+  return MESSAGE_COLS.map((k) => c[k]);
+};
+async function saveMessage(env, m) {
+  if (useD1(env)) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO messages (${MESSAGE_COLS.join(", ")})
+       VALUES (${MESSAGE_COLS.map(() => "?").join(", ")})`
+    ).bind(...messageVals(m)).run();
+    return;
+  }
+  await env.BOOKINGS.put(`message:${m.id}`, JSON.stringify(m));
+}
+async function getMessage(env, id) {
+  if (useD1(env)) {
+    const row = await env.DB.prepare(
+      "SELECT doc FROM messages WHERE id = ?"
+    ).bind(id).first();
+    return row ? JSON.parse(row.doc) : null;
+  }
+  const raw = await env.BOOKINGS.get(`message:${id}`);
+  return raw ? JSON.parse(raw) : null;
+}
+async function listAllMessages(env) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare(
+      "SELECT doc FROM messages ORDER BY created_at DESC"
+    ).all();
+    return parseDocs(results);
+  }
+  const out = [];
+  let cursor;
+  do {
+    const list = await env.BOOKINGS.list({ prefix: "message:", cursor, limit: 100 });
+    const batch = await mapParallel(list.keys, (key) => getMessage(env, key.name.slice("message:".length)));
+    for (const m of batch) if (m) out.push(m);
+    cursor = list.list_complete ? void 0 : list.cursor;
+  } while (cursor);
+  return out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+}
+async function deleteMessage(env, id) {
+  if (useD1(env)) {
+    await env.DB.prepare("DELETE FROM messages WHERE id = ?").bind(id).run();
+    return;
+  }
+  await env.BOOKINGS.delete(`message:${id}`);
 }
 function lessonsOfSub(allBookings, subId) {
   return allBookings.filter((b) => b.subscriptionId === subId).sort((a, b) => lessonStartMs(a) - lessonStartMs(b));
@@ -1428,6 +1486,32 @@ async function handleAdmin(c) {
     }
     return json({ subscriptions: out });
   }
+  if (path === "/api/admin/messages" && request.method === "GET") {
+    if (!await adminAuthorized(env, request)) {
+      return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+    }
+    return json({ messages: await listAllMessages(env) });
+  }
+  const msgm = path.match(/^\/api\/admin\/messages\/([A-Z0-9-]+)\/(read|delete)$/);
+  if (msgm && request.method === "POST") {
+    if (!await adminAuthorized(env, request)) {
+      return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+    }
+    const msg = await getMessage(env, msgm[1]);
+    if (!msg) return json({ error: "Message not found" }, 404);
+    if (msgm[2] === "delete") {
+      await deleteMessage(env, msg.id);
+      return json({ ok: true });
+    }
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+    }
+    msg.read = body && body.read === false ? false : true;
+    await saveMessage(env, msg);
+    return json({ message: msg });
+  }
   const asm = path.match(/^\/api\/admin\/subscriptions\/([A-Z0-9-]+)\/stop$/);
   if (asm && request.method === "POST") {
     if (!await adminAuthorized(env, request)) {
@@ -1985,6 +2069,56 @@ Meeting: ${meet}` : "")
       googleAuth: googleConfigured(settings),
       openDays
     });
+  }
+  if (path === "/api/contact" && request.method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, 400);
+    }
+    if (String(body?.website || "").trim()) return json({ ok: true });
+    const name = String(body?.name || "").trim().slice(0, 100);
+    const email = String(body?.email || "").trim().slice(0, 200);
+    const message = String(body?.message || "").trim().slice(0, 2e3);
+    if (!name) return json({ error: "Please enter your name." }, 400);
+    if (!EMAIL_RE.test(email)) return json({ error: "Please enter a valid email address." }, 400);
+    if (!message) return json({ error: "Please write a message." }, 400);
+    if (String(body?.message || "").trim().length > 2e3) {
+      return json({ error: "Your message is too long (max. 2000 characters)." }, 400);
+    }
+    const msg = {
+      id: "MSG-" + crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase(),
+      name,
+      email,
+      message,
+      read: false,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await saveMessage(env, msg);
+    const settings = await getSettings(env);
+    if (settings.teacherEmail) {
+      const jst = new Date(Date.now() + 9 * 36e5).toISOString().replace("T", " ").slice(0, 16) + " JST";
+      await defer(queueEmail(env, settings, {
+        to: settings.teacherEmail,
+        replyTo: email,
+        kind: "contact",
+        subject: `New message from the website \u2014 ${name}`,
+        body: [
+          "You received a new message from the website contact form.",
+          "",
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Received: ${jst}`,
+          "",
+          "Message:",
+          message,
+          "",
+          "\u2014 Reply to this email to answer the visitor directly."
+        ].join("\n")
+      }));
+    }
+    return json({ ok: true, id: msg.id }, 201);
   }
   if (path === "/api/availability" && request.method === "GET") {
     const date = url.searchParams.get("date");

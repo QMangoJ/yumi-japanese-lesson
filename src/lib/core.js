@@ -41,7 +41,7 @@ export const CONFIG = {
   courses: [
     { id: "conversation", name: "Conversational Japanese", minutes: 60 },
     { id: "beginners", name: "Japanese for Complete Beginners", minutes: 60 },
-    { id: "jlpt", name: "JLPT N5–N4 Preparation", minutes: 60 },
+    { id: "jlpt", name: "JLPT Preparation", minutes: 60 },
     { id: "travel", name: "Japanese for Travel", minutes: 60 },
     { id: "business", name: "Business Japanese", minutes: 60 },
     { id: "other", name: "Other", minutes: 60 },

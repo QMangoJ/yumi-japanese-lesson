@@ -772,17 +772,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeBooking();
   });
-  // Pane 4's "Go to My Bookings" button: close the modal, then jump to #my.
-  const goMy = document.querySelector('.bk-pane[data-pane="4"] .bk-nav a[href="#my"]');
+  // Pane 4's "Go to My Bookings" button: close the modal, then go to /account.
+  const goMy = document.querySelector('.bk-pane[data-pane="4"] .bk-nav a[href="/account"]');
   if (goMy) goMy.addEventListener("click", closeBooking);
 
-  /* Contact form — MOCK handler (Daniel: 先mock). Front-end only:
-   * validates name / email / message and shows the success state
-   * locally. It makes NO network call, writes NO KV record and sends
-   * NO email; replace with a real endpoint before relying on it. */
+  /* Contact form — posts to /api/contact (archive + teacher email).
+   * The success state shows ONLY after the server confirms; a failed
+   * send surfaces an error and keeps the visitor's text. The hidden
+   * #contact-website honeypot rides along (bots fill it, the server
+   * silently drops those). */
   const contactForm = $("#contact-form");
   if (contactForm) {
-    contactForm.addEventListener("submit", (e) => {
+    contactForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = $("#contact-name").value.trim();
       const email = $("#contact-email").value.trim();
@@ -794,10 +795,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!message) return setMsg("#contact-msg", "Please write a message.", false);
       setMsg("#contact-msg", "");
       const btn = $("#contact-submit");
-      btn.textContent = "Message sent ✓";
+      const btnLabel = btn.textContent;
       btn.disabled = true;
-      $("#contact-success").classList.remove("hidden");
-      contactForm.querySelectorAll("input, textarea").forEach((el) => { el.value = ""; });
+      btn.textContent = "Sending…";
+      try {
+        await api("/api/contact", {
+          method: "POST",
+          body: JSON.stringify({ name, email, message,
+            website: $("#contact-website")?.value || "" }),
+        });
+        btn.textContent = "Message sent ✓";
+        $("#contact-success").classList.remove("hidden");
+        contactForm.querySelectorAll("input, textarea").forEach((el) => { el.value = ""; });
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = btnLabel;
+        setMsg("#contact-msg",
+          err.message || "Something went wrong while sending — please try again.", false);
+      }
     });
   }
 
@@ -1818,12 +1833,13 @@ document.addEventListener("DOMContentLoaded", async () => {
    * information density too low). The upcoming list is now a month
    * calendar: days are keyed by the STUDENT'S local date — the same
    * Intl conversion the cards use; bookings stay JST-anchored —
-   * lesson chips sit in the day cells, and the selected day's full
-   * cards (the shared myCard/wireMyCard pair, rules unchanged)
-   * open underneath. Default selection is the soonest lesson's
-   * day, so the next lesson is on screen without a click. The
-   * homepage #my section shares this renderer and gets the
-   * calendar too. */
+   * lesson chips sit in the day cells. Tapping a day slides in a
+   * right-side drawer with that day's lessons as compact cards
+   * (myCardCompact/wireMyCard, management rules unchanged); the
+   * calendar itself no longer grows a giant detail area. Default
+   * selection is the soonest lesson's day (highlight only — the
+   * drawer opens on tap). Only /account renders this calendar now:
+   * the homepage My Bookings section was removed (Daniel). */
   let upcalCursor = null;   // {y, m} month on screen (visitor-local)
   let upcalSelected = null; // visitor-local "YYYY-MM-DD" chosen day
   let upcalList = [];       // latest upcoming list, for re-renders
@@ -1888,14 +1904,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ${list.length ? `<span class="upcal-chips">${chips}</span><span class="upcal-dots">${dots}</span>` : ""}
       </button>`;
     }
-    const dayList = byDay.get(upcalSelected) || [];
-    let selMs;
-    if (dayList.length) {
-      selMs = jstInstantMs(dayList[0].date, dayList[0].time);
-    } else {
-      const [sy, sm, sd] = upcalSelected.split("-").map(Number);
-      selMs = new Date(sy, sm - 1, sd, 12).getTime();
-    }
     return `
     <div class="upcal" id="upcal">
       <div class="upcal-head">
@@ -1905,12 +1913,136 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>
       <div class="upcal-grid upcal-week">${wdNames.map((w) => `<span>${w}</span>`).join("")}</div>
       <div class="upcal-grid">${cells}</div>
-      <div class="upcal-detail">
-        <h4 class="upcal-detail-title">${fmtLocalDate(selMs, true)}</h4>
-        ${dayList.length
-          ? dayList.map((b) => myCard(b, true)).join("")
-          : `<p class="note">No lessons this day.</p>`}
+    </div>`;
+  }
+
+  /* ---------- Upcoming day drawer (/account) ----------
+   * The selected day's lessons live in a right-side drawer (full
+   * screen on small phones) instead of a full-width detail block
+   * under the calendar. Compact cards show only what the student
+   * needs; the refund policy is stated once — in the drawer's
+   * footer line and, case-specifically, in the cancel confirm. */
+  let upcalDrawerOpen = false;
+
+  function upcalSelectedMs() {
+    const { byDay } = upcalByDay(upcalList);
+    const dayList = byDay.get(upcalSelected) || [];
+    if (dayList.length) return jstInstantMs(dayList[0].date, dayList[0].time);
+    const [sy, sm, sd] = (upcalSelected || "").split("-").map(Number);
+    return new Date(sy, (sm || 1) - 1, sd || 1, 12).getTime();
+  }
+
+  function ensureUpcalDrawer() {
+    if (document.getElementById("upcal-drawer")) return;
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `
+      <div class="upcal-overlay hidden" id="upcal-overlay"></div>
+      <aside class="upcal-drawer" id="upcal-drawer" aria-hidden="true">
+        <div class="upcal-drawer-head">
+          <h4 class="upcal-drawer-title" id="upcal-drawer-title"></h4>
+          <button type="button" class="upcal-drawer-close" id="upcal-drawer-close"
+            aria-label="${L3("Close", "关闭", "Fermer")}">×</button>
+        </div>
+        <div class="upcal-drawer-list" id="upcal-drawer-list"></div>
+        <p class="upcal-drawer-note">${L3(
+          "Cancel 12+ hours before the lesson for a full refund; inside 12 hours there is no refund. Rescheduling is free up to 24 hours before, max. 2 times.",
+          "开课前 12 小时以上取消可全额退款；12 小时内取消不退款。改期请在开课前 24 小时以上，最多 2 次。",
+          "Annulation 12 h ou plus avant le cours : remboursement intégral ; à moins de 12 h, aucun remboursement. Report gratuit jusqu'à 24 h avant, 2 fois max.")}</p>
+      </aside>`;
+    document.body.appendChild(wrap);
+    document.getElementById("upcal-overlay")
+      .addEventListener("click", closeUpcalDrawer);
+    document.getElementById("upcal-drawer-close")
+      .addEventListener("click", closeUpcalDrawer);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && upcalDrawerOpen) closeUpcalDrawer();
+    });
+  }
+
+  function renderUpcalDrawer() {
+    const list = document.getElementById("upcal-drawer-list");
+    if (!list) return;
+    document.getElementById("upcal-drawer-title").textContent =
+      fmtLocalDate(upcalSelectedMs(), true);
+    const { byDay } = upcalByDay(upcalList);
+    const dayList = byDay.get(upcalSelected) || [];
+    list.innerHTML = dayList.length
+      ? dayList.map((b) => myCardCompact(b)).join("")
+      : `<p class="note">${L3("No lessons this day.", "这一天没有课程。", "Aucun cours ce jour-là.")}</p>`;
+    dayList.forEach((b) => wireMyCard(b));
+  }
+
+  function openUpcalDrawer() {
+    ensureUpcalDrawer();
+    renderUpcalDrawer();
+    upcalDrawerOpen = true;
+    document.getElementById("upcal-overlay").classList.remove("hidden");
+    const dr = document.getElementById("upcal-drawer");
+    dr.classList.add("open");
+    dr.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeUpcalDrawer() {
+    upcalDrawerOpen = false;
+    const ov = document.getElementById("upcal-overlay");
+    const dr = document.getElementById("upcal-drawer");
+    if (ov) ov.classList.add("hidden");
+    if (dr) {
+      dr.classList.remove("open");
+      dr.setAttribute("aria-hidden", "true");
+    }
+    document.body.style.overflow = "";
+  }
+
+  /* Compact lesson card for the day drawer: local time range big,
+   * course · duration · status on one line, price folded into a
+   * small line, Meet as a real button (paid only — meetLink is
+   * only ever set for paid bookings), reschedule/cancel as small
+   * text buttons. No name/email rows, no per-card policy text. */
+  function myCardCompact(b) {
+    const minutes = minutesOfBooking(b);
+    const lr = localRange(b.date, b.time, minutes);
+    const sameTz = localMatchesJst(lr.start);
+    const canManage = b.status === "paid" || b.status === "unpaid";
+    const status = b.effectiveStatus === "cancelled"
+      ? L3("Cancelled", "已取消", "Annulé")
+      : b.effectiveStatus === "completed"
+        ? L3("Completed", "已完成", "Terminé")
+        : b.status === "paid"
+          ? L3("Confirmed", "已确认", "Confirmé")
+          : L3("Awaiting payment", "待付款", "En attente de paiement");
+    const sub = [money(b.amount)];
+    if (b.subscriptionId) sub.push(L3("Package lesson", "课时包课次", "Cours du forfait"));
+    if (canManage && b.status === "paid" && b.reschedules)
+      sub.push(L3(`Rescheduled ${b.reschedules} / 2`, `已改期 ${b.reschedules} / 2 次`, `Reporté ${b.reschedules} / 2`));
+    return `
+    <div class="my-card my-card-compact">
+      <div class="mcc-time">${lr.text} <span class="mcc-tz">${sameTz ? "JST" : tzAbbr(lr.start)}</span></div>
+      <div class="mcc-meta">${escHtml(courseName(b.courseId))} · ${minutes} min · ${status}</div>
+      <div class="mcc-sub">${sub.map(escHtml).join(" · ")}</div>
+      ${b.status === "cancelled" && b.refundAmount > 0
+        ? `<p class="note">${L3(`Refunded ${money(b.refundAmount)} (mock)`, `已退款 ${money(b.refundAmount)}（mock）`, `Remboursé : ${money(b.refundAmount)} (démo)`)}</p>` : ""}
+      ${b.status === "cancelled" && !(b.refundAmount > 0) &&
+        String(b.refund || "").includes("12-hour")
+        ? `<p class="note">${L3("Cancelled inside the 12-hour window — no refund", "已取消（未退款）——在开课前 12 小时内取消，不退款", "Annulé dans les 12 h précédant le cours — aucun remboursement")}</p>` : ""}
+      ${b.meetLink
+        ? `<a class="btn mcc-meet" href="${b.meetLink}" target="_blank" rel="noopener">${L3("Join the meeting", "进入会议", "Rejoindre la réunion")} →</a>`
+        : b.needsPayment
+          ? `<p class="note">${L3("The meeting link will appear here once payment is complete.", "完成付款后，会议链接会显示在这里。", "Le lien de réunion apparaîtra ici une fois le paiement terminé.")}</p>`
+          : b.status === "paid"
+            ? `<p class="note">${L3("Your teacher will send the meeting link before the lesson.", "老师会在课前发送会议链接。", "Votre professeur enverra le lien de réunion avant le cours.")}</p>` : ""}
+      ${canManage ? `
+      <p class="msg" id="my-msg-${b.id}"></p>
+      <div class="mcc-actions">
+        ${b.status === "paid" ? `<button type="button" class="mcc-btn" id="my-resched-${b.id}">${L3("Reschedule", "改期", "Reporter")}</button>` : ""}
+        <button type="button" class="mcc-btn mcc-btn-danger" id="my-cancel-${b.id}">${L3("Cancel lesson", "取消课程", "Annuler le cours")}</button>
       </div>
+      <div id="my-resched-box-${b.id}" class="hidden">
+        <h4 class="bk-sub">${L3(`Pick a new date & time (${minutes} min lesson)`, `选择新的日期和时间（${minutes} 分钟课程）`, `Choisissez une nouvelle date et heure (cours de ${minutes} min)`)}</h4>
+        <div id="my-picker-${b.id}"></div>
+        <button type="button" class="btn" id="my-resched-go-${b.id}" disabled>${L3("Confirm new time", "确认新时间", "Confirmer le nouvel horaire")}</button>
+      </div>` : ""}
     </div>`;
   }
 
@@ -1920,7 +2052,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const rerender = () => {
       cal.outerHTML = upcomingCalendarHtml();
       wireUpcomingCalendar();
-      upcalList.forEach((b) => wireMyCard(b));
     };
     const shift = (delta) => {
       const nm = upcalCursor.m + delta;
@@ -1944,6 +2075,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const [y, m] = upcalSelected.split("-").map(Number);
         upcalCursor = { y, m: m - 1 };
         rerender();
+        openUpcalDrawer();
       };
     });
   }
@@ -1990,7 +2122,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (myActionMsg) setMsg("#my-action-msg", myActionMsg, true);
     wireUpcomingCalendar();
-    upcoming.forEach((b) => wireMyCard(b));
+    // Fresh data after a drawer action (cancel/reschedule): refresh
+    // the open drawer so it never shows a stale card.
+    if (upcalDrawerOpen) renderUpcalDrawer();
   }
 
   function myCard(b, manageable) {
@@ -2026,7 +2160,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const cancelBtn = document.getElementById(`my-cancel-${b.id}`);
     if (!cancelBtn) return;
     cancelBtn.onclick = async () => {
-      if (!confirm(L3("Cancel this booking? Cancel 12+ hours ahead for a full refund; inside 12 hours there is no refund.", "取消这节课？开课前 12 小时以上取消可全额退款；12 小时内取消不退款。", "Annuler cette réservation ? Annulez 12 h ou plus à l'avance pour un remboursement intégral ; à moins de 12 h, aucun remboursement."))) return;
+      // The refund policy is stated ONCE, here, in the form that
+      // applies to THIS lesson: paid + 12h or more away → full
+      // refund of the amount; paid + inside 12h → no refund.
+      const msLeft = jstInstantMs(b.date, b.time) - Date.now();
+      const confirmText = b.status !== "paid"
+        ? L3("Cancel this booking?", "取消这节预约？", "Annuler cette réservation ?")
+        : msLeft >= 12 * 3600_000
+          ? L3(`Cancel this lesson? You will receive a full refund of ${money(b.amount)}.`,
+              `取消这节课？将全额退款 ${money(b.amount)}。`,
+              `Annuler ce cours ? Vous serez intégralement remboursé (${money(b.amount)}).`)
+          : L3("This lesson starts in less than 12 hours, so cancelling means no refund. Are you sure?",
+              "这节课距开课不足 12 小时，取消后不退款，确定取消吗？",
+              "Ce cours commence dans moins de 12 h : l'annulation ne donnera lieu à aucun remboursement. Confirmer ?");
+      if (!confirm(confirmText)) return;
       try {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
           method: "POST", body: "{}",
@@ -2111,7 +2258,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    * itself points straight at /account (plain navigation,
    * new-tab friendly). If Google sign-in is not configured, the
    * plain #my section anchor stays as fallback. */
-  const navMy = document.querySelector('.site-header nav a[href="#my"]');
+  const navMy = document.querySelector('.site-header nav a[href="/account"]');
   if (navMy) {
     if (authUser) {
       navMy.href = "/account";
