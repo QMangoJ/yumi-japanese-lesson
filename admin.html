@@ -395,8 +395,11 @@
 
   /* --- availability calendar (Feature D) --- */
   .adm-cal { max-width: 560px; margin: 0 auto; }
+  /* minmax(0,1fr): let columns shrink below the "+N lessons" label's
+     min-content, or the calendar overflows its card on narrow screens */
+  .adm-cal .cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
   .adm-cal .cal-day {
-    aspect-ratio: auto; height: 56px; border-radius: 12px; width: 100%;
+    aspect-ratio: auto; height: 56px; border-radius: 12px; width: 100%; min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1px; padding: 4px 1px; position: relative; border: 1.5px solid transparent;
   }
@@ -457,7 +460,8 @@
     font-weight: 700; white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; max-width: 100%; }
   .d-lesson.done { color: var(--sub); font-weight: 400; }
-  .d-more { font-size: 9.5px; color: var(--sub); line-height: 1.3; }
+  .d-more { font-size: 9.5px; color: var(--sub); line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .adm-cal .cal-day.selected .d-lesson { color: #fff; }
   .adm-cal .cal-day.selected .d-lesson.done,
   .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
