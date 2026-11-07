@@ -220,6 +220,9 @@
   .side-nav a svg { width: 18px; height: 18px; flex: 0 0 18px; stroke: var(--sub); fill: none;
     stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .side-nav a .nav-cn { margin-left: auto; font-size: 12px; color: var(--sub); font-weight: 400; }
+  .side-nav a .nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
+    border-radius: 999px; background: #d43d5f; color: #fff; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
   .side-nav a:hover { background: #faf5f3; }
   .side-nav a.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
   .side-nav a.active svg { stroke: var(--accent); }
@@ -289,6 +292,22 @@
     opacity: 0; transform: translate(-50%, -6px); transition: opacity .22s, transform .22s; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+  /* availability save guard dialog */
+  .avail-warn { position: fixed; inset: 0; z-index: 120; background: rgba(38, 28, 28, .45);
+    display: flex; align-items: center; justify-content: center; padding: 18px; }
+  .avail-warn-card { background: #fff; border-radius: 14px; max-width: 560px; width: 100%;
+    max-height: 86vh; display: flex; flex-direction: column; padding: 22px 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .3); }
+  .avail-warn-card h3 { margin: 0 0 4px; font-size: 17px; }
+  .avail-warn-count { margin: 0; font-size: 14px; }
+  .avail-warn-list { overflow-y: auto; min-height: 0; margin: 10px 0 4px;
+    border-top: 1px solid var(--adm-line); }
+  .avail-warn-row { display: flex; gap: 12px; align-items: baseline; padding: 8px 2px;
+    border-bottom: 1px solid var(--adm-line); font-size: 14px; }
+  .avail-warn-when { font-weight: 650; white-space: nowrap; }
+  .avail-warn-who { margin-left: auto; color: var(--sub); text-align: right; }
+  .avail-warn-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+
   /* revenue view （收入统计） */
   .rev-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
     justify-content: space-between; margin: 4px 0 16px; }
@@ -322,13 +341,14 @@
   .adm-revd-title { margin: 0; font-size: 15.5px; }
   .adm-revd-scope { color: var(--sub); font-size: 13px; }
   .adm-revd-all { margin-left: auto; }
-  .adm-revd-scroll { overflow-x: auto; margin-top: 8px; }
-  .adm-revd-table { min-width: 760px; }
+  .revd-region { min-width: 0; }
+  .adm-revd-table { min-width: 760px; margin-top: 2px; }
   .adm-revd-row { display: grid; gap: 10px; align-items: baseline;
     grid-template-columns: 128px 96px minmax(150px, 1.1fr) minmax(170px, 1.3fr) 168px 78px;
     padding: 8px 4px; border-bottom: 1px solid var(--adm-line); font-size: 13.5px; }
   .adm-revd-row.adm-revd-hrow { font-size: 11.5px; font-weight: 700; color: var(--sub);
-    text-transform: uppercase; letter-spacing: .04em; padding-bottom: 6px; }
+    text-transform: uppercase; letter-spacing: .04em; padding-bottom: 6px;
+    position: sticky; top: 0; z-index: 3; background: #fff; }
   .adm-revd-date { white-space: nowrap; font-weight: 600; }
   .adm-revd-who { display: flex; flex-direction: column; min-width: 0; }
   .adm-revd-email { color: var(--sub); font-size: 12.5px; word-break: break-all; }
@@ -559,7 +579,7 @@
   @media (max-width: 900px) {
     .table-scroll { max-height: 65vh; }
     .sch-lessons { max-height: 62vh; overflow-y: auto; }
-    #rev-detail { max-height: 62vh; overflow-y: auto; }
+    .revd-region { max-height: 62vh; overflow-y: auto; }
     #stu-grid { max-height: 70vh; overflow-y: auto; align-content: start; }
   }
   /* ============ desktop app shell (≥901px): fixed height, the page
@@ -568,8 +588,8 @@
      pinned and only the lesson list scrolling; Bookings/Packages keep
      filters + column heads pinned over an internally scrolling table;
      Students keeps stats + controls pinned over the card grid.
-     Revenue, like Dashboard, scrolls as one piece (its detail list
-     must never become a nested mini-window — see its rules below). Popovers (adm-dd / adm-dp) live in the
+     Revenue is a flex column: totals + chart fixed on top, only the
+     detail table's region scrolls (see its rules below). Popovers (adm-dd / adm-dp) live in the
      fixed filter/control rows or scroll together with their field,
      so they stay attached. ============ */
   @media (min-width: 901px) {
@@ -592,37 +612,47 @@
     #adm-schedule-card .sch-grid { flex: 1; min-height: 0; align-items: stretch; }
     #adm-schedule-card .adm-cal { overflow-y: auto; min-height: 0; }
     .sch-lessons { flex: 1; overflow-y: auto; }
-    /* Revenue is the Dashboard-style exception to the fixed shell:
-       the whole CARD scrolls and every block keeps its natural
-       height. (Two earlier layouts failed: chart + details sharing
-       one scroll box buried the rows under the footnote; then making
-       the detail list the lone scroll region left it a ~130px
-       one-row window at 900px viewport height — rescued but
-       unusable.) The vertical budget is reclaimed instead: title and
-       period controls share one row, the five totals cards are
-       compact, the chart is capped at a readable 80px, and the
-       panel borrows 20px of the content's bottom padding — so the
-       first 8 detail rows are fully visible at 1440×900 with no
-       scrolling at all (geometrically asserted in test-schedule R),
-       and longer lists scroll the whole card, never a nested
-       window. */
-    #adm-revenue-card { display: block; overflow-y: auto; overflow-x: hidden;
-      margin-bottom: -20px; padding-top: 12px; }
+    /* Revenue (Daniel's specified layout): the view is exactly one
+       screen tall and the page itself never scrolls. The card is a
+       flex column — title + period controls, the five totals cards
+       and the chart stay FIXED on top; underneath, ONLY the detail
+       table's region (.revd-region) scrolls: it flexes to whatever
+       height is left (never more than the screen), the column
+       header sticks to the region's top while rows scroll under it,
+       and the subtotal row is pinned below the region, always
+       visible. The counting footnote sits at the end of the scroll
+       region. The fixed blocks keep last round's compact sizes
+       (cards ~100px, chart 80px) and the panel borrows 32px
+       of the content's bottom padding — with the region flexing,
+       at least 8 detail rows are fully visible at 1440×900 and at
+       2560×1440 (geometrically asserted in test-schedule R).
+       History: a shared scroll box buried the rows under the
+       footnote; a lone detail scroller with a hard cap became a
+       one-row window; a whole-card scroller scrolled the totals
+       away — this fixed-top / scrolling-table split is the layout
+       Daniel settled on. */
+    #adm-revenue-card { display: flex; flex-direction: column; overflow: hidden;
+      margin-bottom: -36px; padding-top: 6px; padding-bottom: 6px; }
+    #adm-revenue-card > * { flex-shrink: 0; }
+    #adm-revenue-card > .revd-region { flex: 1 1 auto; flex-shrink: 1; min-height: 0;
+      overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; }
     #adm-revenue-card .rev-top { display: flex; align-items: center; gap: 18px;
-      margin-bottom: 8px; }
+      margin-bottom: 6px; }
     #adm-revenue-card .rev-top h2 { margin: 0; flex: none; }
     #adm-revenue-card .rev-top .rev-controls { flex: 1; margin: 0; }
     #adm-revenue-card .rev-chip { padding: 4px 12px; }
     #adm-revenue-card .rev-stats { grid-template-columns: repeat(5, minmax(0, 1fr));
-      margin-bottom: 12px; }
-    #adm-revenue-card .stat-card { padding: 10px 14px; }
+      margin-bottom: 8px; }
+    #adm-revenue-card .stat-card { padding: 8px 14px; }
     #adm-revenue-card .stat-label { font-size: 12px; }
-    #adm-revenue-card .stat-num { font-size: 22px; margin: 3px 0 1px; }
+    #adm-revenue-card .stat-num { font-size: 22px; margin: 2px 0 0; }
     #adm-revenue-card .stat-sub { font-size: 11.5px; line-height: 1.35; }
     #adm-revenue-card .rev-chart { height: 80px; }
-    #adm-revenue-card .rev-labels { margin-top: 2px; }
-    #adm-revenue-card .adm-revd-head { margin-top: 6px; }
-    #adm-revenue-card .adm-revd-row.adm-revd-hrow { padding-top: 4px; padding-bottom: 4px; }
+    #adm-revenue-card .rev-labels { margin-top: 0; }
+    #adm-revenue-card .adm-revd-head { margin-top: 4px; }
+    #adm-revenue-card .adm-revd-row.adm-revd-hrow { padding-top: 3px; padding-bottom: 3px; }
+    #adm-revenue-card .adm-revd-foot { margin-top: 6px; }
+    #adm-revenue-card .adm-revd-subtotal { line-height: 1.35; }
   }
 
 /* ---------- weekly hour-block grid ---------- */
@@ -779,7 +809,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <span>Revenue</span></a>
       <a href="#/messages" data-route="messages">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-        <span>Messages</span></a>
+        <span>Messages</span><span class="nav-badge hidden" id="adm-msg-badge"></span></a>
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Settings</span></a>
@@ -1091,7 +1121,6 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <div class="stat-sub">Revenue-counted bookings + packages</div>
           </div>
         </div>
-        <div class="rev-scroll">
         <div class="rev-chart" id="rev-chart"></div>
         <div class="rev-labels" id="rev-labels"></div>
         <div class="adm-revd-head">
@@ -1099,14 +1128,15 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
           <span class="adm-revd-scope" id="rev-detail-scope"></span>
           <button type="button" class="btn btn-ghost btn-small adm-revd-all hidden" id="rev-detail-all">Show all</button>
         </div>
-        <div id="rev-detail"></div>
+        <div class="revd-region" id="revd-region">
+          <div id="rev-detail"></div>
+          <p class="note rev-note">How it is counted: single-lesson revenue is attributed to the lesson date (JST) at the amount recorded when booked; cancelled-and-fully-refunded bookings are excluded; lessons cancelled inside 12 hours without a refund still count (the money was kept). Package revenue is attributed to the purchase (payment) date at the full package price, regardless of lesson dates. Lesson counts include package lessons. Weeks start on Sunday (same as the admin calendars).</p>
+          <p class="msg" id="rev-msg"></p>
+        </div>
         <div class="adm-revd-foot">
           <button type="button" class="btn btn-ghost btn-small hidden" id="rev-detail-more">Show more</button>
           <div class="adm-revd-subtotal" id="rev-detail-subtotal"></div>
         </div>
-        </div>
-        <p class="note rev-note">How it is counted: single-lesson revenue is attributed to the lesson date (JST) at the amount recorded when booked; cancelled-and-fully-refunded bookings are excluded; lessons cancelled inside 12 hours without a refund still count (the money was kept). Package revenue is attributed to the purchase (payment) date at the full package price, regardless of lesson dates. Lesson counts include package lessons. Weeks start on Sunday (same as the admin calendars).</p>
-        <p class="msg" id="rev-msg"></p>
       </div>
 
       <!-- ===== Messages (website contact form) ===== -->
@@ -1140,6 +1170,22 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 </aside>
 
 <div class="toast hidden" id="adm-toast" role="status"></div>
+
+<!-- Availability save guard: lists booked lessons that a pending
+     availability change would strand. All texts are set from JS via
+     A() so the dialog follows the admin language. -->
+<div class="avail-warn hidden" id="adm-avail-warn" role="dialog" aria-modal="true">
+  <div class="avail-warn-card">
+    <h3 id="adm-avail-warn-title"></h3>
+    <p class="avail-warn-count" id="adm-avail-warn-count"></p>
+    <div class="avail-warn-list" id="adm-avail-warn-list"></div>
+    <p class="note" id="adm-avail-warn-note"></p>
+    <div class="avail-warn-actions">
+      <button type="button" class="btn btn-ghost" id="adm-avail-warn-back"></button>
+      <button type="button" class="btn" id="adm-avail-warn-save"></button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -1891,6 +1937,7 @@ function buildWeekly() {
 }
 
 function fillForm(s) {
+  savedSettings = JSON.parse(JSON.stringify(s));
   draft = JSON.parse(JSON.stringify({
     weekly: s.weekly || {},
     dateOverrides: s.dateOverrides || {},
@@ -3133,8 +3180,8 @@ function renderRevDetails() {
       <span>${A("Student", "生徒")}</span><span>${A("Item", "内容")}</span>
       <span>${A("Basis", "計上根拠")}</span><span class="adm-revd-amt">${A("Amount", "金額")}</span>
     </div>`;
-    box.innerHTML = `<div class="adm-revd-scroll"><div class="adm-revd-table">${head}${
-      entries.slice(0, revDetailShown).map(revDetailRow).join("")}</div></div>`;
+    box.innerHTML = `<div class="adm-revd-table">${head}${
+      entries.slice(0, revDetailShown).map(revDetailRow).join("")}</div>`;
   }
   const shown = Math.min(revDetailShown, entries.length);
   moreBtn.classList.toggle("hidden", entries.length <= shown);
@@ -3169,6 +3216,25 @@ $("#rev-next").addEventListener("click", () => {
   loadRevenue(true);
 });
 
+/* ---------- contact messages: sidebar unread badge ---------- */
+function setMsgBadge(n) {
+  const b = $("#adm-msg-badge");
+  if (!b) return;
+  b.textContent = n > 99 ? "99+" : String(Math.max(0, n || 0));
+  b.classList.toggle("hidden", !(n > 0));
+}
+/** Best-effort unread count for the sidebar badge: same read flags
+ *  the Messages view renders from, fetched on entry so the badge is
+ *  right before the admin ever opens the view. loadMessages() keeps
+ *  it live from then on (mark read / delete flow through it). */
+async function refreshMsgBadge() {
+  if (!authVia) return;
+  try {
+    const data = await api("/api/admin/messages");
+    setMsgBadge((data.messages || []).filter((m) => !m.read).length);
+  } catch { /* badge is best-effort; the view itself reports errors */ }
+}
+
 /* ---------- contact messages view ---------- */
 function fmtMsgTime(iso) {
   const ms = Date.parse(iso || "");
@@ -3186,6 +3252,7 @@ async function loadMessages() {
     const data = await api("/api/admin/messages");
     const msgs = data.messages || [];
     const unread = msgs.filter((m) => !m.read).length;
+    setMsgBadge(unread);
     $("#adm-msg-count").textContent = msgs.length
       ? A(`${msgs.length} message(s)${unread ? ` · ${unread} unread` : ""}`,
           `${msgs.length} 件${unread ? `（未読 ${unread} 件）` : ""}`)
@@ -3317,6 +3384,7 @@ async function enterAdmin(settings) {
   schSelected = selectedDate;
   if (!location.hash) history.replaceState(null, "", "#/dashboard");
   applyRoute();
+  refreshMsgBadge();
   renderCalendar();
   renderSummary();
   await loadMonthBookings();
@@ -3412,6 +3480,80 @@ async function trySessionEntry() {
   return false;
 }
 
+/* ---------- availability save guard ----------
+ * Saving settings must never SILENTLY strand a booked lesson: if a
+ * non-cancelled future lesson's start is bookable under the SAVED
+ * availability but would not be under the availability about to be
+ * saved (weekly hour switched off, a day blocked / overridden
+ * closed, a vacation applied, a date blocked), the save pauses and
+ * lists every affected lesson. The admin picks "Back to editing"
+ * (nothing is saved) or "Save anyway" (settings save; the lessons
+ * themselves are never cancelled or moved — visibility only, the
+ * decision stays with the admin). */
+let savedSettings = null;   // last settings the server confirmed (set by fillForm)
+let availWarnBypass = false;
+
+/** Mirror of the worker's bookable-start rule: the start must sit
+ *  inside the day's open intervals and not be blocked that day. */
+function startBookable(s, dateStr, time) {
+  if (!s || !dateStr || !time) return false;
+  if (!allIntervalStarts(s, dateStr).includes(time)) return false;
+  if (((s.blockedHours || {})[dateStr] || []).includes(time)) return false;
+  return true;
+}
+
+async function availBookingsPool() {
+  const byId = new Map();
+  for (const b of [...allBookings, ...monthBookings, ...schBookings])
+    if (b && b.id) byId.set(b.id, b);
+  if (!byId.size) {
+    try {
+      const today = admDpToday();
+      const data = await api(`/api/admin/bookings?from=${today}&to=${revAddDays(today, 370)}`);
+      for (const b of data.bookings || []) if (b && b.id) byId.set(b.id, b);
+    } catch { /* no pool, no basis to warn — the save proceeds */ }
+  }
+  return [...byId.values()];
+}
+
+async function availabilityConflicts(oldS, newS) {
+  if (!oldS || !newS) return [];
+  const today = admDpToday();
+  const pool = await availBookingsPool();
+  return pool
+    .filter((b) => b.date && b.date >= today && b.status !== "cancelled"
+      && startBookable(oldS, b.date, b.time)
+      && !startBookable(newS, b.date, b.time))
+    .sort((a, b) => (a.date + " " + a.time).localeCompare(b.date + " " + b.time));
+}
+
+function showAvailWarn(list) {
+  $("#adm-avail-warn-title").textContent =
+    A("Booked lessons outside the new availability", "新しい営業時間の対象外になる予約済みレッスン");
+  $("#adm-avail-warn-count").textContent = A(
+    `${list.length} booked lesson(s) would fall outside the new opening hours:`,
+    `予約済みのレッスン ${list.length} 件が、新しい営業時間の対象外になります：`);
+  $("#adm-avail-warn-list").innerHTML = list.map((b) => `
+    <div class="avail-warn-row">
+      <span class="avail-warn-when">${esc(b.date)} · ${esc(b.time)}</span>
+      <span>${esc(courseNames[b.courseId] || b.courseId || "—")}</span>
+      <span class="avail-warn-who">${esc(b.name || "")}</span>
+    </div>`).join("");
+  $("#adm-avail-warn-note").textContent = A(
+    "Saving does not cancel or move these lessons — it only changes what new students can book. Contact the student(s) yourself if a lesson needs to change.",
+    "保存してもこれらのレッスンはキャンセル・変更されません。変わるのは新規予約の受付可否のみです。変更が必要な場合は、ご自身で生徒へご連絡ください。");
+  $("#adm-avail-warn-back").textContent = A("Back to editing", "編集に戻る");
+  $("#adm-avail-warn-save").textContent = A("Save anyway", "それでも保存");
+  $("#adm-avail-warn").classList.remove("hidden");
+}
+function hideAvailWarn() { $("#adm-avail-warn").classList.add("hidden"); }
+$("#adm-avail-warn-back").addEventListener("click", hideAvailWarn);
+$("#adm-avail-warn-save").addEventListener("click", () => {
+  hideAvailWarn();
+  availWarnBypass = true;
+  doSave();
+});
+
 async function doSave() {
   const btn = $("#adm-save");
   btn.disabled = true;
@@ -3426,6 +3568,16 @@ async function doSave() {
       toast(A("Invalid price", "価格が無効です"));
       return;
     }
+    if (!availWarnBypass && savedSettings) {
+      const conflicts = await availabilityConflicts(savedSettings, payload);
+      if (conflicts.length) {
+        showAvailWarn(conflicts);
+        btn.disabled = false;
+        refreshDirty();
+        return;
+      }
+    }
+    availWarnBypass = false;
     const data = await api("/api/admin/settings", {
       method: "PUT", body: JSON.stringify({ settings: payload }),
     });
