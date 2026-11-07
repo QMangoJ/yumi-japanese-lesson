@@ -596,13 +596,34 @@
     .main { height: 100vh; min-height: 0; }
     .content { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
     .view:not(.hidden) { flex: 1; min-height: 0; }
-    section.view:not(.hidden) { display: flex; flex-direction: column; }
-    section.view > .panel { flex: 1; min-height: 0; }
+    /* Height chain: every wrapper between .content and a view must
+       pass the fixed height through. #adm-form wraps the Availability
+       and Settings sections — as a plain block box it sized to its
+       content instead, the sections' flex sizing went inert, and no
+       box in the chain had both a bounded height and a scrollbar:
+       the section grew past the viewport and .content's
+       overflow:hidden clipped its lower panels away (Availability's
+       calendar / blocked-dates panels were unreachable). The form
+       is a flex passthrough now — but ONLY while one of its views
+       is active: as an always-on flex:1 flex item the empty form
+       would steal half of .content's height from every other view
+       (it is their sibling), so the passthrough is gated on :has()
+       an unhidden view section. */
+    #adm-form:has(> section.view:not(.hidden)) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* Section views scroll AS A WHOLE (the model Dashboard already
+       used): the section is the scroll region and its panels keep
+       natural height. flex:1 on the panels was wrong here — it
+       assumed one panel per section, but Availability stacks 3 and
+       Settings stacks 7. Views that pin chrome over an internal
+       scroller opt out explicitly (Students below; the Bookings /
+       Schedule / Packages / Revenue / Messages div views carry
+       their own rules further down). */
+    section.view:not(.hidden) { display: flex; flex-direction: column; overflow-y: auto; }
+    section.view > .panel { flex-shrink: 0; }
+    section.view[data-view="students"] { overflow: hidden; }
+    section.view[data-view="students"] > .panel { flex: 1; min-height: 0; }
     #adm-dashboard-card { overflow-y: auto; }
     #adm-dashboard-card > * { flex-shrink: 0; }
-    section[data-view="availability"], section[data-view="settings"] { overflow: hidden; }
-    section[data-view="availability"] > .panel,
-    section[data-view="settings"] > .panel { overflow-y: auto; }
     [data-view="students"] > .panel { display: flex; flex-direction: column; overflow: hidden; }
     #stu-grid { flex: 1; min-height: 0; overflow-y: auto; align-content: start; }
     #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-messages-card {
