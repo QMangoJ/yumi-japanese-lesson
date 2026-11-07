@@ -1,0 +1,23 @@
+{
+  "name": "yumi-site",
+  "version": "1.0.0",
+  "description": "A one-page introduction + booking site for Yumi N., a certified Japanese tutor, modeled on the structure and booking flow of sakurajapaneselesson.com: hero, 3 reasons, about, lesson menu, price, on-site booking (Sakura-style single pane: month calendar + start-time dropdown + duration + live total), student voices, FAQ, and booking management.",
+  "main": "account.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QMangoJ/yumi-japanese-lesson.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/QMangoJ/yumi-japanese-lesson/issues"
+  },
+  "homepage": "https://github.com/QMangoJ/yumi-japanese-lesson#readme",
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
