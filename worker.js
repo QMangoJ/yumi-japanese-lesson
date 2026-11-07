@@ -1626,7 +1626,12 @@ export default {
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
       const name = String(body?.name || "").trim().slice(0, 80);
       let email = String(body?.email || "").toLowerCase().trim().slice(0, 120);
-      const course = CONFIG.courses.find((c) => c.id === body?.courseId);
+      /* Course is optional (Daniel, 2026-11-07): an absent/empty
+       * courseId books as "Other"; an explicitly unknown one is
+       * still rejected by the !course check below. */
+      const course = body?.courseId
+        ? CONFIG.courses.find((c) => c.id === body.courseId)
+        : CONFIG.courses.find((c) => c.id === "other");
       const dur = CONFIG.durations.find((d) => d.id === body?.durationId);
       const size = Number(body?.packageSize);
       if (!course || !dur) return json({ error: "Unknown course or duration" }, 400);
@@ -2076,9 +2081,14 @@ export default {
     if (path === "/api/bookings" && request.method === "POST") {
       let body;
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-      const { courseId, date, time, name, notes } = body || {};
+      const { date, time, name, notes } = body || {};
       let email = body?.email;
-      const course = CONFIG.courses.find((c) => c.id === courseId);
+      /* Course is optional (Daniel, 2026-11-07): an absent/empty
+       * courseId books as "Other"; an explicitly unknown one is
+       * still rejected by the !course check below. */
+      const course = body?.courseId
+        ? CONFIG.courses.find((c) => c.id === body.courseId)
+        : CONFIG.courses.find((c) => c.id === "other");
       const settings = await getSettings(env);
       /* Payment sign-in gate (Daniel's decision, 2026-11-06): when
        * Google sign-in is configured, a booking can only be created
@@ -2109,7 +2119,7 @@ export default {
 
       const id = "YM-" + crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
       const booking = {
-        id, courseId, lessonTypeId: purchase.lessonTypeId,
+        id, courseId: course.id, lessonTypeId: purchase.lessonTypeId,
         durationId: purchase.durationId, durationMinutes: purchase.minutes,
         date, time,
         name: String(name).slice(0, 80), email: String(email).slice(0, 120),
