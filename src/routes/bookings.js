@@ -5,7 +5,7 @@ import { validateSlot } from "../lib/availability.js";
 import { CONFIG, json, lessonStartMs, minutesOfBooking, publicBooking, slotInstant, toMin } from "../lib/core.js";
 import { checkSubReminderAfterChange, notifyBookingEvent } from "../lib/packages.js";
 import { getSettings, resolvePurchase } from "../lib/settings.js";
-import { bookingsOn, bookingsSplitForEmail, getBooking, overlaps, saveBooking } from "../lib/store.js";
+import { bookingsOn, bookingsSplitForEmail, getBooking, insertBookingGuarded, overlaps, saveBooking } from "../lib/store.js";
 
 export async function handleBookings(c) {
   const { request, env, ctx, url, path, defer } = c;
@@ -60,7 +60,12 @@ export async function handleBookings(c) {
         lessonsTotal: purchase.lessons, reschedules: 0,
         meetLink: null, createdAt: new Date().toISOString(),
       };
-      await saveBooking(env, booking);
+      /* D1 mode: the insert re-checks the overlap atomically
+       * (INSERT … WHERE NOT EXISTS), closing the race between the
+       * JS check above and the write. KV mode: guarded == plain save. */
+      if (!(await insertBookingGuarded(env, booking))) {
+        return json({ error: "That time was just taken" }, 409);
+      }
       defer(notifyBookingEvent(env, settings, booking, "created"));
       return json({ booking: publicBooking(booking, settings) }, 201);
     }

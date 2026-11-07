@@ -181,15 +181,111 @@ function instantMs(dateStr, time) {
 }
 
 // src/lib/store.js
+var useD1 = (env) => !!env.DB;
+function bookingCols(b) {
+  const start = toMin(b.time);
+  return {
+    id: b.id,
+    email: String(b.email || "").toLowerCase(),
+    date: b.date,
+    time: b.time,
+    status: b.status,
+    subscription_id: b.subscriptionId || null,
+    start_min: start,
+    end_min: start + minutesOfBooking(b),
+    lesson_start_ms: lessonStartMs(b),
+    amount: b.amount ?? null,
+    paid_at: b.paidAt || null,
+    created_at: b.createdAt || null,
+    doc: JSON.stringify(b)
+  };
+}
+var BOOKING_COLS = [
+  "id",
+  "email",
+  "date",
+  "time",
+  "status",
+  "subscription_id",
+  "start_min",
+  "end_min",
+  "lesson_start_ms",
+  "amount",
+  "paid_at",
+  "created_at",
+  "doc"
+];
+var bookingVals = (b) => {
+  const c = bookingCols(b);
+  return BOOKING_COLS.map((k) => c[k]);
+};
+function subCols(s) {
+  return {
+    id: s.id,
+    email: String(s.email || "").toLowerCase(),
+    status: s.status,
+    paid_at: s.paidAt || null,
+    created_at: s.createdAt || null,
+    doc: JSON.stringify(s)
+  };
+}
+var SUB_COLS = ["id", "email", "status", "paid_at", "created_at", "doc"];
+var subVals = (s) => {
+  const c = subCols(s);
+  return SUB_COLS.map((k) => c[k]);
+};
+var parseDocs = (rows) => rows.map((r) => JSON.parse(r.doc));
 async function getBooking(env, id) {
+  if (useD1(env)) {
+    const row = await env.DB.prepare(
+      "SELECT doc FROM bookings WHERE id = ?"
+    ).bind(id).first();
+    return row ? JSON.parse(row.doc) : null;
+  }
   const raw = await env.BOOKINGS.get(`booking:${id}`);
   return raw ? JSON.parse(raw) : null;
 }
 async function saveBooking(env, b) {
+  if (useD1(env)) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO bookings (${BOOKING_COLS.join(", ")})
+       VALUES (${BOOKING_COLS.map(() => "?").join(", ")})`
+    ).bind(...bookingVals(b)).run();
+    return;
+  }
   await env.BOOKINGS.put(`booking:${b.id}`, JSON.stringify(b));
   await env.BOOKINGS.put(`byemail:${b.email.toLowerCase()}:${b.id}`, b.id);
 }
+async function insertBookingGuarded(env, b) {
+  if (!useD1(env)) {
+    await saveBooking(env, b);
+    return true;
+  }
+  const c = bookingCols(b);
+  const res = await env.DB.prepare(
+    `INSERT INTO bookings (${BOOKING_COLS.join(", ")})
+     SELECT ${BOOKING_COLS.map(() => "?").join(", ")}
+     WHERE NOT EXISTS (
+       SELECT 1 FROM bookings
+       WHERE date = ? AND status IN ('pending_payment', 'paid')
+         AND start_min < ? AND ? < end_min AND id <> ?)`
+  ).bind(...bookingVals(b), c.date, c.end_min, c.start_min, c.id).run();
+  return (res.meta?.changes || 0) > 0;
+}
 async function bookingsOn(env, dateStr) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare(
+      "SELECT doc FROM bookings WHERE date = ?"
+    ).bind(dateStr).all();
+    const out2 = [];
+    for (const b of parseDocs(results)) {
+      if (["pending_payment", "paid"].includes(b.status)) {
+        const start = toMin(b.time);
+        out2.push({ id: b.id, start, end: start + minutesOfBooking(b) });
+      }
+    }
+    return out2;
+  }
   const out = [];
   let cursor;
   do {
@@ -211,6 +307,10 @@ function overlaps(start, minutes, intervals, excludeId) {
   return intervals.some((iv) => iv.id !== excludeId && start < iv.end && iv.start < start + minutes);
 }
 async function listAllBookings(env) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare("SELECT doc FROM bookings").all();
+    return parseDocs(results);
+  }
   const out = [];
   let cursor;
   do {
@@ -252,19 +352,27 @@ async function resolveRemarks(env, allBookings) {
   return remarks;
 }
 async function bookingsSplitForEmail(env, settings, email) {
-  const mine = [];
-  let cursor;
-  do {
-    const list = await env.BOOKINGS.list({
-      prefix: `byemail:${email}:`,
-      cursor,
-      limit: 100
-    });
-    const ids = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
-    const batch = await mapParallel(ids, (id) => id ? getBooking(env, id) : null);
-    for (const b of batch) if (b) mine.push(b);
-    cursor = list.list_complete ? void 0 : list.cursor;
-  } while (cursor);
+  let mine;
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare(
+      "SELECT doc FROM bookings WHERE email = ?"
+    ).bind(email.toLowerCase()).all();
+    mine = parseDocs(results);
+  } else {
+    mine = [];
+    let cursor;
+    do {
+      const list = await env.BOOKINGS.list({
+        prefix: `byemail:${email}:`,
+        cursor,
+        limit: 100
+      });
+      const ids = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+      const batch = await mapParallel(ids, (id) => id ? getBooking(env, id) : null);
+      for (const b of batch) if (b) mine.push(b);
+      cursor = list.list_complete ? void 0 : list.cursor;
+    } while (cursor);
+  }
   const pub = mine.map((b) => publicBooking(b, settings));
   return {
     upcoming: pub.filter((b) => ["upcoming", "pending_payment"].includes(b.effectiveStatus)).sort((a, b) => lessonStartMs(a) - lessonStartMs(b)),
@@ -272,14 +380,33 @@ async function bookingsSplitForEmail(env, settings, email) {
   };
 }
 async function getSubscription(env, id) {
+  if (useD1(env)) {
+    const row = await env.DB.prepare(
+      "SELECT doc FROM subscriptions WHERE id = ?"
+    ).bind(id).first();
+    return row ? JSON.parse(row.doc) : null;
+  }
   const raw = await env.BOOKINGS.get(`subscription:${id}`);
   return raw ? JSON.parse(raw) : null;
 }
 async function saveSubscription(env, sub) {
+  if (useD1(env)) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO subscriptions (${SUB_COLS.join(", ")})
+       VALUES (${SUB_COLS.map(() => "?").join(", ")})`
+    ).bind(...subVals(sub)).run();
+    return;
+  }
   await env.BOOKINGS.put(`subscription:${sub.id}`, JSON.stringify(sub));
   await env.BOOKINGS.put(`subbyemail:${sub.email.toLowerCase()}:${sub.id}`, sub.id);
 }
 async function subscriptionsForEmail(env, email) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare(
+      "SELECT doc FROM subscriptions WHERE email = ?"
+    ).bind(email.toLowerCase()).all();
+    return parseDocs(results).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  }
   const out = [];
   let cursor;
   do {
@@ -296,6 +423,10 @@ async function subscriptionsForEmail(env, email) {
   return out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 }
 async function listAllSubscriptions(env) {
+  if (useD1(env)) {
+    const { results } = await env.DB.prepare("SELECT doc FROM subscriptions").all();
+    return parseDocs(results).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  }
   const out = [];
   let cursor;
   do {
@@ -984,7 +1115,7 @@ async function createSubscriptionLesson(env, sub, date, time) {
     subscriptionId: sub.id,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
-  await saveBooking(env, booking);
+  if (!await insertBookingGuarded(env, booking)) return null;
   return booking;
 }
 var PACKAGE_SIZES = [6, 10, 20];
@@ -1013,7 +1144,11 @@ async function materializePackage(env, settings, sub) {
     const taken = problem ? [] : await bookingsOn(env, date);
     const clash = !problem && overlaps(toMin(slot.time), sub.durationMinutes, taken);
     if (problem || clash) skipped.push(date);
-    else placed.push(await createSubscriptionLesson(env, sub, date, slot.time));
+    else {
+      const lesson = await createSubscriptionLesson(env, sub, date, slot.time);
+      if (lesson) placed.push(lesson);
+      else skipped.push(date);
+    }
     cursors[idx] = addDaysStr(date, 7);
   }
   return { placed, skipped };
@@ -1971,7 +2106,9 @@ async function handleBookings(c) {
       meetLink: null,
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await saveBooking(env, booking);
+    if (!await insertBookingGuarded(env, booking)) {
+      return json({ error: "That time was just taken" }, 409);
+    }
     defer(notifyBookingEvent(env, settings, booking, "created"));
     return json({ booking: publicBooking(booking, settings) }, 201);
   }

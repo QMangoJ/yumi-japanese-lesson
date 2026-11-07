@@ -2,7 +2,7 @@
 import { DAY_NAMES, checkOccurrence } from "./availability.js";
 import { CONFIG, JST, addDaysStr, instantMs, jstWeekday, lessonStartMs, toMin } from "./core.js";
 import { EMAIL_TEMPLATES, queueEmail } from "./notify.js";
-import { bookingsOn, getSubscription, lessonsForSubscription, nextLessonFrom, overlaps, refundableFrom, remainingFrom, saveBooking, saveSubscription } from "./store.js";
+import { bookingsOn, getSubscription, insertBookingGuarded, lessonsForSubscription, nextLessonFrom, overlaps, refundableFrom, remainingFrom, saveBooking, saveSubscription } from "./store.js";
 
 export async function nextLessonOf(env, sub) {
   return nextLessonFrom(await lessonsForSubscription(env, sub.id));
@@ -80,7 +80,10 @@ export async function createSubscriptionLesson(env, sub, date, time) {
     lessonsTotal: 1, reschedules: 0, meetLink: null,
     subscriptionId: sub.id, createdAt: new Date().toISOString(),
   };
-  await saveBooking(env, booking);
+  /* Guarded insert: if a racer took this slot after materialize's
+   * check, the lesson does not land and materialize counts the date
+   * as skipped (it extends a week like any other skip). */
+  if (!(await insertBookingGuarded(env, booking))) return null;
   return booking;
 }
 
@@ -119,7 +122,11 @@ export async function materializePackage(env, settings, sub) {
     const taken = problem ? [] : await bookingsOn(env, date);
     const clash = !problem && overlaps(toMin(slot.time), sub.durationMinutes, taken);
     if (problem || clash) skipped.push(date);
-    else placed.push(await createSubscriptionLesson(env, sub, date, slot.time));
+    else {
+      const lesson = await createSubscriptionLesson(env, sub, date, slot.time);
+      if (lesson) placed.push(lesson);
+      else skipped.push(date);
+    }
     cursors[idx] = addDaysStr(date, 7);
   }
   return { placed, skipped };
