@@ -357,7 +357,12 @@
   .dash-course { color: var(--sub); font-size: 13px; margin-left: auto; text-align: right; }
 
   /* ============ tables ============ */
-  .table-scroll { overflow-x: auto; }
+  .table-scroll { overflow: auto; }
+  /* Sticky column heads: the header row stays pinned while the row
+     region scrolls inside .table-scroll (any width — on desktop the
+     wrapper flexes to the leftover height, on narrow screens it is
+     capped, see the app-shell / narrow rules below). */
+  .data-table thead th { position: sticky; top: 0; background: #fff; z-index: 3; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px;
     font-variant-numeric: tabular-nums; }
   .data-table th, .data-table td { text-align: left; padding: 11px 12px;
@@ -466,11 +471,32 @@
   .adm-cal .cal-day.selected .d-lesson.done,
   .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
   .lesson-row { border: 1px solid var(--adm-line); border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+    padding: 8px 12px; margin-bottom: 6px; background: #fff; }
   .lesson-row.is-cancelled { opacity: .55; }
-  .lesson-row .lr-head { font-weight: 650; font-size: 14.5px; }
-  .lesson-row .lr-sub { color: var(--sub); font-size: 13px; margin-top: 2px;
-    word-break: break-all; }
+  /* One compact line per lesson: time span · course · duration on the
+     left (never wraps), then student · email · status, ellipsised —
+     a busy day's lessons scan in a glance instead of a long scroll. */
+  .lesson-row .lr-line { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .lesson-row .lr-head { font-weight: 650; font-size: 13.5px; white-space: nowrap;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+  .lesson-row .lr-sub { color: var(--sub); font-size: 12.5px; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lesson-row .lr-status { font-weight: 600; color: var(--ink); }
+  /* Teacher remark, collapsed by default inside lesson rows: a
+     one-line summary + Edit toggle; the roomy editor unfolds below
+     on demand. data-hn="1" when the student has a note. */
+  .remark-fold { margin-top: 5px; border-top: 1px dashed var(--adm-line); padding-top: 5px; }
+  .remark-toggle { display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: none; padding: 1px 0; font: inherit;
+    cursor: pointer; text-align: left; color: inherit; }
+  .remark-sum { flex: 1; min-width: 0; font-size: 12.5px; color: var(--sub);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .remark-fold[data-hn="0"] .remark-sum-with { display: none; }
+  .remark-fold[data-hn="1"] .remark-sum-without { display: none; }
+  .remark-toggle-label { flex: none; font-size: 12px; font-weight: 600; color: var(--accent); }
+  .remark-toggle:hover .remark-toggle-label { text-decoration: underline; }
+  .remark-fold-body[hidden] { display: none; }
+  .remark-fold-body .remark-box { margin-top: 4px; border-top: none; padding-top: 4px; }
   /* The remark editor: one quiet label, a roomy textarea on the
      unified control style, and the save button aligned to the right
      edge of the field. */
@@ -481,13 +507,20 @@
   .remark-box textarea { width: 100%; min-height: 84px; resize: vertical; }
   .remark-box .btn { margin-top: 8px; align-self: flex-end; min-height: 34px; }
   .remark-row td { background: #fffafc; }
-  .sch-grid { display: grid; grid-template-columns: minmax(320px, 600px) 1fr; gap: 20px; align-items: start; }
+  .sch-grid { display: grid; grid-template-columns: minmax(320px, 600px) minmax(0, 1fr); gap: 20px; align-items: start; }
+  /* min-width: 0 on the grid items: a nowrap lesson line's min-content
+     (~727px of head + sub text) must not set a floor under the 1fr
+     column — that floor is what pushed the whole card sideways at
+     768px and 390px. */
+  .sch-grid > *, .avail-grid > * { min-width: 0; }
   .sch-grid .adm-cal { max-width: 600px; margin: 0; }
   .sch-panel h3 { margin: 0 0 6px; font-size: 16.5px; }
+  .sch-panel { display: flex; flex-direction: column; min-height: 0; }
+  .sch-lessons { min-height: 0; }
 
   /* ============ responsive ============ */
   @media (max-width: 1100px) {
-    .avail-grid, .sch-grid { grid-template-columns: 1fr; }
+    .avail-grid, .sch-grid { grid-template-columns: minmax(0, 1fr); }
     .avail-grid .adm-cal, .sch-grid .adm-cal { margin: 0 auto; }
     .dash-grid { grid-template-columns: 1fr; }
   }
@@ -504,6 +537,46 @@
   }
   @media (max-width: 560px) {
     .adm-cal .cal-day { min-height: 50px; }
+  }
+  /* Narrow screens: the page may scroll, but long panels cap their
+     height and scroll internally instead of stretching the page. */
+  @media (max-width: 900px) {
+    .table-scroll { max-height: 65vh; }
+    .sch-lessons { max-height: 62vh; overflow-y: auto; }
+    #rev-detail { max-height: 62vh; overflow-y: auto; }
+    #stu-grid { max-height: 70vh; overflow-y: auto; align-content: start; }
+  }
+  /* ============ desktop app shell (≥901px): fixed height, the page
+     itself never scrolls; every view manages its own interior.
+     Schedule keeps its calendar fixed with the day panel's header
+     pinned and only the lesson list scrolling; Bookings/Packages keep
+     filters + column heads pinned over an internally scrolling table;
+     Students keeps stats + controls pinned over the card grid;
+     Revenue keeps controls + totals pinned over chart + details.
+     Dashboard is short and simply scrolls as one piece if the
+     viewport is very short. Popovers (adm-dd / adm-dp) live in the
+     fixed filter/control rows or scroll together with their field,
+     so they stay attached. ============ */
+  @media (min-width: 901px) {
+    .main { height: 100vh; min-height: 0; }
+    .content { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .view:not(.hidden) { flex: 1; min-height: 0; }
+    section.view:not(.hidden) { display: flex; flex-direction: column; }
+    section.view > .panel { flex: 1; min-height: 0; }
+    #adm-dashboard-card { overflow-y: auto; }
+    #adm-dashboard-card > * { flex-shrink: 0; }
+    section[data-view="availability"], section[data-view="settings"] { overflow: hidden; }
+    section[data-view="availability"] > .panel,
+    section[data-view="settings"] > .panel { overflow-y: auto; }
+    [data-view="students"] > .panel { display: flex; flex-direction: column; overflow: hidden; }
+    #stu-grid { flex: 1; min-height: 0; overflow-y: auto; align-content: start; }
+    #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-revenue-card {
+      display: flex; flex-direction: column; overflow: hidden; }
+    #adm-bookings-card .table-scroll, #adm-subs-card .table-scroll { flex: 1; min-height: 0; }
+    #adm-schedule-card .sch-grid { flex: 1; min-height: 0; align-items: stretch; }
+    #adm-schedule-card .adm-cal { overflow-y: auto; min-height: 0; }
+    .sch-lessons { flex: 1; overflow-y: auto; }
+    #adm-revenue-card .rev-scroll { flex: 1; min-height: 0; overflow-y: auto; }
   }
 
 /* ---------- weekly hour-block grid ---------- */
@@ -967,6 +1040,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <div class="stat-sub">Revenue-counted bookings + packages</div>
           </div>
         </div>
+        <div class="rev-scroll">
         <div class="rev-chart" id="rev-chart"></div>
         <div class="rev-labels" id="rev-labels"></div>
         <div class="adm-revd-head">
@@ -978,6 +1052,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <div class="adm-revd-foot">
           <button type="button" class="btn btn-ghost btn-small hidden" id="rev-detail-more">Show more</button>
           <div class="adm-revd-subtotal" id="rev-detail-subtotal"></div>
+        </div>
         </div>
         <p class="note rev-note">How it is counted: single-lesson revenue is attributed to the lesson date (JST) at the amount recorded when booked; cancelled-and-fully-refunded bookings are excluded; lessons cancelled inside 12 hours without a refund still count (the money was kept). Package revenue is attributed to the purchase (payment) date at the full package price, regardless of lesson dates. Lesson counts include package lessons. Weeks start on Sunday (same as the admin calendars).</p>
         <p class="msg" id="rev-msg"></p>
@@ -2037,7 +2112,36 @@ function remarkBoxHtml(email, remark, isDefault) {
   </div>`;
 }
 
+/* Collapsed remark for lesson rows: summary line + Edit toggle, with
+ * the full editor (remarkBoxHtml, unchanged) folded underneath. The
+ * textarea stays in the DOM, so wireRemarkBoxes and the same-student
+ * sync work exactly as before. */
+function remarkFoldHtml(email, remark, isDefault) {
+  const firstLine = String(remark || "").split("\n")
+    .map((s) => s.trim()).find((s) => s) || "";
+  return `
+  <div class="remark-fold" data-hn="${firstLine ? "1" : "0"}">
+    <button type="button" class="remark-toggle" aria-expanded="false">
+      <span class="remark-sum"><span class="remark-sum-with">${A("Note: ", "メモ：")}<span class="remark-sum-text" data-email="${esc(email)}">${esc(firstLine)}</span></span><span class="remark-sum-without">${A("No note yet", "メモはまだありません")}</span></span>
+      <span class="remark-toggle-label">${A("Edit note", "メモを編集")}</span>
+    </button>
+    <div class="remark-fold-body" hidden>${remarkBoxHtml(email, remark, isDefault)}</div>
+  </div>`;
+}
+
 function wireRemarkBoxes(root) {
+  root.querySelectorAll(".remark-fold").forEach((fold) => {
+    const btn = fold.querySelector(".remark-toggle");
+    const body = fold.querySelector(".remark-fold-body");
+    if (!btn || !body) return;
+    btn.onclick = () => {
+      body.hidden = !body.hidden;
+      btn.setAttribute("aria-expanded", body.hidden ? "false" : "true");
+      const lbl = btn.querySelector(".remark-toggle-label");
+      if (lbl) lbl.textContent = body.hidden
+        ? A("Edit note", "メモを編集") : A("Close", "閉じる");
+    };
+  });
   root.querySelectorAll(".remark-box").forEach((box) => {
     const btn = box.querySelector(".remark-save");
     btn.onclick = async () => {
@@ -2068,6 +2172,16 @@ function wireRemarkBoxes(root) {
             t.value = note;
           }
         });
+        // Collapsed folds show a one-line summary of the note: keep
+        // every fold for this student in step with what was saved.
+        document.querySelectorAll(".remark-fold").forEach((f) => {
+          const t = f.querySelector(".remark-text");
+          if (!t || (t.dataset.email || "").toLowerCase() !== email.toLowerCase()) return;
+          const fl = note.split("\n").map((s) => s.trim()).find((s) => s) || "";
+          f.dataset.hn = fl ? "1" : "0";
+          const st = f.querySelector(".remark-sum-text");
+          if (st) st.textContent = fl;
+        });
         btn.textContent = A("Saved ✓", "保存しました ✓");
         setTimeout(() => { btn.textContent = A("Save note", "メモを保存"); btn.disabled = false; }, 1600);
         renderCalendar();
@@ -2093,9 +2207,8 @@ function lessonsListHtml(lessons) {
       (b.studentRemark ? ` · ${A("Note: ", "メモ：")}${b.studentRemark}` : "");
     return `
     <div class="lesson-row${b.effectiveStatus === "cancelled" ? " is-cancelled" : ""}" title="${esc(tip)}">
-      <div class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</div>
-      <div class="lr-sub">${esc(b.name)} · ${esc(b.email)} · ${statusLabel}${b.refundAmount > 0 ? ` · ${A("refunded", "返金済み")} ${money(b.refundAmount)}` : ""}</div>
-      ${remarkBoxHtml(b.email, b.studentRemark, b.remarkIsDefault)}
+      <div class="lr-line"><span class="lr-head">${b.time}–${end} · ${esc(courseNames[b.courseId] || legacyNames[b.lessonTypeId] || b.courseId || "Lesson")} · ${b.durationMinutes || ""} min</span><span class="lr-sub">${esc(b.name)} · ${esc(b.email)} · <span class="lr-status">${statusLabel}</span>${b.refundAmount > 0 ? ` · ${A("refunded", "返金済み")} ${money(b.refundAmount)}` : ""}</span></div>
+      ${remarkFoldHtml(b.email, b.studentRemark, b.remarkIsDefault)}
     </div>`;
   }).join("") : `<p class="note">${A("No lessons this day.", "この日のレッスンはありません。")}</p>`;
 }
@@ -2230,7 +2343,7 @@ function renderScheduleDay() {
   panel.innerHTML = `
     <h3>${schSelected} · ${wdLong(wd)}</h3>
     <h4 class="bk-sub">${A("Lessons this day", "この日のレッスン")}</h4>
-    ${lessonsListHtml(lessonsOnSch(schSelected))}`;
+    <div class="sch-lessons">${lessonsListHtml(lessonsOnSch(schSelected))}</div>`;
   wireRemarkBoxes(panel);
 }
 
@@ -2503,6 +2616,7 @@ function avatarHtml(s) {
   return `<span class="avatar-circle">${esc(ch)}</span>`;
 }
 
+let stuSlowTimer = null;
 async function loadStudents(force) {
   if (!authVia) return; // same session-mode trap as loadDashboard
 
@@ -2510,8 +2624,16 @@ async function loadStudents(force) {
     renderStudents();
     return;
   }
+  // If the fetch runs long, say so in words instead of leaving the
+  // skeleton up indefinitely (renderStudents / the error path below
+  // both replace this text when the wait ends).
+  clearTimeout(stuSlowTimer);
+  stuSlowTimer = setTimeout(() => {
+    $("#stu-msg").textContent = A("Loading students…", "生徒を読み込み中…");
+  }, 800);
   try {
     const data = await api("/api/admin/students");
+    clearTimeout(stuSlowTimer);
     studentsCache = data.students || [];
     stuLoadedAt = Date.now();
     $("#stu-stat-total").textContent = data.summary.total;
@@ -2520,6 +2642,7 @@ async function loadStudents(force) {
     $("#stu-stat-new").textContent = data.summary.newThisMonth;
     renderStudents();
   } catch (e) {
+    clearTimeout(stuSlowTimer);
     ["#stu-stat-total", "#stu-stat-upcoming", "#stu-stat-package", "#stu-stat-new"]
       .forEach((s) => settleSkl($(s), "–"));
     settleSkl($("#stu-grid"), "");
