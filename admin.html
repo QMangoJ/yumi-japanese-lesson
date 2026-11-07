@@ -567,10 +567,9 @@
      Schedule keeps its calendar fixed with the day panel's header
      pinned and only the lesson list scrolling; Bookings/Packages keep
      filters + column heads pinned over an internally scrolling table;
-     Students keeps stats + controls pinned over the card grid;
-     Revenue keeps controls + totals pinned over chart + details.
-     Dashboard is short and simply scrolls as one piece if the
-     viewport is very short. Popovers (adm-dd / adm-dp) live in the
+     Students keeps stats + controls pinned over the card grid.
+     Revenue, like Dashboard, scrolls as one piece (its detail list
+     must never become a nested mini-window — see its rules below). Popovers (adm-dd / adm-dp) live in the
      fixed filter/control rows or scroll together with their field,
      so they stay attached. ============ */
   @media (min-width: 901px) {
@@ -586,29 +585,44 @@
     section[data-view="settings"] > .panel { overflow-y: auto; }
     [data-view="students"] > .panel { display: flex; flex-direction: column; overflow: hidden; }
     #stu-grid { flex: 1; min-height: 0; overflow-y: auto; align-content: start; }
-    #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-revenue-card, #adm-messages-card {
+    #adm-bookings-card, #adm-subs-card, #adm-schedule-card, #adm-messages-card {
       display: flex; flex-direction: column; overflow: hidden; }
     #adm-messages-card .msg-list { flex: 1; min-height: 0; overflow-y: auto; }
     #adm-bookings-card .table-scroll, #adm-subs-card .table-scroll { flex: 1; min-height: 0; }
     #adm-schedule-card .sch-grid { flex: 1; min-height: 0; align-items: stretch; }
     #adm-schedule-card .adm-cal { overflow-y: auto; min-height: 0; }
     .sch-lessons { flex: 1; overflow-y: auto; }
-    /* Revenue: chart + headings + subtotal stay pinned; the DETAIL
-       list is the one scrolling region. (Previously chart + details
-       shared .rev-scroll, so the 168px chart pushed every detail row
-       below the fold of a 231px window and the note paragraph —
-       a sibling after the scroll box — painted over the rows:
-       the drill-down was effectively invisible.) */
-    #adm-revenue-card .rev-scroll { flex: 1; min-height: 0; display: flex;
-      flex-direction: column; overflow: hidden; }
-    #adm-revenue-card .rev-scroll > * { flex: none; }
-    #adm-revenue-card #rev-detail { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-    /* The five totals cards go in ONE row on desktop (the auto-fit
-       grid wrapped them 3+2, eating 250px of vertical space), and the
-       chart may shrink toward a 92px floor before the detail list
-       gives up any of its space. */
-    #adm-revenue-card .rev-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-    #adm-revenue-card .rev-scroll .rev-chart { flex: 0 1 auto; min-height: 92px; }
+    /* Revenue is the Dashboard-style exception to the fixed shell:
+       the whole CARD scrolls and every block keeps its natural
+       height. (Two earlier layouts failed: chart + details sharing
+       one scroll box buried the rows under the footnote; then making
+       the detail list the lone scroll region left it a ~130px
+       one-row window at 900px viewport height — rescued but
+       unusable.) The vertical budget is reclaimed instead: title and
+       period controls share one row, the five totals cards are
+       compact, the chart is capped at a readable 80px, and the
+       panel borrows 20px of the content's bottom padding — so the
+       first 8 detail rows are fully visible at 1440×900 with no
+       scrolling at all (geometrically asserted in test-schedule R),
+       and longer lists scroll the whole card, never a nested
+       window. */
+    #adm-revenue-card { display: block; overflow-y: auto; overflow-x: hidden;
+      margin-bottom: -20px; padding-top: 12px; }
+    #adm-revenue-card .rev-top { display: flex; align-items: center; gap: 18px;
+      margin-bottom: 8px; }
+    #adm-revenue-card .rev-top h2 { margin: 0; flex: none; }
+    #adm-revenue-card .rev-top .rev-controls { flex: 1; margin: 0; }
+    #adm-revenue-card .rev-chip { padding: 4px 12px; }
+    #adm-revenue-card .rev-stats { grid-template-columns: repeat(5, minmax(0, 1fr));
+      margin-bottom: 12px; }
+    #adm-revenue-card .stat-card { padding: 10px 14px; }
+    #adm-revenue-card .stat-label { font-size: 12px; }
+    #adm-revenue-card .stat-num { font-size: 22px; margin: 3px 0 1px; }
+    #adm-revenue-card .stat-sub { font-size: 11.5px; line-height: 1.35; }
+    #adm-revenue-card .rev-chart { height: 80px; }
+    #adm-revenue-card .rev-labels { margin-top: 2px; }
+    #adm-revenue-card .adm-revd-head { margin-top: 6px; }
+    #adm-revenue-card .adm-revd-row.adm-revd-hrow { padding-top: 4px; padding-bottom: 4px; }
   }
 
 /* ---------- weekly hour-block grid ---------- */
@@ -1034,6 +1048,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 
       <!-- ===== Revenue ===== -->
       <div class="panel view hidden" id="adm-revenue-card" data-view="revenue">
+        <div class="rev-top">
         <h2>Revenue</h2>
         <div class="rev-controls">
           <div class="rev-modes" role="group" aria-label="Period type">
@@ -1047,6 +1062,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
             <span id="rev-label">…</span>
             <button type="button" class="btn btn-ghost btn-small" id="rev-next" aria-label="Next period">›</button>
           </div>
+        </div>
         </div>
         <div class="stat-grid rev-stats">
           <div class="stat-card">
