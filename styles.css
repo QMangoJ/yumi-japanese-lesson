@@ -180,6 +180,11 @@ button { font-family: inherit; }
   color: var(--ink);
 }
 .hero-langs span { color: var(--sub); }
+/* Task 8: the "(13 years teaching English)" credential inside the
+ * English chip drops to its own quieter sub-line instead of being
+ * squeezed onto the chip's main line. The span exists only in that
+ * chip, in all three front-end languages. */
+.hero-langs li span { display: block; font-size: 12.5px; margin-top: 1px; }
 
 /* The photo + caption read as ONE composed unit, centered against the
  * text column (the .hero grid already centers items vertically). */
@@ -1010,6 +1015,39 @@ button { font-family: inherit; }
   background: var(--accent-soft); border-radius: 10px;
   padding: 10px 14px; font-size: 14.5px; margin: 14px 0 12px;
 }
+/* Task 3: a package-slot conflict must be unmissable — the summary
+ * banner turns into a strong alert, the offending slots get a red
+ * frame plus their own named error line, and the disabled Continue
+ * explains itself through its wrapper (a disabled button receives
+ * no hover events, so the tooltip hangs on #bk-to-2-wrap). */
+.bk-selected.alert {
+  background: #c2274b; color: #fff; font-weight: 700;
+}
+.pkg-slot.conflict {
+  border: 2px solid #c2274b; background: #fff5f7;
+}
+.pkg-slot-err {
+  width: 100%; margin: 2px 0 0; color: #c2274b;
+  font-weight: 700; font-size: 13.5px; line-height: 1.45;
+}
+.bk-to2-wrap { position: relative; display: inline-block; }
+#bk-to-2:disabled { pointer-events: none; }
+.bk-to2-wrap.has-reason:hover::after,
+.bk-to2-wrap.has-reason:focus-within::after {
+  content: attr(data-reason);
+  position: absolute; bottom: calc(100% + 10px); right: 0;
+  width: max-content; max-width: min(320px, 82vw);
+  background: #38262b; color: #fff; font-size: 13px; font-weight: 600;
+  line-height: 1.45; text-align: left;
+  padding: 9px 12px; border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(56, 38, 43, 0.35);
+  z-index: 80; pointer-events: none;
+}
+@keyframes bkflash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(194, 39, 75, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(194, 39, 75, 0.55); }
+}
+.flash { animation: bkflash 0.45s ease-in-out 4; }
 .bk-total { border: 1.5px solid var(--accent); border-radius: 12px; padding: 12px 16px; background: #fff; }
 .bk-total-row { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; padding: 2px 0; }
 .bk-total-sum { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; font-weight: 700; font-size: 16px; }
@@ -1017,6 +1055,64 @@ button { font-family: inherit; }
 
 #my-picker .cal { margin-bottom: 14px; }
 #my-resched-go { margin-top: 14px; }
+
+/* ---------- Upcoming lessons: month calendar (task 1) ----------
+ * Replaces the stack of one tall card per lesson in My bookings /
+ * /account. Day cells carry compact time chips on desktop; on
+ * narrow screens the chips give way to dots + a count so the grid
+ * never overflows. The selected day's full cards (shared .my-card
+ * renderer) open in .upcal-detail underneath. */
+.upcal {
+  border: 1.5px solid var(--line); border-radius: 16px;
+  background: #fff; padding: 16px 16px 8px; margin-bottom: 18px;
+}
+.upcal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.upcal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.upcal-week span {
+  text-align: center; font-size: 11.5px; font-weight: 700;
+  color: var(--sub); padding: 2px 0 6px;
+}
+.upcal-day {
+  border: 1.5px solid transparent; background: transparent;
+  border-radius: 10px; font: inherit; color: var(--ink);
+  cursor: pointer; padding: 5px 4px 6px; min-height: 66px;
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 3px; text-align: left; min-width: 0;
+}
+.upcal-day:hover { border-color: var(--accent); }
+.upcal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.upcal-num { font-size: 13.5px; font-weight: 600; line-height: 1.1; }
+.upcal-day.outside { opacity: 0.38; }
+.upcal-day.today .upcal-num { color: var(--accent); font-weight: 800; }
+.upcal-day.selected { border-color: var(--accent); background: var(--accent-soft); }
+.upcal-chips { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.upcal-chip {
+  display: block; font-size: 10.5px; line-height: 1.3;
+  background: var(--accent-soft); color: var(--ink);
+  border-radius: 5px; padding: 1px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.upcal-day.selected .upcal-chip { background: #fff; }
+.upcal-chip-time { font-weight: 700; color: var(--accent); }
+.upcal-chip.upcal-more { background: transparent; color: var(--accent); font-weight: 700; }
+.upcal-dots { display: none; }
+.upcal-detail { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 4px; }
+.upcal-detail-title { font-size: 16px; margin: 8px 0 10px; }
+.upcal-detail .my-card:last-child { margin-bottom: 8px; }
+@media (max-width: 560px) {
+  .upcal { padding: 12px 10px 6px; }
+  .upcal-day { min-height: 46px; align-items: center; padding: 5px 2px; }
+  .upcal-chips { display: none; }
+  .upcal-dots {
+    display: flex; gap: 3px; align-items: center;
+    justify-content: center; min-height: 7px;
+  }
+  .upcal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .upcal-count { font-size: 10px; font-weight: 700; color: var(--accent); line-height: 1; }
+}
 
 /* Booking modal (Sakura-style pop-up) */
 .modal-overlay {

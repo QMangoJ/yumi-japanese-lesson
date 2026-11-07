@@ -95,6 +95,25 @@ function localDateOfMs(ms) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+/** True when the visitor's own clock shows this instant at exactly
+ * the same wall time as JST (same date, same hour and minute). The
+ * comparison uses the actual conversion result for THIS instant —
+ * never a timezone-name list — so a UTC+9 zone whose own DST rules
+ * ever diverge from JST stops matching on its own. Wherever this
+ * holds, the single local-time line (task 9: chips and cards show
+ * ONE line of visitor-local time, the JST second line is gone)
+ * simply carries a "JST" suffix instead of a foreign tz label —
+ * a visitor in Tokyo was shown "8:00 AM GMT+9" stacked over
+ * "JST 8:00 AM" for one and the same time, which reads as a bug. */
+function localMatchesJst(ms) {
+  const loc = new Date(ms);
+  const jst = new Date(ms + 9 * 3600_000);
+  return loc.getFullYear() === jst.getUTCFullYear() &&
+    loc.getMonth() === jst.getUTCMonth() &&
+    loc.getDate() === jst.getUTCDate() &&
+    loc.getHours() === jst.getUTCHours() &&
+    loc.getMinutes() === jst.getUTCMinutes();
+}
 
 
 /* ---------- i18n: en / zh / fr, ONE language at a time ----------
@@ -313,8 +332,17 @@ function bkDraftClear(store) {
  * picker, so they survive a close + reopen within the same page visit.
  * Only a completed booking resets: the next open starts fresh at pane 1.
  */
+/* Full-reset hook for a COMPLETED flow, installed by the booking
+ * wiring (resetBookingFlow) once it runs. Resetting on close —
+ * not on open — is the fix for the stale Done page: the old
+ * open-time reset was gated on (state.booking || state.pkgOrder),
+ * but the package pay path nulls pkgOrder before showing Done,
+ * so the condition never held and the result page survived. */
+let bkResetHook = null;
+
 function openBooking() {
-  if ((state.booking || state.pkgOrder) && flowDone) {
+  if (flowDone && bkResetHook) bkResetHook();
+  else if ((state.booking || state.pkgOrder) && flowDone) {
     state.booking = null;
     state.pkgOrder = null;
     const extra = document.querySelector("#bk-done-extra");
@@ -329,6 +357,11 @@ function openBooking() {
 function closeBooking() {
   $("#book-modal").classList.add("hidden");
   document.body.style.overflow = "";
+  /* Any close path (×, overlay, Esc, the Done pane's button) after
+   * a completed booking resets the whole flow, so the next open is
+   * a fresh Step 1. Mid-flow closes (panes 1–3, gate) are NOT
+   * touched: their selections survive a close + reopen as before. */
+  if (flowDone && bkResetHook) bkResetHook();
 }
 
 /* ---------- student account (drives My Bookings) ---------- */
@@ -450,11 +483,45 @@ function createPicker({ getMinutes, onPick }) {
   const timesEl = document.createElement("div");
   timesEl.innerHTML = `
     <div class="field">Available times
+      <p class="note picker-tznote"></p>
       <div class="time-grid"><p class="time-hint">Choose a date first</p></div>
     </div>
     <p class="note picker-note"></p>`;
   const grid = timesEl.querySelector(".time-grid");
   const note = timesEl.querySelector(".picker-note");
+  const tzNote = timesEl.querySelector(".picker-tznote");
+
+  /* Task 9 (Daniel's final call): chips show ONE line — the
+   * visitor's own local time — and this note, pinned above the
+   * grid, says whose clock that is. When the picked JST date lands
+   * on a different local date, a second sentence spells out the
+   * correspondence ("Japan Nov 16 = your Nov 15") so the day shift
+   * is never a silent surprise. A visitor whose clock IS JST gets
+   * the plain JST wording instead. */
+  function renderTzNote(crossMs) {
+    const noonJst = jstInstantMs(jstToday(), "12:00");
+    if (localMatchesJst(crossMs ?? noonJst)) {
+      tzNote.textContent = L3(
+        "Times are shown in Japan time (JST).",
+        "时间按日本时间（JST）显示。",
+        "Les horaires sont affichés à l'heure du Japon (JST).");
+      return;
+    }
+    let text = L3(
+      `Times are shown in your timezone (${localTZName}).`,
+      `时间按你的时区显示（${localTZName}）。`,
+      `Les horaires sont affichés dans votre fuseau horaire (${localTZName}).`);
+    if (crossMs != null) {
+      const jstDay = new Intl.DateTimeFormat(locale(),
+        { timeZone: "Asia/Tokyo", weekday: "short", month: "short", day: "numeric" }).format(crossMs);
+      text += " " + L3(
+        `Japan ${jstDay} = your ${fmtLocalDate(crossMs)}.`,
+        `日本 ${jstDay} = 你的 ${fmtLocalDate(crossMs)}。`,
+        `Japon : ${jstDay} = votre ${fmtLocalDate(crossMs)}.`);
+    }
+    tzNote.textContent = text;
+  }
+  renderTzNote(null);
 
   function markSelectedChip() {
     grid.querySelectorAll(".time-chip").forEach((chip) => {
@@ -535,6 +602,7 @@ function createPicker({ getMinutes, onPick }) {
     onPick(date, time);
     grid.innerHTML = `<p class="time-hint">Checking availability…</p>`;
     note.textContent = "Checking availability…";
+    renderTzNote(null);
     try {
       const data = await api(`/api/availability?date=${date}&duration=${getMinutes()}`);
       if (token !== loadToken) return;
@@ -569,15 +637,25 @@ function createPicker({ getMinutes, onPick }) {
         chip.className = "time-chip";
         chip.dataset.time = s.time;
         chip.disabled = !s.available;
-        chip.innerHTML = `
-          <span class="tc-main">${dayPrefix}${lr.text} ${tzAbbr(lr.start)}</span>
-          <span class="tc-sub">JST ${rangeText(toMin(s.time), minutes)}</span>`;
+        // Task 9: ONE line only — the visitor's local range (with
+        // the local-date prefix when the day shifts). The JST
+        // second line is gone by Daniel's decision; the pinned
+        // tz note above the grid carries the timezone context.
+        chip.innerHTML = localMatchesJst(lr.start)
+          ? `<span class="tc-main">${lr.text} JST</span>`
+          : `<span class="tc-main">${dayPrefix}${lr.text} ${tzAbbr(lr.start)}</span>`;
         if (s.available) {
           chip.onclick = () => { time = s.time; markSelectedChip(); onPick(date, time); };
         }
         grid.appendChild(chip);
       }
       markSelectedChip();
+      // Cross-day? The first open slot whose local date differs
+      // from the JST calendar date drives the tz note's second
+      // sentence ("Japan Mon, Nov 16 = your Sun, Nov 15").
+      const cross = open.length
+        ? localRange(date, open[0].time, minutes) : null;
+      renderTzNote(cross && localDateOfMs(cross.start) !== date ? cross.start : null);
       if (!open.length) {
         note.textContent = "No times are available on this date.";
         return;
@@ -625,6 +703,20 @@ function createPicker({ getMinutes, onPick }) {
       onPick(date, time);
       return true;
     },
+    /* Full reset (a completed booking flow starts over): back to
+     * the current month with nothing picked. */
+    reset() {
+      date = null;
+      time = null;
+      const t = jstToday();
+      view = { y: Number(t.slice(0, 4)), m: Number(t.slice(5, 7)) };
+      grid.innerHTML = `<p class="time-hint">Choose a date first</p>`;
+      note.textContent = "";
+      renderTzNote(null);
+      renderCal();
+      loadMonth();
+      onPick(null, null);
+    },
   };
 }
 
@@ -635,10 +727,16 @@ function summaryRows(b) {
   const lr = localRange(b.date, b.time, minutes);
   const rows = [["Course", courseName(b.courseId)]];
   if (b.lessonTypeId && !b.durationId) rows.push(["Lesson type", legacyName(b.lessonTypeId)]);
+  // Task 9: Date/Time rows are ONE line of the visitor's local
+  // time everywhere (booking summary, Done pane, My bookings /
+  // /account cards) — no JST second value. A visitor whose clock
+  // IS JST just gets the JST suffix on the same single line.
+  const sameTz = localMatchesJst(lr.start);
   rows.push(
     ["Duration", `${minutes} min`],
-    ["Date", `${fmtLocalDate(lr.start, true)} · JST ${b.date}`],
-    ["Time", `${lr.text} ${tzAbbr(lr.start)} · JST ${rangeText(toMin(b.time), minutes)} (${b.time}–${minToHHMM(toMin(b.time) + minutes)})`],
+    ["Date", fmtLocalDate(lr.start, true)],
+    ["Time", sameTz ? `${lr.text} JST`
+      : `${lr.text} ${tzAbbr(lr.start)}`],
     ["Name", b.name],
     ["Email", b.email],
     ["Total", money(b.amount)],
@@ -769,23 +867,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   function refreshSummary() {
     if (state.mode === "package") {
       renderPkgSummary();
-      $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+      refreshContinue();
       return;
     }
     const dur = durationOf(state.durationId);
     const sel = $("#bk-selected");
     if (state.date && state.time && dur) {
       const lr = localRange(state.date, state.time, dur.minutes);
-      sel.textContent = `${L3("Selected", "已选", "Sélection")} : ${fmtLocalDate(lr.start, true)}, ${lr.text} (${tzAbbr(lr.start)} · ${localTZName}) · JST ${state.date} ${state.time}`;
+      sel.textContent = localMatchesJst(lr.start)
+        ? `${L3("Selected", "已选", "Sélection")} : ${fmtLocalDate(lr.start, true)}, ${lr.text} JST`
+        : `${L3("Selected", "已选", "Sélection")} : ${fmtLocalDate(lr.start, true)}, ${lr.text} (${tzAbbr(lr.start)} · ${localTZName})`;
     } else {
       sel.textContent = "Selected: choose a date and a time";
     }
     $("#bk-total").innerHTML = dur ? `
-      <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
+      <div class="bk-total-row"><span>${courseName(state.courseId || "other")}</span></div>
       <div class="bk-total-row"><span>${dur.minutes} min lesson</span><span>${money(dur.price)}</span></div>
       <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(dur.price)}</span></div>
       <p class="note">Lessons are online: your meeting link is sent after booking and payment.</p>` : "";
-    $("#bk-to-2").disabled = !(state.courseId && state.date && state.time);
+    refreshContinue();
   }
 
 
@@ -800,11 +900,165 @@ document.addEventListener("DOMContentLoaded", async () => {
   const WEEKDAY_LABELS = WEEKDAYS_LONG.en;
   const WEEKDAY_CN = ["日", "一", "二", "三", "四", "五", "六"];
 
+  /* ---------- package slot conflicts (task 3) ----------
+   * Two fixed slots clash when they share a weekday and their
+   * lesson ranges intersect: identical starts are the special case
+   * "same"; a 120-min slot at 19:00 also collides with one at
+   * 20:00. (The worker rejects both cases too — the front end now
+   * catches them at pick time and says exactly where.) */
+  function pkgConflicts() {
+    const minutes = durationOf(state.durationId)?.minutes || 50;
+    const out = [];
+    for (let i = 0; i < pkg.slots.length; i++) {
+      for (let j = i + 1; j < pkg.slots.length; j++) {
+        const a = pkg.slots[i], b = pkg.slots[j];
+        if (a.weekday === "" || b.weekday === "" || !a.time || !b.time) continue;
+        if (String(a.weekday) !== String(b.weekday)) continue;
+        const as = toMin(a.time), bs = toMin(b.time);
+        if (as === bs) {
+          out.push({ i, j, kind: "same", weekday: a.weekday, time: a.time });
+        } else if (as < bs + minutes && bs < as + minutes) {
+          out.push({ i, j, kind: "overlap", weekday: a.weekday,
+            time: a.time, time2: b.time });
+        }
+      }
+    }
+    return out;
+  }
+
+  /** One sentence naming both slots of a conflict (summary banner,
+   *  Continue tooltip). */
+  function pkgConflictText(c) {
+    const minutes = durationOf(state.durationId)?.minutes || 50;
+    const wd = weekdayLong(c.weekday);
+    if (c.kind === "same") {
+      return L3(
+        `Weekly slots ${c.i + 1} and ${c.j + 1} are set to the same time: ${wd} ${c.time} — please change one of them.`,
+        `固定时间 ${c.i + 1} 和 ${c.j + 1} 设成了完全相同的时间：${wd} ${c.time}，请改掉其中一个。`,
+        `Les créneaux hebdomadaires ${c.i + 1} et ${c.j + 1} sont réglés à la même heure : ${wd} ${c.time} — veuillez en modifier un.`);
+    }
+    const e1 = minToHHMM(toMin(c.time) + minutes);
+    const e2 = minToHHMM(toMin(c.time2) + minutes);
+    return L3(
+      `Weekly slots ${c.i + 1} and ${c.j + 1} overlap: ${wd} ${c.time}–${e1} and ${c.time2}–${e2} run into each other — please change one of them.`,
+      `固定时间 ${c.i + 1} 和 ${c.j + 1} 时间重叠：${wd} ${c.time}–${e1} 与 ${c.time2}–${e2} 相撞，请改掉其中一个。`,
+      `Les créneaux hebdomadaires ${c.i + 1} et ${c.j + 1} se chevauchent : ${wd} ${c.time}–${e1} et ${c.time2}–${e2} se percutent — veuillez en modifier un.`);
+  }
+
+  /** The inline line under ONE conflicting slot, naming the other. */
+  function pkgSlotErrorText(k, other, c) {
+    const minutes = durationOf(state.durationId)?.minutes || 50;
+    const wd = weekdayLong(c.weekday);
+    if (c.kind === "same") {
+      return L3(
+        `Same as Weekly slot ${other + 1}: ${wd} ${c.time} — the two fixed times cannot be identical, please change one of them.`,
+        `与固定时间 ${other + 1} 相同：${wd} ${c.time}——两个固定时间不能完全相同，请改掉其中一个。`,
+        `Identique au créneau hebdomadaire ${other + 1} : ${wd} ${c.time} — les deux horaires fixes ne peuvent pas être identiques, veuillez en modifier un.`);
+    }
+    const own = pkg.slots[k], oth = pkg.slots[other];
+    const oe = minToHHMM(toMin(own.time) + minutes);
+    const xe = minToHHMM(toMin(oth.time) + minutes);
+    return L3(
+      `Overlaps Weekly slot ${other + 1}: ${wd} ${own.time}–${oe} runs into ${oth.time}–${xe} — please change one of them.`,
+      `与固定时间 ${other + 1} 时间重叠：${wd} ${own.time}–${oe} 与 ${oth.time}–${xe} 相撞，请改掉其中一个。`,
+      `Chevauche le créneau hebdomadaire ${other + 1} : ${wd} ${own.time}–${oe} percute ${oth.time}–${xe} — veuillez en modifier un.`);
+  }
+
+  function flashEl(el) {
+    el.classList.remove("flash");
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add("flash");
+    setTimeout(() => el.classList.remove("flash"), 1800);
+  }
+
+  let pkgConflictSeen = false;
+  /** Paint conflict state onto the slot rows + summary banner.
+   *  Called from renderPkgSummary, which every slot interaction
+   *  funnels through. A NEWLY appearing conflict scrolls the first
+   *  offending slot into view and flashes it. */
+  function refreshPkgSlotErrors() {
+    const conflicts = pkgConflicts();
+    const rows = [...document.querySelectorAll("#bk-pkg-slots .pkg-slot")];
+    const bySlot = new Map();
+    for (const c of conflicts) {
+      bySlot.set(c.i, { other: c.j, c });
+      bySlot.set(c.j, { other: c.i, c });
+    }
+    rows.forEach((row, k) => {
+      const hit = bySlot.get(k);
+      row.classList.toggle("conflict", !!hit);
+      const err = row.querySelector(".pkg-slot-err");
+      if (err) {
+        err.textContent = hit ? pkgSlotErrorText(k, hit.other, hit.c) : "";
+        err.classList.toggle("hidden", !hit);
+      }
+    });
+    const summary = $("#bk-pkg-summary");
+    if (summary) summary.classList.toggle("alert", conflicts.length > 0);
+    if (conflicts.length && !pkgConflictSeen) {
+      const first = rows[Math.min(...conflicts.map((c) => c.i))];
+      if (first) {
+        first.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        flashEl(first);
+      }
+    }
+    pkgConflictSeen = conflicts.length > 0;
+    return conflicts;
+  }
+
+  /* ---------- Continue gating (tasks 3 + 4) ----------
+   * One place decides whether Step 1's Continue is enabled, and
+   * WHY not — the reason rides on the wrapper (#bk-to-2-wrap) as a
+   * hover tooltip, and a tap on the disabled button scrolls to the
+   * problem. Course is deliberately NOT a reason: an unpicked
+   * course silently defaults to Other on Continue (task 4). */
+  function continueBlockReason() {
+    if (state.mode === "package") {
+      const bad = pkg.slots.findIndex((s) => s.weekday === "" || !s.time);
+      if (bad >= 0) {
+        return L3(
+          `Weekly slot ${bad + 1} is not set yet — pick a weekday and a start time for it.`,
+          `固定时间 ${bad + 1} 还没选好——请为它选择星期和开始时间。`,
+          `Le créneau hebdomadaire ${bad + 1} n'est pas encore réglé — choisissez un jour et une heure de début.`);
+      }
+      const cs = pkgConflicts();
+      if (cs.length) return pkgConflictText(cs[0]);
+      return "";
+    }
+    if (!state.date || !state.time) {
+      return L3("Please pick a date and a time first.",
+        "请先选择日期和时间。",
+        "Veuillez d'abord choisir une date et une heure.");
+    }
+    return "";
+  }
+
+  function refreshContinue() {
+    const reason = continueBlockReason();
+    const btn = $("#bk-to-2");
+    if (btn) btn.disabled = !!reason;
+    const wrap = $("#bk-to-2-wrap");
+    if (wrap) {
+      wrap.classList.toggle("has-reason", !!reason);
+      if (reason) wrap.dataset.reason = reason;
+      else delete wrap.dataset.reason;
+    }
+  }
+
+  /** Task 4: no course picked → Continue books "Other", silently. */
+  function ensureCourseDefault() {
+    if (state.courseId) return;
+    const other = state.config?.courses.find((c) => c.id === "other");
+    if (!other) return;
+    state.courseId = other.id;
+    renderCourses();   // the Other chip lights up as it takes effect
+    refreshSummary();
+  }
+
   function pkgComplete() {
     if (pkg.slots.length !== pkg.freq) return false;
-    const keys = pkg.slots.map((s) => `${s.weekday}|${s.time}`);
     return pkg.slots.every((s) => s.weekday !== "" && s.time) &&
-      new Set(keys).size === keys.length;
+      pkgConflicts().length === 0;
   }
 
   function pkgFirstDate(weekday, time) {
@@ -878,7 +1132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         while (pkg.slots.length < f) pkg.slots.push({ weekday: "", time: "" });
         pkg.slots.length = f;
         renderPkgFreq(); renderPkgSlots(); renderPkgSummary();
-        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+        refreshContinue();
       };
       $("#bk-pkg-freq").appendChild(b);
     }
@@ -896,7 +1150,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="field">${L3("Weekday", "星期", "Jour de la semaine")}
           <div class="wd-chips" role="group" aria-label="Weekday"></div></div>
         <div class="field">${L3("Start time (JST)", "开始时间 (JST)", "Heure de début (JST)")}
-          <div class="time-chips-sm"><p class="time-hint">${L3("Pick a weekday first…", "先选星期…", "Choisissez d'abord un jour…")}</p></div></div>`;
+          <div class="time-chips-sm"><p class="time-hint">${L3("Pick a weekday first…", "先选星期…", "Choisissez d'abord un jour…")}</p></div></div>
+        <p class="pkg-slot-err hidden" role="alert"></p>`;
       box.appendChild(row);
       const wdBox = row.querySelector(".wd-chips");
       const timeBox = row.querySelector(".time-chips-sm");
@@ -936,7 +1191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             chip.type = "button";
             chip.className = "time-chip sm" + (t === slot.time ? " selected" : "");
             chip.setAttribute("aria-pressed", t === slot.time ? "true" : "false");
-            chip.innerHTML = `<span class="tc-main">${t}</span><span class="tc-sub">JST</span>`;
+            chip.innerHTML = `<span class="tc-main">${t} JST</span>`;
             chip.onclick = () => {
               slot.time = t;
               timeBox.querySelectorAll(".time-chip").forEach((c) => {
@@ -945,13 +1200,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 c.setAttribute("aria-pressed", on ? "true" : "false");
               });
               renderPkgSummary();
-              $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+              refreshContinue();
             };
             timeBox.appendChild(chip);
           }
         }
         renderPkgSummary();
-        $("#bk-to-2").disabled = !(state.courseId && pkgComplete());
+        refreshContinue();
       };
       if (slot.weekday !== "") fillTimes();
     });
@@ -968,12 +1223,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           `每周 ${pkg.freq} 节 · 共 ${pkg.size} 节 · 预计从 ${dates[0]} 上到 ${dates[dates.length - 1]} · 合计 ${money(pkg.size * dur.price)}`,
           `${pkg.freq}× / semaine · ${pkg.size} cours · prévu du ${dates[0]} au ${dates[dates.length - 1]} · total ${money(pkg.size * dur.price)}`);
     } else if (dates) {
-      summary.textContent = L3("The two fixed times cannot be identical — please adjust one of them.", "两个固定时间不能完全相同，请调整其中一个。", "Les deux horaires fixes ne peuvent pas être identiques — veuillez en ajuster un.");
+      const cs = pkgConflicts();
+      summary.textContent = cs.length
+        ? "⚠ " + pkgConflictText(cs[0])
+        : L3("The two fixed times cannot be identical — please adjust one of them.", "两个固定时间不能完全相同，请调整其中一个。", "Les deux horaires fixes ne peuvent pas être identiques — veuillez en ajuster un.");
     } else {
       summary.textContent = L3("Please choose your fixed weekly lesson times (weekday first, then a start time)", "请选择每周固定的上课时间（先选星期，再选开始时间）", "Veuillez choisir vos horaires hebdomadaires fixes (le jour d'abord, puis l'heure de début)");
     }
+    refreshPkgSlotErrors();
     $("#bk-pkg-total").innerHTML = `
-      <div class="bk-total-row"><span>${state.courseId ? courseName(state.courseId) : "Course — pick one above"}</span></div>
+      <div class="bk-total-row"><span>${courseName(state.courseId || "other")}</span></div>
       <div class="bk-total-row"><span>${L3(`Package ${pkg.size} lessons × ${dur.minutes} min`, `课时包 ${pkg.size} 节 × ${dur.minutes} 分钟`, `Forfait ${pkg.size} cours × ${dur.minutes} min`)}</span><span>${money(pkg.size * dur.price)}</span></div>
       <div class="bk-total-row bk-total-sum"><span>Total</span><span>${money(pkg.size * dur.price)}</span></div>
       <p class="note">${L3(`After payment, all ${pkg.size} lessons are scheduled at once; if a date is taken, that lesson moves one week later automatically.`, `支付后系统会一次性排好全部 ${pkg.size} 节课；个别日期被占用时会自动顺延一周。`, `Après le paiement, les ${pkg.size} cours sont tous programmés d'un coup ; si une date est prise, le cours est automatiquement décalé d'une semaine.`)}</p>`;
@@ -1041,7 +1300,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("#bk-to-2").onclick = () => {
-    if (!state.courseId) return setMsg("#bk-msg-1", "Please choose a course.", false);
+    /* Task 4 (Daniel): course is optional — no pick means the
+     * booking silently goes ahead as "Other". No error, no nag. */
+    ensureCourseDefault();
     if (state.mode === "package") {
       if (!pkgComplete()) {
         return setMsg("#bk-msg-1", L3("Please choose a package size and pick a weekday and start time for every weekly slot.", "请选择课时包，并为每一节固定课选好星期和开始时间。", "Veuillez choisir un forfait et, pour chaque créneau, un jour et une heure de début."), false);
@@ -1054,6 +1315,77 @@ document.addEventListener("DOMContentLoaded", async () => {
     setMsg("#bk-msg-1", "");
     showPane(2);
   };
+
+  /* Disabled-Continue tap (touch has no hover for the tooltip):
+   * tapping the disabled button's wrapper scrolls the actual
+   * problem into view and flashes it. Enabled clicks pass through
+   * to the button itself. */
+  const to2Wrap = $("#bk-to-2-wrap");
+  if (to2Wrap) {
+    to2Wrap.addEventListener("click", () => {
+      if (!$("#bk-to-2").disabled) return;
+      let target = null;
+      if (state.mode === "package") {
+        const rows = document.querySelectorAll("#bk-pkg-slots .pkg-slot");
+        const cs = pkgConflicts();
+        if (cs.length) target = rows[cs[0].i];
+        if (!target) {
+          const bad = pkg.slots.findIndex((s) => s.weekday === "" || !s.time);
+          if (bad >= 0) target = rows[bad];
+        }
+      } else {
+        target = $("#bk-cal");
+      }
+      if (target) {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        flashEl(target);
+      }
+    });
+  }
+
+  /* ---------- completed-flow reset (task 7) ----------
+   * Installed as bkResetHook: closeBooking() runs this whenever
+   * the modal closes from the Done pane, by ANY path. Everything
+   * goes back to factory: step 1, no course/duration/package/slot
+   * picks, blank form + payment fields, no created-booking refs,
+   * and the sign-in-gate draft is cleared too — a completed
+   * booking's draft must never resurrect its data next time. */
+  function resetBookingFlow() {
+    state.courseId = null;
+    state.durationId = state.config.durations.find((d) => d.minutes === 50)?.id ||
+      state.config.durations[0].id;
+    state.date = null;
+    state.time = null;
+    state.booking = null;
+    state.pkgOrder = null;
+    state.pkgBuyer = null;
+    pkg.size = 10;
+    pkg.freq = 1;
+    pkg.slots = [{ weekday: "", time: "" }];
+    pkgConflictSeen = false;
+    $("#bk-name").value = "";
+    $("#bk-email").value = "";
+    $("#bk-notes").value = "";
+    for (const id of ["#pay-card", "#pay-exp", "#pay-cvc"]) {
+      const el = $(id);
+      if (el) el.value = "";
+    }
+    const extra = $("#bk-done-extra");
+    if (extra) extra.innerHTML = "";
+    setMsg("#bk-msg-1", "");
+    setMsg("#bk-msg-2", "");
+    setMsg("#bk-msg-3", "");
+    bkDraftClear(localStorage);
+    renderCourses();
+    renderDurations();
+    renderPkgSizes();
+    renderPkgFreq();
+    renderPkgSlots();
+    picker.reset();
+    setMode("single");
+    showPane(1);
+  }
+  bkResetHook = resetBookingFlow;
 
   /* ---------- Payment sign-in gate + draft ----------
    * Advancing from Step 2 to Payment is where a booking gets
@@ -1195,8 +1527,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const lessons = data.lessons || [];
         $("#bk-done-extra").innerHTML = `
           <h4 class="bk-sub">${L3(`Your ${lessons.length} lessons`, `你的课程安排 · 共 ${lessons.length} 节`, `Vos ${lessons.length} cours`)}</h4>
-          <ul class="done-lessons">${lessons.map((l) =>
-            `<li>${dateLong(l.date)} · ${l.time} JST</li>`).join("")}</ul>
+          <ul class="done-lessons">${lessons.map((l) => {
+            const llr = localRange(l.date, l.time, minutesOfBooking(l));
+            return `<li>${fmtLocalDate(llr.start, true)} · ${llr.text} ${localMatchesJst(llr.start) ? "JST" : tzAbbr(llr.start)}</li>`;
+          }).join("")}</ul>
           ${(data.skippedDates || []).length
             ? `<p class="note">${L3(`These dates were taken or the teacher is off, so those lessons moved one week later: ${data.skippedDates.join(", ")}`, `这些日期已被占用或老师休息，对应课程已自动顺延一周：${data.skippedDates.join(", ")}`, `Ces dates étaient prises ou la professeure est en congé : ces cours ont été décalés d'une semaine : ${data.skippedDates.join(", ")}`)}</p>` : ""}`;
         state.pkgOrder = null;
@@ -1422,7 +1756,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <tr><th>${L3("Fixed weekly times", "每周固定时间", "Horaires hebdomadaires fixes")}</th><td>${escHtml(slotsText)} (JST)</td></tr>
         <tr><th>${L3("Status", "状态", "Statut")}</th><td>${stopped ? L3("Stopped", "已停止", "Arrêté") : L3("Active", "进行中", "Actif")}</td></tr>
         ${!stopped ? `<tr><th>${L3("Remaining", "还剩", "Restants")}</th><td>${s.remainingLessons} ${L3("lessons", "节", "cours")}</td></tr>` : ""}
-        ${!stopped && s.nextLesson ? `<tr><th>${L3("Next lesson", "下一节", "Prochain cours")}</th><td>${s.nextLesson.date} · ${s.nextLesson.time} JST</td></tr>` : ""}
+        ${!stopped && s.nextLesson ? (() => { const nlr = localRange(s.nextLesson.date, s.nextLesson.time, s.durationMinutes || 50); return `<tr><th>${L3("Next lesson", "下一节", "Prochain cours")}</th><td>${fmtLocalDate(nlr.start, true)} · ${nlr.text} ${localMatchesJst(nlr.start) ? "JST" : tzAbbr(nlr.start)}</td></tr>`; })() : ""}
       </table>
       ${(s.lastSkippedDates || []).length
         ? `<p class="note">${L3(`These dates were taken or the teacher is off, so those lessons moved one week later: ${s.lastSkippedDates.join(", ")}`, `这些日期已被占用或老师休息，对应课程已自动顺延一周：${s.lastSkippedDates.join(", ")}`, `Ces dates étaient prises ou la professeure est en congé : ces cours ont été décalés d'une semaine : ${s.lastSkippedDates.join(", ")}`)}</p>` : ""}
@@ -1479,8 +1813,155 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /* ---------- Upcoming lessons: month calendar ----------
+   * One tall card per lesson was mostly empty space (Daniel:
+   * information density too low). The upcoming list is now a month
+   * calendar: days are keyed by the STUDENT'S local date — the same
+   * Intl conversion the cards use; bookings stay JST-anchored —
+   * lesson chips sit in the day cells, and the selected day's full
+   * cards (the shared myCard/wireMyCard pair, rules unchanged)
+   * open underneath. Default selection is the soonest lesson's
+   * day, so the next lesson is on screen without a click. The
+   * homepage #my section shares this renderer and gets the
+   * calendar too. */
+  let upcalCursor = null;   // {y, m} month on screen (visitor-local)
+  let upcalSelected = null; // visitor-local "YYYY-MM-DD" chosen day
+  let upcalList = [];       // latest upcoming list, for re-renders
+
+  const UPCAL_SHORT = {
+    conversation: "Conversation", beginners: "Beginners", jlpt: "JLPT",
+    travel: "Travel", business: "Business", other: "Lesson",
+    trial: "Trial", single: "Lesson", pack5: "Package",
+  };
+  function courseShort(b) {
+    return UPCAL_SHORT[b.courseId] || UPCAL_SHORT[b.lessonTypeId] ||
+      courseName(b.courseId).split(" ")[0];
+  }
+  function upcalDayKey(b) {
+    return localDateOfMs(jstInstantMs(b.date, b.time));
+  }
+  function upcalByDay(list) {
+    const byDay = new Map();
+    const sorted = [...list].sort((a, b) =>
+      jstInstantMs(a.date, a.time) - jstInstantMs(b.date, b.time));
+    for (const b of sorted) {
+      const k = upcalDayKey(b);
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k).push(b);
+    }
+    return { byDay, sorted };
+  }
+
+  function upcomingCalendarHtml() {
+    const { byDay } = upcalByDay(upcalList);
+    if (!upcalSelected) {
+      upcalSelected = upcalDayKey(upcalByDay(upcalList).sorted[0]);
+    }
+    if (!upcalCursor) {
+      const [y, m] = upcalSelected.split("-").map(Number);
+      upcalCursor = { y, m: m - 1 };
+    }
+    const { y, m } = upcalCursor;
+    const title = new Date(Date.UTC(y, m, 1)).toLocaleDateString(locale(),
+      { month: "long", year: "numeric", timeZone: "UTC" });
+    const wdNames = [...Array(7)].map((_, i) =>
+      new Date(Date.UTC(2024, 0, 7 + i)).toLocaleDateString(locale(),
+        { weekday: "short", timeZone: "UTC" }));
+    const start = new Date(y, m, 1 - new Date(y, m, 1).getDay());
+    const todayKey = localDateOfMs(Date.now());
+    let cells = "";
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(),
+        start.getDate() + i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const list = byDay.get(key) || [];
+      const chips = list.slice(0, 2).map((b) => {
+        const lr = localRange(b.date, b.time, minutesOfBooking(b));
+        return `<span class="upcal-chip"><span class="upcal-chip-time">${fmtLocalTime(lr.start)}</span> <span>${escHtml(courseShort(b))}</span></span>`;
+      }).join("") + (list.length > 2
+        ? `<span class="upcal-chip upcal-more">+${list.length - 2}</span>` : "");
+      const dots = list.slice(0, 3)
+        .map(() => `<span class="upcal-dot"></span>`).join("") +
+        (list.length > 3 ? `<span class="upcal-count">${list.length}</span>` : "");
+      cells += `<button type="button" class="upcal-day${d.getMonth() !== m ? " outside" : ""}${key === todayKey ? " today" : ""}${key === upcalSelected ? " selected" : ""}" data-day="${key}">
+        <span class="upcal-num">${d.getDate()}</span>
+        ${list.length ? `<span class="upcal-chips">${chips}</span><span class="upcal-dots">${dots}</span>` : ""}
+      </button>`;
+    }
+    const dayList = byDay.get(upcalSelected) || [];
+    let selMs;
+    if (dayList.length) {
+      selMs = jstInstantMs(dayList[0].date, dayList[0].time);
+    } else {
+      const [sy, sm, sd] = upcalSelected.split("-").map(Number);
+      selMs = new Date(sy, sm - 1, sd, 12).getTime();
+    }
+    return `
+    <div class="upcal" id="upcal">
+      <div class="upcal-head">
+        <button type="button" class="cal-nav" id="upcal-prev" aria-label="Previous month">‹</button>
+        <span class="cal-title">${title}</span>
+        <button type="button" class="cal-nav" id="upcal-next" aria-label="Next month">›</button>
+      </div>
+      <div class="upcal-grid upcal-week">${wdNames.map((w) => `<span>${w}</span>`).join("")}</div>
+      <div class="upcal-grid">${cells}</div>
+      <div class="upcal-detail">
+        <h4 class="upcal-detail-title">${fmtLocalDate(selMs, true)}</h4>
+        ${dayList.length
+          ? dayList.map((b) => myCard(b, true)).join("")
+          : `<p class="note">No lessons this day.</p>`}
+      </div>
+    </div>`;
+  }
+
+  function wireUpcomingCalendar() {
+    const cal = document.getElementById("upcal");
+    if (!cal) return;
+    const rerender = () => {
+      cal.outerHTML = upcomingCalendarHtml();
+      wireUpcomingCalendar();
+      upcalList.forEach((b) => wireMyCard(b));
+    };
+    const shift = (delta) => {
+      const nm = upcalCursor.m + delta;
+      upcalCursor = { y: upcalCursor.y + Math.floor(nm / 12),
+        m: ((nm % 12) + 12) % 12 };
+      // Keep the detail in step with the month on screen: if the
+      // selected day is not in this month, select its 1st.
+      const [sy, sm] = (upcalSelected || "").split("-").map(Number);
+      if (sy !== upcalCursor.y || sm - 1 !== upcalCursor.m) {
+        upcalSelected = `${upcalCursor.y}-${String(upcalCursor.m + 1).padStart(2, "0")}-01`;
+      }
+      rerender();
+    };
+    const prev = document.getElementById("upcal-prev");
+    const next = document.getElementById("upcal-next");
+    if (prev) prev.onclick = () => shift(-1);
+    if (next) next.onclick = () => shift(1);
+    cal.querySelectorAll(".upcal-day").forEach((btn) => {
+      btn.onclick = () => {
+        upcalSelected = btn.dataset.day;
+        const [y, m] = upcalSelected.split("-").map(Number);
+        upcalCursor = { y, m: m - 1 };
+        rerender();
+      };
+    });
+  }
+
   function renderMyBookings({ upcoming, history }) {
     const box = $("#my-result");
+    upcalList = upcoming || [];
+    // Fresh data: if the chosen day no longer has lessons (its
+    // lesson was cancelled or rescheduled away), fall back to the
+    // soonest lesson's day and show that month.
+    if (upcoming.length) {
+      const { byDay, sorted } = upcalByDay(upcoming);
+      if (!upcalSelected || !byDay.has(upcalSelected)) {
+        upcalSelected = upcalDayKey(sorted[0]);
+        const [y, m] = upcalSelected.split("-").map(Number);
+        upcalCursor = { y, m: m - 1 };
+      }
+    }
     const section = (title, list, render) => list.length ? `
       <h3 class="my-section-title">${title}</h3>
       ${list.map(render).join("")}` : "";
@@ -1493,7 +1974,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       box.innerHTML = `
       <p class="msg" id="my-action-msg"></p>
       ${upcoming.length
-        ? upcoming.map((b) => myCard(b, true)).join("")
+        ? upcomingCalendarHtml()
         : `<p class="note">You have no upcoming lessons.</p>`}`;
       histBox.innerHTML = history.length
         ? history.map((b) => myCard(b, false)).join("")
@@ -1501,11 +1982,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       box.innerHTML = `
       <p class="msg" id="my-action-msg"></p>
-      ${section("Upcoming lessons", upcoming, (b) => myCard(b, true))}
+      ${upcoming.length
+        ? `<h3 class="my-section-title">Upcoming lessons</h3>${upcomingCalendarHtml()}`
+        : ""}
       ${section("Lesson history", history, (b) => myCard(b, false))}
       ${!upcoming.length && !history.length ? "<p class='note'>No bookings found.</p>" : ""}`;
     }
     if (myActionMsg) setMsg("#my-action-msg", myActionMsg, true);
+    wireUpcomingCalendar();
     upcoming.forEach((b) => wireMyCard(b));
   }
 

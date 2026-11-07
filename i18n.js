@@ -66,6 +66,17 @@ window.YUMI_I18N = {
     "teaching experience": "教学经验",
     "13 yrs": "13 年",
     "(13 years teaching English)": "（13 年英语教学经验）",
+    /* upcoming-lessons calendar (task 1) */
+    "No lessons this day.": "这一天没有课程。",
+    "Beginners": "入门",
+    "Conversation": "会话",
+    "JLPT": "JLPT",
+    "Travel": "旅行",
+    "Business": "商务",
+    "Lesson": "课程",
+    "Trial": "体验课",
+    "Previous month": "上个月",
+    "Next month": "下个月",
     "· Native": "· 母语",
     "· C1 — fluent support": "· C1 — 可流利辅助",
     "Japanese (native) · English (C1) · Spanish · Khmer · French": "日语（母语）· 英语（C1）· 西班牙语 · 高棉语 · 法语",
@@ -177,8 +188,8 @@ window.YUMI_I18N = {
     "See packages in the booking window →": "在预约窗口查看课时包 →",
     /* book section */
     "Book your lesson": "预约你的课程",
-    "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone, with Japan time (JST) as a reference.":
-      "提前至少 72 小时选择课程和课程时间。时间按你的时区显示，并附日本时间（JST）参考。",
+    "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone.":
+      "提前至少 72 小时选择课程和课程时间。时间按你的时区显示。",
     "Closed Saturdays & Sundays. Calendar days are Japan dates; times are shown in your timezone.":
       "周六、周日休息。日历日期为日本日期；时间按你的时区显示。",
     /* modal / picker */
@@ -380,6 +391,17 @@ window.YUMI_I18N = {
     "teaching experience": "d'expérience d'enseignement",
     "13 yrs": "13 ans",
     "(13 years teaching English)": "(13 ans d'enseignement de l'anglais)",
+    /* upcoming-lessons calendar (task 1) */
+    "No lessons this day.": "Aucun cours ce jour-là.",
+    "Beginners": "Débutants",
+    "Conversation": "Conversation",
+    "JLPT": "JLPT",
+    "Travel": "Voyage",
+    "Business": "Affaires",
+    "Lesson": "Cours",
+    "Trial": "Essai",
+    "Previous month": "Mois précédent",
+    "Next month": "Mois suivant",
     "· Native": "· Langue maternelle",
     "· C1 — fluent support": "· C1 — aide fluide",
     "Japanese (native) · English (C1) · Spanish · Khmer · French": "Japonais (langue maternelle) · Anglais (C1) · Espagnol · Khmer · Français",
@@ -485,8 +507,8 @@ window.YUMI_I18N = {
     "Every course is available at every duration — just pick": "Chaque cours est disponible dans toutes les durées — choisissez",
     "See packages in the booking window →": "Voir les forfaits dans la fenêtre de réservation →",
     "Book your lesson": "Réservez votre cours",
-    "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone, with Japan time (JST) as a reference.":
-      "Choisissez un cours au moins 72 heures à l'avance. Les horaires sont affichés dans votre fuseau horaire, avec l'heure du Japon (JST) en référence.",
+    "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone.":
+      "Choisissez un cours au moins 72 heures à l'avance. Les horaires sont affichés dans votre fuseau horaire.",
     "Closed Saturdays & Sundays. Calendar days are Japan dates; times are shown in your timezone.":
       "Fermé les samedis et dimanches. Les jours du calendrier sont des dates japonaises ; les horaires sont affichés dans votre fuseau horaire.",
     "Book a lesson →": "Réserver un cours →",
@@ -723,10 +745,10 @@ Object.assign(window.YUMI_I18N.fr, {
 
 /* Late-found static copy (booking pane subtitle). */
 Object.assign(window.YUMI_I18N.zh, {
-  "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone, with Japan time (JST) as a reference.": "请选择课程，并预约至少 72 小时之后的课时。时间以您所在的时区显示，并附日本时间（JST）供参考。",
+  "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone.": "请选择课程，并预约至少 72 小时之后的课时。时间以您所在的时区显示。",
 });
 Object.assign(window.YUMI_I18N.fr, {
-  "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone, with Japan time (JST) as a reference.": "Choisissez un cours et réservez un créneau au moins 72 heures à l'avance. Les horaires sont affichés dans votre fuseau horaire, avec l'heure du Japon (JST) à titre de référence.",
+  "Choose a course and a lesson at least 72 hours in advance. Times are shown in your timezone.": "Choisissez un cours et réservez un créneau au moins 72 heures à l'avance. Les horaires sont affichés dans votre fuseau horaire.",
 });
 
 /* Inline <strong> fragment inside the gate sentence. */
