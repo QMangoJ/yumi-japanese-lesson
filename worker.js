@@ -621,6 +621,26 @@ function redirectTo(location, cookies = []) {
 
 /* ---------------- Bookings storage ---------------- */
 
+/** Run fn over items with bounded concurrency, preserving order.
+ *  KV reads are independent round trips: awaiting them one by one
+ *  made the admin aggregates cost one serial round trip per record
+ *  (measured in measure-students-perf.mjs: /api/admin/students did
+ *  240 serial gets ≈ 1.3s at only 5ms/op). Batching keeps the same
+ *  reads, just overlapped. */
+async function mapParallel(items, fn, limit = 50) {
+  const out = new Array(items.length);
+  let i = 0;
+  async function run() {
+    while (i < items.length) {
+      const idx = i++;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, run));
+  return out;
+}
+
 async function getBooking(env, id) {
   const raw = await env.BOOKINGS.get(`booking:${id}`);
   return raw ? JSON.parse(raw) : null;
@@ -638,8 +658,8 @@ async function bookingsOn(env, dateStr) {
   let cursor;
   do {
     const list = await env.BOOKINGS.list({ prefix: "booking:", cursor, limit: 100 });
-    for (const key of list.keys) {
-      const raw = await env.BOOKINGS.get(key.name);
+    const raws = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+    for (const raw of raws) {
       if (!raw) continue;
       const b = JSON.parse(raw);
       if (b.date === dateStr && ["pending_payment", "paid"].includes(b.status)) {
@@ -662,10 +682,9 @@ async function listAllBookings(env) {
   let cursor;
   do {
     const list = await env.BOOKINGS.list({ prefix: "booking:", cursor, limit: 100 });
-    for (const key of list.keys) {
-      const b = await getBooking(env, key.name.slice("booking:".length));
-      if (b) out.push(b);
-    }
+    const batch = await mapParallel(list.keys, (key) =>
+      getBooking(env, key.name.slice("booking:".length)));
+    for (const b of batch) if (b) out.push(b);
     cursor = list.list_complete ? undefined : list.cursor;
   } while (cursor);
   return out;
@@ -685,8 +704,11 @@ async function resolveRemarks(env, allBookings) {
     if (!earliest.has(em) && (b.notes || "").trim()) earliest.set(em, b.notes);
   }
   const remarks = new Map();
-  for (const em of new Set(allBookings.map((b) => b.email.toLowerCase()))) {
-    const raw = await env.BOOKINGS.get(`studentnote:${em}`);
+  const emails = [...new Set(allBookings.map((b) => b.email.toLowerCase()))];
+  const raws = await mapParallel(emails, (em) =>
+    env.BOOKINGS.get(`studentnote:${em}`));
+  emails.forEach((em, i) => {
+    const raw = raws[i];
     let stored = null;
     if (raw) { try { stored = JSON.parse(raw); } catch { stored = null; } }
     if (stored) {
@@ -696,7 +718,7 @@ async function resolveRemarks(env, allBookings) {
     } else {
       remarks.set(em, { note: "", isDefault: false });
     }
-  }
+  });
   return remarks;
 }
 
@@ -708,11 +730,9 @@ async function bookingsSplitForEmail(env, settings, email) {
   do {
     const list = await env.BOOKINGS.list({
       prefix: `byemail:${email}:`, cursor, limit: 100 });
-    for (const key of list.keys) {
-      const id = await env.BOOKINGS.get(key.name);
-      const b = id ? await getBooking(env, id) : null;
-      if (b) mine.push(b);
-    }
+    const ids = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+    const batch = await mapParallel(ids, (id) => id ? getBooking(env, id) : null);
+    for (const b of batch) if (b) mine.push(b);
     cursor = list.list_complete ? undefined : list.cursor;
   } while (cursor);
   const pub = mine.map((b) => publicBooking(b, settings));
@@ -1005,11 +1025,9 @@ async function subscriptionsForEmail(env, email) {
   do {
     const list = await env.BOOKINGS.list({
       prefix: `subbyemail:${email}:`, cursor, limit: 100 });
-    for (const key of list.keys) {
-      const id = await env.BOOKINGS.get(key.name);
-      const sub = id ? await getSubscription(env, id) : null;
-      if (sub) out.push(sub);
-    }
+    const ids = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+    const batch = await mapParallel(ids, (id) => id ? getSubscription(env, id) : null);
+    for (const sub of batch) if (sub) out.push(sub);
     cursor = list.list_complete ? undefined : list.cursor;
   } while (cursor);
   return out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
@@ -1020,25 +1038,53 @@ async function listAllSubscriptions(env) {
   let cursor;
   do {
     const list = await env.BOOKINGS.list({ prefix: "subscription:", cursor, limit: 100 });
-    for (const key of list.keys) {
-      const sub = await getSubscription(env, key.name.slice("subscription:".length));
-      if (sub) out.push(sub);
-    }
+    const batch = await mapParallel(list.keys, (key) =>
+      getSubscription(env, key.name.slice("subscription:".length)));
+    for (const sub of batch) if (sub) out.push(sub);
     cursor = list.list_complete ? undefined : list.cursor;
   } while (cursor);
   return out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 }
 
 async function lessonsForSubscription(env, subId) {
-  return (await listAllBookings(env))
+  return lessonsOfSub(await listAllBookings(env), subId);
+}
+
+/** One subscription's lessons out of an already-loaded booking list,
+ *  chronological — the same set lessonsForSubscription returns,
+ *  without re-scanning KV. List endpoints load every booking ONCE
+ *  and derive all per-package aggregates from it (previously each
+ *  aggregate re-scanned the whole booking table per subscription). */
+function lessonsOfSub(allBookings, subId) {
+  return allBookings
     .filter((b) => b.subscriptionId === subId)
     .sort((a, b) => lessonStartMs(a) - lessonStartMs(b));
 }
 
-async function nextLessonOf(env, sub) {
-  const lessons = await lessonsForSubscription(env, sub.id);
+function nextLessonFrom(lessons) {
   const f = lessons.find((b) => b.status === "paid" && lessonStartMs(b) > Date.now());
   return f ? { id: f.id, date: f.date, time: f.time } : null;
+}
+
+function remainingFrom(lessons) {
+  const now = Date.now();
+  return lessons.filter((b) => b.status === "paid" && lessonStartMs(b) > now).length;
+}
+
+function refundableFrom(lessons) {
+  const now = Date.now();
+  const cutoff = CONFIG.policy.refundCutoffHours * 3600_000;
+  let count = 0, total = 0, insideWindow = 0;
+  for (const b of lessons) {
+    if (b.status !== "paid" || lessonStartMs(b) <= now) continue;
+    if (lessonStartMs(b) - now >= cutoff) { count++; total += b.amount || 0; }
+    else insideWindow++;
+  }
+  return { count, total, insideWindow };
+}
+
+async function nextLessonOf(env, sub) {
+  return nextLessonFrom(await lessonsForSubscription(env, sub.id));
 }
 
 function publicSubscription(sub, nextLesson = null, remainingLessons = null, refundable = null) {
@@ -1064,22 +1110,11 @@ function publicSubscription(sub, nextLesson = null, remainingLessons = null, ref
  *  (start at least refundCutoffHours away) and which fall inside the
  *  no-refund window. */
 async function refundableOf(env, sub) {
-  const lessons = await lessonsForSubscription(env, sub.id);
-  const now = Date.now();
-  const cutoff = CONFIG.policy.refundCutoffHours * 3600_000;
-  let count = 0, total = 0, insideWindow = 0;
-  for (const b of lessons) {
-    if (b.status !== "paid" || lessonStartMs(b) <= now) continue;
-    if (lessonStartMs(b) - now >= cutoff) { count++; total += b.amount || 0; }
-    else insideWindow++;
-  }
-  return { count, total, insideWindow };
+  return refundableFrom(await lessonsForSubscription(env, sub.id));
 }
 
 async function remainingOf(env, sub) {
-  const lessons = await lessonsForSubscription(env, sub.id);
-  const now = Date.now();
-  return lessons.filter((b) => b.status === "paid" && lessonStartMs(b) > now).length;
+  return remainingFrom(await lessonsForSubscription(env, sub.id));
 }
 
 /** Ending reminder (Feature F amendment): when an active subscription's
@@ -1087,9 +1122,9 @@ async function remainingOf(env, sub) {
  *  the student once (+ teacher copy) that the weekly block is about to end.
  *  Guarded by sub.endingReminderSent so it never double-fires per block;
  *  renewal resets the flag. */
-async function checkEndingReminder(env, settings, sub) {
+async function checkEndingReminder(env, settings, sub, preloadedLessons = null) {
   if (sub.status !== "active" || sub.endingReminderSent) return;
-  const lessons = await lessonsForSubscription(env, sub.id);
+  const lessons = preloadedLessons || await lessonsForSubscription(env, sub.id);
   const now = Date.now();
   const future = lessons.filter((b) => b.status === "paid" && lessonStartMs(b) > now);
   if (future.length === 0 || future.length > 2) return;
@@ -1551,11 +1586,13 @@ export default {
       if (!me) return json({ error: "Please log in to see your subscriptions" }, 401);
       const settings = await getSettings(env);
       const subs = await subscriptionsForEmail(env, me.email);
+      const all = await listAllBookings(env);
       const out = [];
       for (const sub of subs) {
-        await checkEndingReminder(env, settings, sub);
-        out.push(publicSubscription(sub, await nextLessonOf(env, sub),
-          await remainingOf(env, sub), await refundableOf(env, sub)));
+        const lessons = lessonsOfSub(all, sub.id);
+        await checkEndingReminder(env, settings, sub, lessons);
+        out.push(publicSubscription(sub, nextLessonFrom(lessons),
+          remainingFrom(lessons), refundableFrom(lessons)));
       }
       return json({ subscriptions: out });
     }
@@ -1739,11 +1776,13 @@ export default {
       }
       const subs = await listAllSubscriptions(env);
       const settings = await getSettings(env);
+      const all = await listAllBookings(env);
       const out = [];
       for (const sub of subs) {
-        await checkEndingReminder(env, settings, sub);
-        out.push(publicSubscription(sub, await nextLessonOf(env, sub),
-          await remainingOf(env, sub), await refundableOf(env, sub)));
+        const lessons = lessonsOfSub(all, sub.id);
+        await checkEndingReminder(env, settings, sub, lessons);
+        out.push(publicSubscription(sub, nextLessonFrom(lessons),
+          remainingFrom(lessons), refundableFrom(lessons)));
       }
       return json({ subscriptions: out });
     }
@@ -1777,9 +1816,10 @@ export default {
         let cursor;
         do {
           const list = await env.BOOKINGS.list({ prefix: "profile:", cursor, limit: 100 });
-          for (const key of list.keys) {
-            const raw = await env.BOOKINGS.get(key.name);
-            if (!raw) continue;
+          const raws = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+          list.keys.forEach((key, i) => {
+            const raw = raws[i];
+            if (!raw) return;
             try {
               const p = JSON.parse(raw);
               profiles.set(key.name.slice("profile:".length).toLowerCase(), {
@@ -1787,7 +1827,7 @@ export default {
                 goals: String(p.goals || "").slice(0, 2000),
               });
             } catch { /* skip malformed record */ }
-          }
+          });
           cursor = list.list_complete ? undefined : list.cursor;
         } while (cursor);
       }
@@ -1797,13 +1837,14 @@ export default {
         let cursor;
         do {
           const list = await env.BOOKINGS.list({ prefix: "user:", cursor, limit: 100 });
-          for (const key of list.keys) {
-            const raw = await env.BOOKINGS.get(key.name);
-            if (!raw) continue;
+          const raws = await mapParallel(list.keys, (key) => env.BOOKINGS.get(key.name));
+          list.keys.forEach((key, i) => {
+            const raw = raws[i];
+            if (!raw) return;
             try {
               users.set(key.name.slice("user:".length).toLowerCase(), JSON.parse(raw));
             } catch { /* skip malformed record */ }
-          }
+          });
           cursor = list.list_complete ? undefined : list.cursor;
         } while (cursor);
       }
@@ -1865,7 +1906,11 @@ export default {
       }
       for (const sub of subs) {
         const s = ensure(sub.email);
-        const remaining = sub.status === "active" ? await remainingOf(env, sub) : 0;
+        // Remaining lessons come from the already-loaded booking
+        // list — remainingOf() here used to re-scan all of KV per
+        // subscription (the N+1 that made this endpoint crawl).
+        const remaining = sub.status === "active"
+          ? remainingFrom(lessonsOfSub(all, sub.id)) : 0;
         s.packages.push({
           id: sub.id, courseId: sub.courseId,
           durationMinutes: sub.durationMinutes,
