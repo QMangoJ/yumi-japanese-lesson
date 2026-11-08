@@ -8,19 +8,29 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
 <link rel="stylesheet" href="styles.css" />
 <style>
-  /* ============ admin design system ============
-   * Tokens: body 14px/1.5; view title 18px, panel title 15.5px,
-   * labels 12.5px/600, captions 12.5px muted; form controls 36px
-   * tall, 1px neutral border, 8px radius, soft pink focus ring;
-   * buttons 36px primary / 32px small; spacing on an 8px rhythm
-   * (4/8/12/16/20/24/32); hairline borders over shadows; the sakura
-   * pink appears only as the accent. */
-  body { background: #f6f6f7; font-size: 14px; line-height: 1.5; }
+  /* ============ admin design system (2026-11 redesign) ============
+   * Language borrowed from the nav-menu references Daniel liked:
+   * light-gray app canvas, white cards with large rounded corners
+   * (14–16px) as the basic container, near-black text with mid-gray
+   * secondary, accent colours only inside small icons / badges /
+   * dots. Hierarchy comes from spacing and indentation — section
+   * labels are small gray UPPERCASE with wide letter-spacing, not
+   * divider lines. Active states are a light-gray pill + bold text.
+   * Form controls keep the admin's unified 36px box and pink focus
+   * ring (brand accent, kept deliberately); buttons are pills. */
+  body { background: #f1f1f3; font-size: 14px; line-height: 1.5;
+    font-family: "Inter", "Helvetica Neue", "Segoe UI", system-ui,
+    -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+    "Noto Sans JP", sans-serif;
+    -webkit-font-smoothing: antialiased; }
   :root {
-    --adm-line: #e8e1dd;
-    --adm-line-strong: #d3c8c2;
-    --adm-faint: #a79a94;
-    --adm-inset: #faf8f7;
+    --adm-line: #e6e2e0;
+    --adm-line-strong: #d8d2ce;
+    --adm-faint: #a89d99;
+    --adm-inset: #f7f5f4;
+    --adm-pill: #f0eeed;
+    --adm-shadow: 0 1px 2px rgba(38, 30, 30, .04), 0 10px 28px rgba(38, 30, 30, .05);
+    --adm-shadow-pop: 0 16px 40px rgba(38, 30, 30, .16);
     --adm-ring: 0 0 0 3px var(--accent-soft);
   }
   button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
@@ -32,9 +42,9 @@
      gets the same box, whether or not it sits inside a .field. */
   .shell :is(input, select, textarea),
   .login-wrap :is(input, select, textarea) {
-    border: 1px solid var(--adm-line-strong); border-radius: 8px;
+    border: 1px solid var(--adm-line-strong); border-radius: 10px;
     background: #fff; color: var(--ink); font-size: 14px;
-    padding: 0 10px; min-height: 36px;
+    padding: 0 12px; min-height: 38px;
   }
   .shell textarea, .login-wrap textarea {
     padding: 9px 11px; min-height: 0; line-height: 1.5;
@@ -56,8 +66,8 @@
   .adm-dd { position: relative; display: inline-block; }
   .adm-dd-btn {
     display: inline-flex; align-items: center; gap: 8px; width: 100%;
-    min-height: 36px; padding: 0 10px; background: #fff; color: var(--ink);
-    border: 1px solid var(--adm-line-strong); border-radius: 8px;
+    min-height: 38px; padding: 0 12px; background: #fff; color: var(--ink);
+    border: 1px solid var(--adm-line-strong); border-radius: 10px;
     font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
   }
   .adm-dd-btn:hover { border-color: var(--accent); }
@@ -70,23 +80,23 @@
   .adm-dd-chev svg { width: 14px; height: 14px; display: block; }
   .adm-dd.open .adm-dd-chev { transform: rotate(180deg); color: var(--accent); }
   .adm-dd-pop {
-    position: absolute; top: calc(100% + 4px); left: 0; z-index: 90;
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 90;
     min-width: 100%; max-height: 248px; overflow-y: auto;
-    background: #fff; border: 1px solid var(--adm-line); border-radius: 10px;
-    box-shadow: 0 12px 32px rgba(60, 40, 40, .14); padding: 4px;
+    background: #fff; border: 1px solid var(--adm-line); border-radius: 14px;
+    box-shadow: var(--adm-shadow-pop); padding: 5px;
   }
   .adm-dd-pop[hidden] { display: none; }
   .adm-dd-opt {
     display: flex; align-items: center; gap: 8px; width: 100%;
-    padding: 7px 10px; border: none; background: none; border-radius: 6px;
+    padding: 8px 10px; border: none; background: none; border-radius: 9px;
     font: inherit; font-size: 13.5px; color: var(--ink); text-align: left;
     cursor: pointer; white-space: nowrap;
   }
-  .adm-dd-opt:hover, .adm-dd-opt.adm-dd-hl { background: #faf5f3; }
+  .adm-dd-opt:hover, .adm-dd-opt.adm-dd-hl { background: var(--adm-pill); }
   .adm-dd-opt .adm-dd-check { width: 14px; flex: 0 0 14px; color: var(--accent);
     visibility: hidden; display: inline-flex; }
   .adm-dd-opt .adm-dd-check svg { width: 12px; height: 12px; display: block; }
-  .adm-dd-opt.sel { color: var(--accent); font-weight: 600; }
+  .adm-dd-opt.sel { background: var(--accent-soft); color: var(--accent); font-weight: 650; }
   .adm-dd-opt.sel .adm-dd-check { visibility: visible; }
   /* Remaining native widgets, restyled to drop OS chrome:
      number inputs lose their spinner buttons. */
@@ -105,9 +115,9 @@
   .adm-dp { position: relative; display: inline-block; }
   .adm-dp-btn {
     display: inline-flex; align-items: center; gap: 8px; width: 100%;
-    min-width: 168px; min-height: 36px; padding: 0 10px; background: #fff;
+    min-width: 168px; min-height: 38px; padding: 0 12px; background: #fff;
     color: var(--ink); border: 1px solid var(--adm-line-strong);
-    border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer;
+    border-radius: 10px; font: inherit; font-size: 14px; cursor: pointer;
     white-space: nowrap;
   }
   .adm-dp-btn:hover { border-color: var(--accent); }
@@ -121,10 +131,10 @@
   .adm-dp-ico svg { width: 15px; height: 15px; display: block; }
   .adm-dp.open .adm-dp-ico { color: var(--accent); }
   .adm-dp-pop {
-    position: absolute; top: calc(100% + 4px); left: 0; z-index: 90;
-    width: 252px; background: #fff; border: 1px solid var(--adm-line);
-    border-radius: 10px; box-shadow: 0 12px 32px rgba(60, 40, 40, .14);
-    padding: 10px;
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 90;
+    width: 256px; background: #fff; border: 1px solid var(--adm-line);
+    border-radius: 14px; box-shadow: var(--adm-shadow-pop);
+    padding: 12px;
   }
   .adm-dp-pop[hidden] { display: none; }
   .adm-dp-head {
@@ -135,10 +145,10 @@
   .adm-dp-nav {
     width: 28px; height: 28px; display: inline-flex; align-items: center;
     justify-content: center; border: none; background: none;
-    border-radius: 6px; font: inherit; font-size: 17px; line-height: 1;
+    border-radius: 8px; font: inherit; font-size: 17px; line-height: 1;
     color: var(--sub); cursor: pointer;
   }
-  .adm-dp-nav:hover { background: #faf5f3; color: var(--accent); }
+  .adm-dp-nav:hover { background: var(--adm-pill); color: var(--accent); }
   .adm-dp-week, .adm-dp-grid {
     display: grid; grid-template-columns: repeat(7, 1fr);
   }
@@ -153,7 +163,7 @@
     font: inherit; font-size: 13px; color: var(--ink); cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .adm-dp-day:hover:not(:disabled):not(.sel) { background: #faf5f3; }
+  .adm-dp-day:hover:not(:disabled):not(.sel) { background: var(--adm-pill); }
   .adm-dp-day.filler { color: var(--adm-faint); opacity: .55; }
   .adm-dp-day.today { box-shadow: inset 0 0 0 1.5px var(--accent);
     color: var(--accent); font-weight: 700; }
@@ -163,35 +173,42 @@
     cursor: default; box-shadow: none; font-weight: 400; }
   .adm-dp-foot {
     display: flex; align-items: center; justify-content: space-between;
-    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--adm-line);
+    margin-top: 10px; padding-top: 8px;
   }
   .adm-dp-foot-btn {
-    border: none; background: none; border-radius: 6px; padding: 2px 6px;
+    border: none; background: none; border-radius: 999px; padding: 3px 9px;
     font: inherit; font-size: 12.5px; font-weight: 600; color: var(--sub);
     cursor: pointer;
   }
-  .adm-dp-foot-btn:hover:not(:disabled) { background: #faf5f3;
+  .adm-dp-foot-btn:hover:not(:disabled) { background: var(--adm-pill);
     color: var(--accent); }
   .adm-dp-foot-btn:disabled { opacity: .4; cursor: default; }
   .shell .field, .login-wrap .field {
-    font-size: 12.5px; font-weight: 600; margin-bottom: 14px;
+    font-size: 11.5px; font-weight: 700; color: var(--sub);
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px;
   }
+  /* Controls inside a label keep their natural case + size. */
+  .shell .field :is(input, select, textarea, .adm-dd-btn, .adm-dp-btn),
+  .login-wrap .field :is(input, select, textarea) {
+    text-transform: none; letter-spacing: normal; font-weight: 400;
+  }
+  .shell .field .adm-dd, .shell .field .adm-dp { text-transform: none; letter-spacing: normal; }
   .shell .note, .login-wrap .note {
     font-size: 13px; color: var(--sub); line-height: 1.55;
   }
   .shell .btn, .login-wrap .btn {
-    border-radius: 8px; box-shadow: none; padding: 8px 16px;
-    font-size: 13.5px; font-weight: 600; min-height: 36px;
+    border-radius: 999px; box-shadow: none; padding: 8px 18px;
+    font-size: 13.5px; font-weight: 600; min-height: 38px;
   }
   .shell .btn:hover, .login-wrap .btn:hover { transform: none; box-shadow: 0 2px 8px rgba(212,87,122,.22); }
   .shell .btn-ghost { border: 1px solid var(--adm-line-strong); color: var(--ink); background: #fff; }
   .shell .btn-ghost:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
-  .shell .btn-small { padding: 5px 11px; font-size: 12.5px; min-height: 32px; }
+  .shell .btn-small { padding: 5px 13px; font-size: 12.5px; min-height: 32px; }
 
   /* ============ login ============ */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
-  .login-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 14px;
-    box-shadow: 0 8px 30px rgba(60, 40, 40, .07); padding: 40px 36px 30px;
+  .login-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 16px;
+    box-shadow: var(--adm-shadow); padding: 40px 36px 30px;
     width: 100%; max-width: 400px; text-align: left; }
   .login-logo { font-size: 34px; line-height: 1; }
   .login-card h1 { font-size: 21px; margin: 12px 0 4px; letter-spacing: -.01em; }
@@ -208,54 +225,76 @@
 
   /* ============ app shell ============ */
   .shell { display: flex; min-height: 100vh; }
-  .sidebar { width: 234px; flex: 0 0 234px; background: #fff; border-right: 1px solid var(--adm-line);
-    display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 40; }
+  /* Sidebar (2026-11 redesign): a white rounded card floating on the
+     gray canvas — grouped nav with small gray UPPERCASE group labels,
+     pill selected state, generous row spacing, and a teacher card
+     pinned above the foot links. The outer shell (aside) keeps its
+     fixed positioning + mobile slide-in; the card is its inner box. */
+  .sidebar { width: 250px; flex: 0 0 250px; background: transparent;
+    display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 40;
+    padding: 14px 0 14px 14px; }
+  .side-card { flex: 1; min-height: 0; background: #fff; border: 1px solid var(--adm-line);
+    border-radius: 16px; box-shadow: var(--adm-shadow);
+    display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
   .side-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16.5px;
-    padding: 18px 18px 14px; color: var(--ink); }
+    padding: 18px 18px 12px; color: var(--ink); }
   .side-logo { font-size: 20px; }
-  .side-nav { display: flex; flex-direction: column; gap: 2px; padding: 4px 10px; }
-  .side-nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px;
-    border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14.5px; font-weight: 600;
-    border-left: 3px solid transparent; }
+  .side-nav { display: flex; flex-direction: column; gap: 2px; padding: 2px 10px; }
+  .side-group { font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--adm-faint); padding: 16px 12px 6px; }
+  .side-group:first-child { padding-top: 6px; }
+  .side-nav a { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+    border-radius: 999px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 550; }
   .side-nav a svg { width: 18px; height: 18px; flex: 0 0 18px; stroke: var(--sub); fill: none;
-    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .side-nav a .nav-cn { margin-left: auto; font-size: 12px; color: var(--sub); font-weight: 400; }
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .side-nav a .nav-count { margin-left: auto; min-width: 22px; height: 20px; padding: 0 7px;
+    border-radius: 999px; background: var(--adm-pill); color: var(--sub); font-size: 11.5px;
+    font-weight: 650; display: inline-flex; align-items: center; justify-content: center;
+    line-height: 1; font-variant-numeric: tabular-nums; }
   .side-nav a .nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
     border-radius: 999px; background: #d43d5f; color: #fff; font-size: 12px; font-weight: 700;
     display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-  .side-nav a:hover { background: #faf5f3; }
-  .side-nav a.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+  .side-nav a .nav-count + .nav-badge { margin-left: 6px; }
+  .side-nav a:hover { background: var(--adm-pill); }
+  .side-nav a.active { background: var(--adm-pill); color: var(--ink); font-weight: 700; }
   .side-nav a.active svg { stroke: var(--accent); }
-  .side-nav a.active .nav-cn { color: var(--accent); }
-  .side-foot { margin-top: auto; border-top: 1px solid var(--adm-line); padding: 12px 10px;
+  .side-teacher { margin: auto 12px 4px; background: var(--adm-inset);
+    border: 1px solid var(--adm-line); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 11px; }
+  .side-teacher-avatar { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%;
+    background: var(--accent-soft); display: inline-flex; align-items: center;
+    justify-content: center; font-size: 18px; }
+  .side-teacher-name { font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+  .side-teacher-sub { font-size: 11.5px; color: var(--sub); line-height: 1.35; }
+  .side-foot { padding: 8px 10px 12px;
     display: flex; flex-direction: column; gap: 2px; }
-  .side-foot-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
-    color: var(--sub); text-decoration: none; font-size: 14px; font-weight: 600;
+  .side-foot-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 999px;
+    color: var(--sub); text-decoration: none; font-size: 13.5px; font-weight: 600;
     background: none; border: none; font: inherit; cursor: pointer; text-align: left; width: 100%; }
   .side-foot-link svg { width: 17px; height: 17px; stroke: var(--sub); fill: none; stroke-width: 2;
     stroke-linecap: round; stroke-linejoin: round; }
-  .side-foot-link:hover { background: #faf5f3; color: var(--ink); }
+  .side-foot-link:hover { background: var(--adm-pill); color: var(--ink); }
   .backdrop { position: fixed; inset: 0; background: rgba(40,30,30,.35); z-index: 39; }
 
-  .main { flex: 1; min-width: 0; margin-left: 234px; display: flex; flex-direction: column; min-height: 100vh; }
+  .main { flex: 1; min-width: 0; margin-left: 250px; display: flex; flex-direction: column; min-height: 100vh; }
   .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px;
-    background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--adm-line); padding: 12px 26px; }
+    background: rgba(241,241,243,.88); backdrop-filter: blur(8px);
+    padding: 13px 26px; }
   .topbar h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
   .topbar-auth { margin-left: auto; color: var(--sub); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .topbar-env { color: var(--sub); font-size: 12.5px; }
-  .burger { display: none; border: 1px solid var(--adm-line-strong); background: #fff; border-radius: 8px;
+  .burger { display: none; border: 1px solid var(--adm-line-strong); background: #fff; border-radius: 999px;
     width: 38px; height: 38px; font-size: 17px; cursor: pointer; color: var(--ink); padding: 0;
     align-items: center; justify-content: center; }
-  .content { flex: 1; padding: 26px 28px 44px; max-width: 1240px; width: 100%; margin: 0 auto; }
+  .content { flex: 1; padding: 20px 28px 40px; max-width: 1240px; width: 100%; margin: 0 auto; }
   .view { animation: view-in .16s ease-out; }
   @keyframes view-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
-  .panel { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px;
-    padding: 22px 24px; margin-bottom: 20px; }
+  .panel { background: #fff; border: 1px solid var(--adm-line); border-radius: 16px;
+    box-shadow: var(--adm-shadow); padding: 24px 26px; margin-bottom: 20px; }
   .panel h2 { margin: 0 0 6px; font-size: 15.5px; font-weight: 650; letter-spacing: -.005em; }
   .panel h2 + .note { margin-top: 0; }
-  .panel hr.sep { border: none; border-top: 1px dashed var(--adm-line); margin: 20px 0; }
+  .panel hr.sep { border: none; border-top: 1px dashed var(--adm-line); margin: 22px 0; }
 
   /* save bar */
   .savebar { position: sticky; bottom: 0; z-index: 30; display: flex; align-items: center; gap: 14px;
@@ -287,7 +326,7 @@
      so every admin success toast lands here. 76px clears the
      sticky topbar and sits in the upper area of the viewport. */
   .toast { position: fixed; top: 76px; left: 50%; z-index: 90; background: #33302e; color: #fff;
-    padding: 11px 18px; border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    padding: 11px 20px; border-radius: 999px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
     max-width: min(92vw, 560px); text-align: center;
     opacity: 0; transform: translate(-50%, -6px); transition: opacity .22s, transform .22s; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -295,8 +334,8 @@
   /* availability save guard dialog */
   .avail-warn { position: fixed; inset: 0; z-index: 120; background: rgba(38, 28, 28, .45);
     display: flex; align-items: center; justify-content: center; padding: 18px; }
-  .avail-warn-card { background: #fff; border-radius: 14px; max-width: 560px; width: 100%;
-    max-height: 86vh; display: flex; flex-direction: column; padding: 22px 24px;
+  .avail-warn-card { background: #fff; border-radius: 16px; max-width: 560px; width: 100%;
+    max-height: 86vh; display: flex; flex-direction: column; padding: 24px 26px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, .3); }
   .avail-warn-card h3 { margin: 0 0 4px; font-size: 17px; }
   .avail-warn-count { margin: 0; font-size: 14px; }
@@ -315,8 +354,8 @@
   .rev-chip { appearance: none; -webkit-appearance: none; border: 1px solid var(--adm-line-strong);
     background: #fff; color: var(--ink); border-radius: 999px; padding: 6px 14px;
     font: inherit; font-size: 13.5px; cursor: pointer; }
-  .rev-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .rev-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; }
+  .rev-chip:hover { border-color: var(--adm-line-strong); background: var(--adm-pill); }
+  .rev-chip.active { background: var(--adm-pill); border-color: var(--adm-line-strong); color: var(--ink); font-weight: 700; }
   .rev-nav { display: inline-flex; align-items: center; gap: 10px; }
   #rev-label { font-weight: 650; font-size: 15px; min-width: 168px; text-align: center; }
   .rev-stats { grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); }
@@ -346,8 +385,8 @@
   .adm-revd-row { display: grid; gap: 10px; align-items: baseline;
     grid-template-columns: 128px 96px minmax(150px, 1.1fr) minmax(170px, 1.3fr) 168px 78px;
     padding: 8px 4px; border-bottom: 1px solid var(--adm-line); font-size: 13.5px; }
-  .adm-revd-row.adm-revd-hrow { font-size: 11.5px; font-weight: 700; color: var(--sub);
-    text-transform: uppercase; letter-spacing: .04em; padding-bottom: 6px;
+  .adm-revd-row.adm-revd-hrow { font-size: 11px; font-weight: 700; color: var(--adm-faint);
+    text-transform: uppercase; letter-spacing: .1em; padding-bottom: 6px;
     position: sticky; top: 0; z-index: 3; background: #fff; }
   .adm-revd-date { white-space: nowrap; font-weight: 600; }
   .adm-revd-who { display: flex; flex-direction: column; min-width: 0; }
@@ -359,9 +398,10 @@
   .adm-revd-subtotal b { color: var(--ink, inherit); font-size: 14.5px; }
   /* contact messages view (adm-msgc-*) */
   .msg-list { margin-top: 12px; }
-  .msgc-row { display: flex; gap: 14px; padding: 13px 6px;
-    border-bottom: 1px solid var(--adm-line); align-items: flex-start; }
-  .msgc-row.unread { background: #fdf3f6; }
+  .msgc-row { display: flex; gap: 14px; padding: 14px 14px;
+    border: 1px solid var(--adm-line); border-radius: 14px; margin-bottom: 10px;
+    background: #fff; align-items: flex-start; }
+  .msgc-row.unread { background: #fdf3f6; border-color: #f3d3dd; }
   .msgc-main { flex: 1; min-width: 0; }
   .msgc-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
   .msgc-name { font-weight: 700; }
@@ -376,18 +416,19 @@
 
   /* ============ dashboard ============ */
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-  .stat-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 12px; padding: 18px 20px; }
-  .stat-label { font-size: 12.5px; color: var(--sub); font-weight: 600; }
+  .stat-card { background: #fff; border: 1px solid var(--adm-line); border-radius: 16px;
+    box-shadow: var(--adm-shadow); padding: 20px 22px; }
+  .stat-label { font-size: 11px; color: var(--adm-faint); font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em; }
   .stat-num { font-size: 30px; font-weight: 750; line-height: 1.15; margin: 5px 0 2px;
     font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .stat-sub { font-size: 12.5px; color: var(--sub); }
   .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
   .dash-grid .panel { margin-bottom: 0; }
   .dash-row { display: flex; gap: 12px; align-items: baseline; width: 100%; text-align: left;
-    background: none; border: none; border-bottom: 1px solid var(--adm-line);
-    padding: 9px 4px; font: inherit; cursor: pointer; color: var(--ink); }
-  .dash-row:last-child { border-bottom: none; }
-  .dash-row:hover { background: #faf5f3; }
+    background: none; border: none; border-radius: 10px;
+    padding: 10px 10px; font: inherit; cursor: pointer; color: var(--ink); }
+  .dash-row:hover { background: var(--adm-pill); }
   .dash-time { font-weight: 700; white-space: nowrap; }
   .dash-name { font-weight: 600; }
   .dash-course { color: var(--sub); font-size: 13px; margin-left: auto; text-align: right; }
@@ -401,11 +442,11 @@
   .data-table thead th { position: sticky; top: 0; background: #fff; z-index: 3; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px;
     font-variant-numeric: tabular-nums; }
-  .data-table th, .data-table td { text-align: left; padding: 11px 12px;
+  .data-table th, .data-table td { text-align: left; padding: 12px 12px;
     border-bottom: 1px solid var(--adm-line); vertical-align: top; }
-  .data-table th { color: var(--sub); font-size: 11.5px; text-transform: uppercase;
-    letter-spacing: .05em; font-weight: 700; white-space: nowrap; }
-  .data-table tbody tr:hover { background: #fdfaf9; }
+  .data-table th { color: var(--adm-faint); font-size: 11px; text-transform: uppercase;
+    letter-spacing: .1em; font-weight: 700; white-space: nowrap; }
+  .data-table tbody tr:hover { background: var(--adm-inset); }
   .data-table .cell-sub { color: var(--sub); font-size: 12.5px; }
   .data-table .nowrap { white-space: nowrap; }
   .data-table .actions { white-space: nowrap; text-align: right; }
@@ -423,9 +464,8 @@
   .filter-bar .field.grow { flex: 1 1 200px; }
 
   /* ============ settings form pieces (carried over) ============ */
-  .day-row { display: flex; align-items: center; gap: 12px; padding: 7px 0;
-    border-bottom: 1px dashed var(--adm-line); flex-wrap: wrap; }
-  .day-row:last-child { border-bottom: none; }
+  .day-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; flex-wrap: wrap; }
+  .day-row + .day-row { margin-top: 2px; }
   .day-name { width: 110px; font-weight: 600; }
   .day-row input[type="time"] { width: 130px; }
   .day-row .closed-note { color: var(--sub); font-size: 13px; }
@@ -440,7 +480,7 @@
      min-content, or the calendar overflows its card on narrow screens */
   .adm-cal .cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
   .adm-cal .cal-day {
-    aspect-ratio: auto; height: 56px; border-radius: 12px; width: 100%; min-width: 0;
+    aspect-ratio: auto; height: 56px; border-radius: 14px; width: 100%; min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 1px; padding: 4px 1px; position: relative; border: 1.5px solid transparent;
   }
@@ -459,31 +499,31 @@
   .adm-cal .cal-day.today { box-shadow: inset 0 0 0 1.5px var(--adm-line-strong); }
   .adm-cal .cal-day.today::after { display: none; }
 
-  .day-editor { border: 1px solid var(--adm-line); border-radius: 12px;
-    padding: 18px; background: #fff; }
-  .seg { display: flex; border: 1px solid var(--adm-line-strong); border-radius: 10px;
-    overflow: hidden; margin-bottom: 14px; }
-  .seg button { flex: 1; border: none; background: #fff; font: inherit;
+  .day-editor { border: 1px solid var(--adm-line); border-radius: 14px;
+    padding: 20px; background: var(--adm-inset); }
+  .seg { display: flex; background: var(--adm-pill); border-radius: 999px;
+    padding: 3px; gap: 3px; margin-bottom: 14px; }
+  .seg button { flex: 1; border: none; background: transparent; font: inherit;
     font-size: 13.5px; padding: 7px 2px; cursor: pointer; color: var(--sub);
-    min-height: 38px; }
-  .seg button + button { border-left: 1px solid var(--adm-line-strong); }
-  .seg button.active { background: var(--accent); color: #fff; font-weight: 650; }
+    min-height: 36px; border-radius: 999px; }
+  .seg button.active { background: #fff; color: var(--ink); font-weight: 650;
+    box-shadow: 0 1px 4px rgba(38, 30, 30, .12); }
   .de-special { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 6px; }
   .de-special .field { margin-bottom: 6px; }
   .de-special select { min-width: 110px; }
   .de-special .adm-dd { min-width: 110px; }
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
-  .hour-chip { border: 1px solid var(--accent); background: var(--accent);
-    color: #fff; border-radius: 999px; padding: 6px 13px; font: inherit;
+  .hour-chip { border: 1px solid var(--adm-line-strong); background: var(--adm-pill);
+    color: var(--ink); border-radius: 999px; padding: 6px 14px; font: inherit;
     font-size: 13.5px; font-weight: 600; cursor: pointer; min-height: 36px; }
   .hour-chip.blocked { background: #fff; color: var(--sub);
-    border-color: var(--adm-line-strong); text-decoration: line-through; font-weight: 400; }
-  .vac-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 18px;
-    border-top: 1px dashed var(--adm-line); padding-top: 16px; }
+    border-color: var(--adm-line); text-decoration: line-through; font-weight: 400; }
+  .vac-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 20px;
+    padding-top: 4px; }
   .vac-row .field { margin-bottom: 0; }
   .summary-line { font-size: 14px; margin-top: 16px; line-height: 2; }
   .sum-chip { display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent-soft); border-radius: 999px; padding: 3px 6px 3px 12px;
+    background: var(--adm-pill); border-radius: 999px; padding: 3px 6px 3px 12px;
     margin: 2px 4px 2px 0; font-size: 13.5px; white-space: nowrap; }
   .sum-chip button { border: none; background: #fff; color: var(--accent);
     width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
@@ -506,8 +546,8 @@
   .adm-cal .cal-day.selected .d-lesson { color: #fff; }
   .adm-cal .cal-day.selected .d-lesson.done,
   .adm-cal .cal-day.selected .d-more { color: #ffe3ec; }
-  .lesson-row { border: 1px solid var(--adm-line); border-radius: 10px;
-    padding: 8px 12px; margin-bottom: 6px; background: #fff; }
+  .lesson-row { border: 1px solid var(--adm-line); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 8px; background: #fff; }
   .lesson-row.is-cancelled { opacity: .55; }
   /* One compact line per lesson: time span · course · duration on the
      left (never wraps), then student · email · status, ellipsised —
@@ -521,7 +561,7 @@
   /* Teacher remark, collapsed by default inside lesson rows: a
      one-line summary + Edit toggle; the roomy editor unfolds below
      on demand. data-hn="1" when the student has a note. */
-  .remark-fold { margin-top: 5px; border-top: 1px dashed var(--adm-line); padding-top: 5px; }
+  .remark-fold { margin-top: 6px; padding-top: 5px; }
   .remark-toggle { display: flex; align-items: center; gap: 10px; width: 100%;
     background: none; border: none; padding: 1px 0; font: inherit;
     cursor: pointer; text-align: left; color: inherit; }
@@ -536,8 +576,7 @@
   /* The remark editor: one quiet label, a roomy textarea on the
      unified control style, and the save button aligned to the right
      edge of the field. */
-  .remark-box { margin-top: 10px; border-top: 1px solid var(--adm-line);
-    padding-top: 10px; display: flex; flex-direction: column; }
+  .remark-box { margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; }
   .remark-box label { font-size: 12.5px; font-weight: 600; display: block; margin-bottom: 6px; }
   .remark-box label .default-tag { color: var(--sub); font-weight: 400; }
   .remark-box textarea { width: 100%; min-height: 84px; resize: vertical; }
@@ -561,7 +600,9 @@
     .dash-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 900px) {
-    .sidebar { transform: translateX(-105%); transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.12); }
+    .sidebar { transform: translateX(-108%); transition: transform .22s ease; padding: 10px 0 10px 10px;
+      width: min(272px, 86vw); flex-basis: auto; }
+    .sidebar .side-card { box-shadow: 0 0 44px rgba(0,0,0,.18); }
     .sidebar.open { transform: none; }
     .main { margin-left: 0; }
     .burger { display: flex; }
@@ -689,27 +730,29 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .wh-day-head{padding:4px 2px 8px!important;vertical-align:top}
 .wh-day-name{font-weight:650;font-size:13.5px}
 .wh-all{display:block;margin:6px auto 5px;font:inherit;font-size:12px;padding:4px 14px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
-.wh-all:hover{border-color:var(--accent);color:var(--accent)}
+.wh-all:hover{background:var(--adm-pill)}
 /* Each selected range on its own line; 3 lines of height are always
    reserved so the header never grows/shrinks while painting. */
 .wh-day-sum{display:block;font-size:10.5px;color:var(--muted);line-height:1.45;min-height:46px;font-variant-numeric:tabular-nums;white-space:pre-line}
 .wh-hour-label{font-size:12.5px;font-weight:600;color:var(--sub);font-variant-numeric:tabular-nums;padding-right:8px!important;text-align:right!important;white-space:nowrap}
-.wh-cell{width:100%;height:43px;border:1px solid var(--adm-line);background:#f4f2f0;border-radius:6px;cursor:pointer;font-size:12px;color:#cfc8c3;padding:0}
-.wh-cell:hover{border-color:var(--accent)}
-.wh-cell.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.wh-cell{width:100%;height:43px;border:1px solid var(--adm-line);background:#f4f3f2;border-radius:10px;cursor:pointer;font-size:12px;color:#cfc8c3;padding:0}
+.wh-cell:hover{border-color:var(--adm-line-strong)}
+.wh-cell.on{background:var(--accent-soft);border-color:#eec3d0;color:var(--accent);font-weight:700}
 
 /* ---------- students board ---------- */
 .stu-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px}
 .stu-controls input[type="search"]{flex:1 1 220px}
 .chip-filters{display:flex;gap:6px;flex-wrap:wrap}
-.fchip{font:inherit;font-size:13px;padding:6px 13px;min-height:32px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
-.fchip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.stu-sort{font-size:12.5px;color:var(--sub);display:flex;align-items:center;gap:6px;font-weight:600}
+.fchip{font:inherit;font-size:13px;padding:6px 14px;min-height:32px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
+.fchip:hover{background:var(--adm-pill)}
+.fchip.active{background:var(--adm-pill);border-color:var(--adm-line-strong);color:var(--ink);font-weight:700}
+.stu-sort{font-size:11.5px;color:var(--sub);display:flex;align-items:center;gap:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.stu-sort .adm-dd{text-transform:none;letter-spacing:normal}
 .stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px;margin-top:12px}
-.stu-card{background:#fff;border:1px solid var(--adm-line);border-radius:12px;padding:16px;cursor:pointer;text-align:left;transition:border-color .15s,box-shadow .15s}
-.stu-card:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(60,30,40,.06)}
+.stu-card{background:#fff;border:1px solid var(--adm-line);border-radius:16px;padding:18px;cursor:pointer;text-align:left;transition:border-color .15s,box-shadow .15s;box-shadow:var(--adm-shadow)}
+.stu-card:hover{border-color:var(--adm-line-strong);box-shadow:0 4px 16px rgba(38,30,30,.09)}
 .stu-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 38px}
+.avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--adm-pill);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 38px}
 .avatar-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 38px}
 .stu-name{font-weight:650;font-size:15px}
 .pill-acct{background:#eef2f7;color:#3c5a78}
@@ -717,13 +760,14 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .stu-lines strong{color:var(--ink);font-weight:600}
 .remark-snippet{margin-top:8px;font-size:12.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drawer-backdrop{position:fixed;inset:0;background:rgba(35,25,22,.38);z-index:65}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,94vw);background:#fff;z-index:70;box-shadow:-8px 0 28px rgba(60,30,40,.18);padding:24px;overflow-y:auto}
+.drawer{position:fixed;top:12px;right:12px;bottom:12px;width:min(500px,94vw);background:#fff;z-index:70;box-shadow:var(--adm-shadow-pop);padding:26px;border-radius:16px;overflow-y:auto}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .drawer-head h3{margin:0;font-size:18px;font-weight:650;letter-spacing:-.01em}
 .stu-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;color:var(--sub);margin:12px 0}
 .stu-facts strong{color:var(--ink)}
-.pkg-card{border:1px solid var(--adm-line);border-radius:10px;padding:11px 13px;margin:8px 0}
-.tl-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--adm-line);font-size:13px}
+.pkg-card{border:1px solid var(--adm-line);border-radius:12px;padding:12px 14px;margin:8px 0;background:var(--adm-inset)}
+.tl-row{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:13px}
+.tl-row + .tl-row{margin-top:1px}
 .tl-date{font-variant-numeric:tabular-nums;white-space:nowrap}
 .tl-what{flex:1;color:var(--muted)}
 
@@ -753,11 +797,11 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .skl-line{height:11px;margin:7px 0}
 .skl-row{height:14px;margin:14px 0}
 .skl-row:first-child{margin-top:4px}
-.skl-card{border:1px solid var(--adm-line);border-radius:12px;padding:16px;background:#fff}
+.skl-card{border:1px solid var(--adm-line);border-radius:16px;padding:16px;background:#fff}
 .skl-top{display:flex;gap:10px;align-items:center;margin-bottom:10px}
 .skl-avatar{width:38px;height:38px;border-radius:50%;flex:0 0 38px}
 .skl-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.skl-cell{height:54px;border-radius:10px}
+.skl-cell{height:54px;border-radius:12px}
 .skl-caltitle{width:38%;height:14px;margin:8px auto 16px}
 @keyframes adm-spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:13px;height:13px;border-radius:50%;
@@ -765,16 +809,26 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
   animation:adm-spin .7s linear infinite;vertical-align:-2px;margin-right:7px}
 
   /* admin language switcher (en/ja) */
-  .adm-lang { position: relative; }
+  .adm-lang { position: relative; margin-left: 4px; }
+  /* Section group label inside a panel: the small gray UPPERCASE
+     label the redesign uses wherever a panel holds sub-groups. */
+  .adm-group-label { font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--adm-faint); margin: 22px 0 10px; }
+  .adm-group-label:first-child { margin-top: 2px; }
+  /* Admin calendars share the public .cal-* chrome from styles.css:
+     pull it into the same language (gray labels, pill nav). */
+  .shell .cal-week span { font-size: 10.5px; letter-spacing: .08em; color: var(--adm-faint); }
+  .shell .cal-nav { border-color: var(--adm-line); }
+  .shell .cal-nav:hover:not(:disabled) { background: var(--adm-pill); border-color: var(--adm-line-strong); color: var(--ink); }
   .adm-lang-btn { appearance: none; border: 1px solid var(--adm-line-strong); background: #fff; color: var(--ink);
-    border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-  .adm-lang-btn:hover { border-color: var(--accent); color: var(--accent); }
+    border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .adm-lang-btn:hover { background: var(--adm-pill); }
   .adm-lang-pop { position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--adm-line);
-    border-radius: 12px; box-shadow: 0 12px 32px rgba(31,26,23,.16); padding: 6px; min-width: 140px; z-index: 60; }
+    border-radius: 14px; box-shadow: var(--adm-shadow-pop); padding: 5px; min-width: 140px; z-index: 60; }
   .adm-lang-pop.hidden { display: none; }
   .adm-lang-pop button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px;
-    appearance: none; border: 0; background: none; font: inherit; font-size: 13.5px; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--ink); }
-  .adm-lang-pop button:hover { background: #fdf3f5; }
+    appearance: none; border: 0; background: none; font: inherit; font-size: 13.5px; padding: 8px 10px; border-radius: 9px; cursor: pointer; color: var(--ink); }
+  .adm-lang-pop button:hover { background: var(--adm-pill); }
   .adm-lang-pop button.active { color: var(--accent); font-weight: 650; }
 </style>
 </head>
@@ -805,36 +859,47 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 <div class="shell hidden" id="adm-shell">
   <div class="backdrop hidden" id="adm-backdrop"></div>
   <aside class="sidebar" id="adm-sidebar">
+   <div class="side-card">
     <div class="side-brand"><span class="side-logo">🌸</span> Yumi Admin</div>
     <nav class="side-nav">
+      <div class="side-group">Operations</div>
       <a href="#/dashboard" data-route="dashboard">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
         <span>Dashboard</span></a>
-      <a href="#/students" data-route="students">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Students</span></a>
       <a href="#/bookings" data-route="bookings">
         <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="0.5"/><circle cx="4" cy="12" r="0.5"/><circle cx="4" cy="18" r="0.5"/></svg>
-        <span>Bookings</span></a>
+        <span>Bookings</span><span class="nav-count hidden" id="adm-bk-count"></span></a>
       <a href="#/schedule" data-route="schedule">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         <span>Schedule</span></a>
-      <a href="#/availability" data-route="availability">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Availability</span></a>
+      <div class="side-group">People</div>
+      <a href="#/students" data-route="students">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Students</span></a>
+      <a href="#/messages" data-route="messages">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+        <span>Messages</span><span class="nav-count hidden" id="adm-msg-count-nav"></span><span class="nav-badge hidden" id="adm-msg-badge"></span></a>
+      <div class="side-group">Business</div>
       <a href="#/packages" data-route="packages">
         <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg>
         <span>Packages</span></a>
       <a href="#/revenue" data-route="revenue">
         <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
         <span>Revenue</span></a>
-      <a href="#/messages" data-route="messages">
-        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-        <span>Messages</span><span class="nav-badge hidden" id="adm-msg-badge"></span></a>
+      <a href="#/availability" data-route="availability">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Availability</span></a>
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Settings</span></a>
     </nav>
+    <div class="side-teacher">
+      <span class="side-teacher-avatar" aria-hidden="true">🌸</span>
+      <div>
+        <div class="side-teacher-name">Yumi</div>
+        <div class="side-teacher-sub">Teacher workspace · yumi.ki-toko.com</div>
+      </div>
+    </div>
     <div class="side-foot">
       <a class="side-foot-link" href="/" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></svg>
@@ -843,6 +908,7 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
         <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         Logout</button>
     </div>
+   </div>
   </aside>
 
   <div class="main">
@@ -1235,6 +1301,8 @@ function statusLabel(v) {
 
 const ADM_DICT_JA = {
   "Yumi Admin": "Yumi 管理画面",
+  "Operations": "運用", "People": "人", "Business": "ビジネス",
+  "Teacher workspace · yumi.ki-toko.com": "講師ワークスペース · yumi.ki-toko.com",
   "Dashboard": "ダッシュボード", "Students": "生徒", "Bookings": "予約", "Schedule": "スケジュール",
   "Availability": "予約可能時間", "Packages": "パッケージ", "Revenue": "収益", "Messages": "メッセージ", "Settings": "設定",
   "View site ↗": "サイトを見る ↗", "Logout": "ログアウト",
@@ -2548,6 +2616,7 @@ async function loadBookings() {
   try {
   const data = await api(`/api/admin/bookings?${params}`);
   allBookings = data.bookings || [];
+  setNavCount("adm-bk-count", data.total);
   $("#adm-bk-msg").textContent = `${data.total} booking(s)`;
   tbody.innerHTML = allBookings.map((b) => {
     const cancellable = (b.status === "paid" || b.status === "pending_payment") &&
@@ -3244,6 +3313,16 @@ function setMsgBadge(n) {
   b.textContent = n > 99 ? "99+" : String(Math.max(0, n || 0));
   b.classList.toggle("hidden", !(n > 0));
 }
+/* Gray total-count pills on nav items (visual only; the red unread
+ *  badge above keeps its own behaviour). Fed by loaders that already
+ *  hold the data — no extra requests. */
+function setNavCount(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const v = Math.max(0, n || 0);
+  el.textContent = v > 99 ? "99+" : String(v);
+  el.classList.toggle("hidden", !(v > 0));
+}
 /** Best-effort unread count for the sidebar badge: same read flags
  *  the Messages view renders from, fetched on entry so the badge is
  *  right before the admin ever opens the view. loadMessages() keeps
@@ -3253,6 +3332,7 @@ async function refreshMsgBadge() {
   try {
     const data = await api("/api/admin/messages");
     setMsgBadge((data.messages || []).filter((m) => !m.read).length);
+    setNavCount("adm-msg-count-nav", (data.messages || []).length);
   } catch { /* badge is best-effort; the view itself reports errors */ }
 }
 
@@ -3274,6 +3354,7 @@ async function loadMessages() {
     const msgs = data.messages || [];
     const unread = msgs.filter((m) => !m.read).length;
     setMsgBadge(unread);
+    setNavCount("adm-msg-count-nav", msgs.length);
     $("#adm-msg-count").textContent = msgs.length
       ? A(`${msgs.length} message(s)${unread ? ` · ${unread} unread` : ""}`,
           `${msgs.length} 件${unread ? `（未読 ${unread} 件）` : ""}`)
