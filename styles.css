@@ -1278,6 +1278,36 @@ button { font-family: inherit; }
  * the steps keep their own row), a real flex row on phones. */
 .modal-top { display: contents; }
 
+/* uiConfirm — the shared custom confirmation dialog that replaces
+ * native confirm() in My Bookings / My Packages. Same overlay + card
+ * language as the booking modal above, sized for a short question;
+ * motion follows the site standard (opacity + scale(.97), 180ms
+ * --ease-out, symmetric out; reduced motion keeps only the fade). */
+.ui-confirm-overlay {
+  position: fixed; inset: 0; z-index: 200; display: none;
+  background: rgba(51, 40, 38, 0.45);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 24px 14px;
+  opacity: 0; transition: opacity 0.18s var(--ease-out);
+}
+.ui-confirm-overlay.open { display: flex; }
+.ui-confirm-overlay.show { opacity: 1; }
+.ui-confirm-card {
+  background: var(--card); border-radius: 20px; max-width: 430px; width: 100%;
+  padding: 26px 28px; box-shadow: 0 24px 60px rgba(51, 40, 38, 0.28);
+  opacity: 0; transform: scale(0.97);
+  transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+}
+.ui-confirm-overlay.show .ui-confirm-card { opacity: 1; transform: scale(1); }
+.ui-confirm-msg { margin: 0; font-size: 15px; line-height: 1.65; white-space: pre-line; overflow-wrap: break-word; }
+.ui-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.btn.ui-confirm-danger { background: #a3402f; box-shadow: 0 8px 20px rgba(163, 64, 47, 0.3); }
+.btn.ui-confirm-danger:hover { background: #8f3727; box-shadow: 0 10px 24px rgba(163, 64, 47, 0.34); }
+@media (prefers-reduced-motion: reduce) {
+  .ui-confirm-overlay, .ui-confirm-card { transition: opacity 0.1s ease; }
+  .ui-confirm-card { transform: none; }
+}
+
 @media (max-width: 640px) {
   /* Near-fullscreen sheet on phones: same pinned header/footer with
      the internal scroll, edge to edge. */

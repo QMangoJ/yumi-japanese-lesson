@@ -60,6 +60,13 @@ export const DEFAULT_SETTINGS = {
   // individual start times on a day that is otherwise open.
   dateOverrides: {},
   blockedHours: {},
+  // Admin fullscreen background (2026-11): three modes — "default"
+  // (Yumi's portrait, the static asset /images/yumi-avatar.jpg),
+  // "custom" (an uploaded image stored as raw bytes in KV under
+  // `admin-bg`; only its meta lives here), "off" (plain canvas).
+  // strength = how strongly the image shows through the veil, in
+  // percent (5–40, default 20). The bytes never enter this JSON.
+  adminBg: { mode: "default", strength: 20, custom: null },
 };
 
 export function normalizeSettings(raw) {
@@ -137,6 +144,22 @@ export function normalizeSettings(raw) {
       }
     }
   }
+  if (raw.adminBg && typeof raw.adminBg === "object") {
+    const bg = raw.adminBg;
+    if (["default", "custom", "off"].includes(bg.mode)) s.adminBg.mode = bg.mode;
+    const st = Number(bg.strength);
+    if (Number.isFinite(st)) s.adminBg.strength = Math.min(40, Math.max(5, Math.round(st)));
+    if (bg.custom && typeof bg.custom === "object" &&
+        ["image/jpeg", "image/png", "image/webp"].includes(bg.custom.contentType)) {
+      s.adminBg.custom = {
+        contentType: bg.custom.contentType,
+        size: Math.max(0, Number(bg.custom.size) || 0),
+        uploadedAt: String(bg.custom.uploadedAt || "").slice(0, 40),
+      };
+    }
+    // "custom" without a stored image is meaningless — fall back.
+    if (s.adminBg.mode === "custom" && !s.adminBg.custom) s.adminBg.mode = "default";
+  }
   if (raw.blockedHours && typeof raw.blockedHours === "object") {
     for (const [date, list] of Object.entries(raw.blockedHours)) {
       if (!DATE_RE.test(date) || !Array.isArray(list)) continue;
@@ -170,6 +193,7 @@ export function publicSettings(s) {
     dateOverrides: s.dateOverrides,
     blockedHours: s.blockedHours,
     adminEmails: s.adminEmails,
+    adminBg: s.adminBg,
   };
 }
 

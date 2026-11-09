@@ -40,6 +40,96 @@ export async function handleAdmin(c) {
       return json({ error: "Method not allowed" }, 405);
     }
 
+    /* ----- Admin: fullscreen background image -----
+     * The image bytes live in KV under `admin-bg` (never inside the
+     * settings JSON — only meta does). Modes: "default" = Yumi's
+     * portrait (the static asset /images/yumi-avatar.jpg, served by
+     * the client directly, no route involved), "custom" = the KV
+     * blob below, "off" = plain canvas. Same admin auth as every
+     * other admin API; the <img> on the admin page rides the session
+     * cookie, so before sign-in only the public default can show. */
+    if (path === "/api/admin/background") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      if (request.method === "GET") {
+        const s = await getSettings(env);
+        if (s.adminBg.mode !== "custom" || !s.adminBg.custom) {
+          return json({ error: "No custom background" }, 404);
+        }
+        const buf = await env.BOOKINGS.get("admin-bg", "arrayBuffer");
+        if (!buf) return json({ error: "No custom background" }, 404);
+        return new Response(buf, {
+          headers: {
+            "Content-Type": s.adminBg.custom.contentType,
+            "Cache-Control": "private, max-age=60",
+          },
+        });
+      }
+      if (request.method === "POST") {
+        const ct = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+        if (!["image/jpeg", "image/png", "image/webp"].includes(ct)) {
+          return json({ error: "Only JPG, PNG or WebP images are allowed" }, 400);
+        }
+        const buf = await request.arrayBuffer();
+        if (!buf.byteLength) return json({ error: "Empty upload" }, 400);
+        if (buf.byteLength > 5 * 1024 * 1024) {
+          return json({ error: "Image is larger than 5 MB" }, 413);
+        }
+        const b = new Uint8Array(buf);
+        const sigOk = ct === "image/jpeg"
+          ? b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
+          : ct === "image/png"
+            ? b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47
+            : b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+              b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+        if (!sigOk) return json({ error: "File content does not match its image type" }, 400);
+        await env.BOOKINGS.put("admin-bg", buf);
+        const current = await getSettings(env);
+        const merged = normalizeSettings({
+          ...current,
+          adminBg: {
+            mode: "custom",
+            strength: current.adminBg.strength,
+            custom: { contentType: ct, size: buf.byteLength, uploadedAt: new Date().toISOString() },
+          },
+        });
+        await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+        return json({ settings: publicSettings(merged) });
+      }
+      if (request.method === "DELETE") {
+        await env.BOOKINGS.delete("admin-bg");
+        const current = await getSettings(env);
+        const merged = normalizeSettings({
+          ...current,
+          adminBg: { mode: "default", strength: current.adminBg.strength, custom: null },
+        });
+        await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+        return json({ settings: publicSettings(merged) });
+      }
+      return json({ error: "Method not allowed" }, 405);
+    }
+    if (path === "/api/admin/background/prefs") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+      const current = await getSettings(env);
+      const next = { ...current.adminBg };
+      if (body && ["default", "custom", "off"].includes(body.mode)) {
+        if (body.mode === "custom" && !current.adminBg.custom) {
+          return json({ error: "Upload an image first" }, 400);
+        }
+        next.mode = body.mode;
+      }
+      if (body && Number.isFinite(Number(body.strength))) next.strength = Number(body.strength);
+      const merged = normalizeSettings({ ...current, adminBg: next });
+      await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+      return json({ settings: publicSettings(merged) });
+    }
+
     /* ----- Admin: booking management ----- */
     if (path === "/api/admin/bookings" && request.method === "GET") {
       if (!(await adminAuthorized(env, request))) {

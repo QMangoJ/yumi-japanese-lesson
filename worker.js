@@ -716,7 +716,14 @@ var DEFAULT_SETTINGS = {
   // weekday). blockedHours["YYYY-MM-DD"] = ["10:00", ...] removes
   // individual start times on a day that is otherwise open.
   dateOverrides: {},
-  blockedHours: {}
+  blockedHours: {},
+  // Admin fullscreen background (2026-11): three modes — "default"
+  // (Yumi's portrait, the static asset /images/yumi-avatar.jpg),
+  // "custom" (an uploaded image stored as raw bytes in KV under
+  // `admin-bg`; only its meta lives here), "off" (plain canvas).
+  // strength = how strongly the image shows through the veil, in
+  // percent (5–40, default 20). The bytes never enter this JSON.
+  adminBg: { mode: "default", strength: 20, custom: null }
 };
 function normalizeSettings(raw) {
   const s = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -789,6 +796,20 @@ function normalizeSettings(raw) {
       }
     }
   }
+  if (raw.adminBg && typeof raw.adminBg === "object") {
+    const bg = raw.adminBg;
+    if (["default", "custom", "off"].includes(bg.mode)) s.adminBg.mode = bg.mode;
+    const st = Number(bg.strength);
+    if (Number.isFinite(st)) s.adminBg.strength = Math.min(40, Math.max(5, Math.round(st)));
+    if (bg.custom && typeof bg.custom === "object" && ["image/jpeg", "image/png", "image/webp"].includes(bg.custom.contentType)) {
+      s.adminBg.custom = {
+        contentType: bg.custom.contentType,
+        size: Math.max(0, Number(bg.custom.size) || 0),
+        uploadedAt: String(bg.custom.uploadedAt || "").slice(0, 40)
+      };
+    }
+    if (s.adminBg.mode === "custom" && !s.adminBg.custom) s.adminBg.mode = "default";
+  }
   if (raw.blockedHours && typeof raw.blockedHours === "object") {
     for (const [date, list] of Object.entries(raw.blockedHours)) {
       if (!DATE_RE.test(date) || !Array.isArray(list)) continue;
@@ -821,7 +842,8 @@ function publicSettings(s) {
     calendarKey: s.calendarKey,
     dateOverrides: s.dateOverrides,
     blockedHours: s.blockedHours,
-    adminEmails: s.adminEmails
+    adminEmails: s.adminEmails,
+    adminBg: s.adminBg
   };
 }
 function priceFor(settings, minutes) {
@@ -1385,6 +1407,86 @@ async function handleAdmin(c) {
       return json({ settings: publicSettings(merged) });
     }
     return json({ error: "Method not allowed" }, 405);
+  }
+  if (path === "/api/admin/background") {
+    if (!await adminAuthorized(env, request)) {
+      return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+    }
+    if (request.method === "GET") {
+      const s = await getSettings(env);
+      if (s.adminBg.mode !== "custom" || !s.adminBg.custom) {
+        return json({ error: "No custom background" }, 404);
+      }
+      const buf = await env.BOOKINGS.get("admin-bg", "arrayBuffer");
+      if (!buf) return json({ error: "No custom background" }, 404);
+      return new Response(buf, {
+        headers: {
+          "Content-Type": s.adminBg.custom.contentType,
+          "Cache-Control": "private, max-age=60"
+        }
+      });
+    }
+    if (request.method === "POST") {
+      const ct = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+      if (!["image/jpeg", "image/png", "image/webp"].includes(ct)) {
+        return json({ error: "Only JPG, PNG or WebP images are allowed" }, 400);
+      }
+      const buf = await request.arrayBuffer();
+      if (!buf.byteLength) return json({ error: "Empty upload" }, 400);
+      if (buf.byteLength > 5 * 1024 * 1024) {
+        return json({ error: "Image is larger than 5 MB" }, 413);
+      }
+      const b = new Uint8Array(buf);
+      const sigOk = ct === "image/jpeg" ? b[0] === 255 && b[1] === 216 && b[2] === 255 : ct === "image/png" ? b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71 : b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80;
+      if (!sigOk) return json({ error: "File content does not match its image type" }, 400);
+      await env.BOOKINGS.put("admin-bg", buf);
+      const current = await getSettings(env);
+      const merged = normalizeSettings({
+        ...current,
+        adminBg: {
+          mode: "custom",
+          strength: current.adminBg.strength,
+          custom: { contentType: ct, size: buf.byteLength, uploadedAt: (/* @__PURE__ */ new Date()).toISOString() }
+        }
+      });
+      await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+      return json({ settings: publicSettings(merged) });
+    }
+    if (request.method === "DELETE") {
+      await env.BOOKINGS.delete("admin-bg");
+      const current = await getSettings(env);
+      const merged = normalizeSettings({
+        ...current,
+        adminBg: { mode: "default", strength: current.adminBg.strength, custom: null }
+      });
+      await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+      return json({ settings: publicSettings(merged) });
+    }
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (path === "/api/admin/background/prefs") {
+    if (!await adminAuthorized(env, request)) {
+      return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+    }
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, 400);
+    }
+    const current = await getSettings(env);
+    const next = { ...current.adminBg };
+    if (body && ["default", "custom", "off"].includes(body.mode)) {
+      if (body.mode === "custom" && !current.adminBg.custom) {
+        return json({ error: "Upload an image first" }, 400);
+      }
+      next.mode = body.mode;
+    }
+    if (body && Number.isFinite(Number(body.strength))) next.strength = Number(body.strength);
+    const merged = normalizeSettings({ ...current, adminBg: next });
+    await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
+    return json({ settings: publicSettings(merged) });
   }
   if (path === "/api/admin/bookings" && request.method === "GET") {
     if (!await adminAuthorized(env, request)) {

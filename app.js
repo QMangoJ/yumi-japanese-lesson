@@ -257,6 +257,68 @@ function setMsg(id, text, ok) {
   el.className = "msg" + (text ? (ok ? " msg-ok" : " msg-err") : "");
 }
 
+/* ---------- custom confirm dialog (uiConfirm) ----------
+ * Promise-based replacement for native confirm(): resolves true
+ * only via the OK button; Cancel, Esc and backdrop clicks resolve
+ * false — the exact semantics the old `if (!confirm(...)) return;`
+ * call sites relied on. Destructive actions pass { danger: true }
+ * (red OK button, focus starts on Cancel). One lazily-built overlay
+ * element is shared by every call site (homepage + /account). */
+
+let uiConfirmResolve = null;
+let uiConfirmPrevOverflow = "";
+function uiConfirmKey(e) {
+  if (e.key === "Escape") { e.preventDefault(); uiConfirmClose(false); }
+}
+function uiConfirmClose(result) {
+  const overlay = document.getElementById("ui-confirm");
+  if (overlay) {
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.remove("open"), 190);
+  }
+  document.removeEventListener("keydown", uiConfirmKey, true);
+  document.body.style.overflow = uiConfirmPrevOverflow;
+  if (uiConfirmResolve) { const r = uiConfirmResolve; uiConfirmResolve = null; r(result); }
+}
+function uiConfirm(message, opts = {}) {
+  return new Promise((resolve) => {
+    let overlay = document.getElementById("ui-confirm");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "ui-confirm";
+      overlay.className = "ui-confirm-overlay";
+      overlay.setAttribute("role", "alertdialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.innerHTML = `
+        <div class="ui-confirm-card">
+          <p class="ui-confirm-msg"></p>
+          <div class="ui-confirm-actions">
+            <button type="button" class="btn btn-ghost ui-confirm-cancel"></button>
+            <button type="button" class="btn ui-confirm-ok"></button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector(".ui-confirm-ok").addEventListener("click", () => uiConfirmClose(true));
+      overlay.querySelector(".ui-confirm-cancel").addEventListener("click", () => uiConfirmClose(false));
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) uiConfirmClose(false); });
+    }
+    if (uiConfirmResolve) uiConfirmClose(false);
+    uiConfirmResolve = resolve;
+    overlay.querySelector(".ui-confirm-msg").textContent = message;
+    const ok = overlay.querySelector(".ui-confirm-ok");
+    const cancel = overlay.querySelector(".ui-confirm-cancel");
+    ok.textContent = L3("OK", "确定", "OK");
+    cancel.textContent = L3("Cancel", "取消", "Annuler");
+    ok.classList.toggle("ui-confirm-danger", !!opts.danger);
+    uiConfirmPrevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    overlay.classList.add("open");
+    requestAnimationFrame(() => overlay.classList.add("show"));
+    document.addEventListener("keydown", uiConfirmKey, true);
+    (opts.danger ? cancel : ok).focus();
+  });
+}
+
 let flowDone = false; // true once pane 4 (Done) has been shown
 
 function showPane(n) {
@@ -1804,7 +1866,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const text = L3(`Stop the package and refund the rest?\nThis cancels the remaining ${s.remainingLessons} lessons and refunds ${money(s.refundableTotal || 0)} (mock)` + (inside > 0 ? `; ${inside} of them start within 12 hours and are not refunded` : "") + `. Lessons already taken are unaffected, and stopping cannot be undone.`,
           `退掉剩余课时并退款？\n将取消剩余 ${s.remainingLessons} 节课，退款 ${money(s.refundableTotal || 0)}（mock）` + (inside > 0 ? `；其中 ${inside} 节在开课前 12 小时内，不退款` : "") + `。已上过的课不受影响，停止后不能恢复。`,
           `Arrêter le forfait et rembourser le reste ?\nCela annule les ${s.remainingLessons} cours restants et rembourse ${money(s.refundableTotal || 0)} (démo)` + (inside > 0 ? ` ; ${inside} d'entre eux commencent dans moins de 12 h et ne sont pas remboursés` : "") + `. Les cours déjà suivis ne sont pas affectés, et l'arrêt est définitif.`);
-        if (!confirm(text)) return;
+        if (!(await uiConfirm(text, { danger: true }))) return;
         try {
           const data = await api(`/api/subscriptions/${s.id}/stop`, {
             method: "POST", body: "{}",
@@ -2173,7 +2235,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           : L3("This lesson starts in less than 12 hours, so cancelling means no refund. Are you sure?",
               "这节课距开课不足 12 小时，取消后不退款，确定取消吗？",
               "Ce cours commence dans moins de 12 h : l'annulation ne donnera lieu à aucun remboursement. Confirmer ?");
-      if (!confirm(confirmText)) return;
+      if (!(await uiConfirm(confirmText, { danger: true }))) return;
       try {
         const data = await api(`/api/bookings/${b.id}/cancel`, {
           method: "POST", body: "{}",
@@ -2188,9 +2250,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (refundBtn) {
       refundBtn.onclick = async () => {
         const msLeft = jstInstantMs(b.date, b.time) - Date.now();
-        const ok = msLeft >= 12 * 3600_000
-          ? confirm(L3(`Cancel this lesson and refund ${money(b.amount)} in full?`, `取消这节课并全额退款 ${money(b.amount)}？`, `Annuler ce cours et rembourser intégralement ${money(b.amount)} ?`))
-          : confirm(L3("This lesson starts in less than 12 hours, so cancelling means no refund. Are you sure?", "这节课距开课不足 12 小时，取消后不退款，确定取消吗？", "Ce cours commence dans moins de 12 h : l'annulation ne donnera lieu à aucun remboursement. Confirmer ?"));
+        const ok = await (msLeft >= 12 * 3600_000
+          ? uiConfirm(L3(`Cancel this lesson and refund ${money(b.amount)} in full?`, `取消这节课并全额退款 ${money(b.amount)}？`, `Annuler ce cours et rembourser intégralement ${money(b.amount)} ?`), { danger: true })
+          : uiConfirm(L3("This lesson starts in less than 12 hours, so cancelling means no refund. Are you sure?", "这节课距开课不足 12 小时，取消后不退款，确定取消吗？", "Ce cours commence dans moins de 12 h : l'annulation ne donnera lieu à aucun remboursement. Confirmer ?"), { danger: true }));
         if (!ok) return;
         try {
           const data = await api(`/api/bookings/${b.id}/cancel`, {

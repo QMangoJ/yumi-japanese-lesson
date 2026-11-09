@@ -331,6 +331,61 @@
     opacity: 0; transform: translate(-50%, -6px); transition: opacity .22s, transform .22s; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+  /* danger button (destructive confirms: stop / cancel / delete).
+     Unscoped on purpose: the shared dialog DOM lives outside .shell. */
+  .btn.btn-danger { background: #a3402f; box-shadow: 0 2px 8px rgba(163, 64, 47, .25); }
+  .btn.btn-danger:hover { background: #8f3727; box-shadow: 0 2px 8px rgba(163, 64, 47, .32); }
+
+  /* uiConfirm / uiAlert — the admin's shared custom dialog, replacing
+     native confirm()/alert() everywhere. Same visual family as the
+     availability guard below (flat dark overlay + white 16px card +
+     pop shadow); motion follows the site standard: opacity +
+     scale(.97) in, symmetric out, 180ms ease-out; reduced motion
+     keeps only a short fade. */
+  .adm-confirm { position: fixed; inset: 0; z-index: 130; background: rgba(38, 28, 28, .45);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+    opacity: 0; transition: opacity .18s ease-out; }
+  .adm-confirm.show { opacity: 1; }
+  .adm-confirm-card { background: #fff; border-radius: 16px; max-width: 430px; width: 100%;
+    padding: 24px 26px; box-shadow: var(--adm-shadow-pop);
+    opacity: 0; transform: scale(.97);
+    transition: opacity .18s ease-out, transform .18s ease-out; }
+  .adm-confirm.show .adm-confirm-card { opacity: 1; transform: scale(1); }
+  .adm-confirm-msg { margin: 0; font-size: 14.5px; line-height: 1.6;
+    white-space: pre-line; overflow-wrap: break-word; }
+  .adm-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  @media (prefers-reduced-motion: reduce) {
+    .adm-confirm, .adm-confirm-card { transition: opacity .12s ease; }
+    .adm-confirm-card { transform: none; }
+  }
+
+  /* Admin fullscreen background (Settings → Admin background).
+     A fixed layer underneath everything (the login wrap and the app
+     shell are lifted above it); the photo shows through a
+     canvas-coloured veil whose opacity is --adm-bg-veil
+     (= 1 − strength/100). Cards and the sidebar keep their opaque
+     surfaces, so the image only breathes through the page margins
+     and gaps. No image / load failure = the layer stays hidden and
+     the admin looks exactly as before. */
+  .adm-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .adm-bg img { width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: blur(6px) saturate(.92); transform: scale(1.05); }
+  .adm-bg-veil { position: absolute; inset: 0; background: #f1f1f3;
+    opacity: var(--adm-bg-veil, .8); }
+  .login-wrap, .shell { position: relative; z-index: 1; }
+  @media (max-width: 760px) {
+    .adm-bg-veil { opacity: min(1, calc(var(--adm-bg-veil, .8) + .07)); }
+  }
+  /* background settings section */
+  .adm-bg-row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .adm-bg-preview { width: 176px; height: 100px; object-fit: cover; display: block;
+    border-radius: 12px; border: 1px solid var(--adm-line); background: var(--adm-inset); }
+  .adm-bg-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .adm-bg-strength { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .adm-bg-strength input[type="range"] { flex: 0 1 260px; accent-color: var(--accent);
+    min-height: 0; padding: 0; border: none; background: none; box-shadow: none; }
+  .adm-bg-strength-val { font-size: 13px; color: var(--sub); min-width: 38px; }
+
   /* availability save guard dialog */
   .avail-warn { position: fixed; inset: 0; z-index: 120; background: rgba(38, 28, 28, .45);
     display: flex; align-items: center; justify-content: center; padding: 18px; }
@@ -834,6 +889,10 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 </head>
 <body>
 
+<!-- Fullscreen background layer (Settings → Admin background).
+     Empty/hidden = the plain canvas the admin has always had. -->
+<div class="adm-bg hidden" id="adm-bg" aria-hidden="true"><img id="adm-bg-img" alt="" /><div class="adm-bg-veil"></div></div>
+
 <!-- ================= LOGIN ================= -->
 <div class="login-wrap" id="adm-login">
   <div class="login-card">
@@ -1146,6 +1205,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
                 placeholder="Leave blank to keep the saved secret" /></label>
             <p class="note" id="adm-google-state"></p>
           </div>
+
+          <div class="panel">
+            <h2>Admin background</h2>
+            <p class="note">A photo behind the whole admin, veiled so text stays readable. The default is Yumi's photo; you can upload your own (JPG, PNG or WebP, up to 5 MB) or turn the background off entirely.</p>
+            <div class="adm-bg-row">
+              <img class="adm-bg-preview" id="adm-bg-preview" alt="" />
+              <div>
+                <p class="note" id="adm-bg-state" style="margin-top:0"></p>
+                <div class="adm-bg-actions">
+                  <button type="button" class="btn btn-ghost" id="adm-bg-upload-btn">Upload image…</button>
+                  <button type="button" class="btn btn-ghost" id="adm-bg-default-btn">Use Yumi's photo</button>
+                  <button type="button" class="btn btn-ghost" id="adm-bg-off-btn">No background</button>
+                </div>
+                <input type="file" id="adm-bg-file" accept="image/jpeg,image/png,image/webp" hidden />
+              </div>
+            </div>
+            <div class="adm-bg-strength">
+              <label for="adm-bg-strength">Image strength</label>
+              <input type="range" id="adm-bg-strength" min="5" max="40" step="1" value="20" />
+              <span class="adm-bg-strength-val" id="adm-bg-strength-val">20%</span>
+            </div>
+          </div>
         </section>
       </form>
 
@@ -1274,6 +1355,18 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
   </div>
 </div>
 
+<!-- Shared custom confirm/alert (uiConfirm / uiAlert) — replaces every
+     native confirm()/alert() in this page. -->
+<div class="adm-confirm hidden" id="adm-confirm" role="alertdialog" aria-modal="true" aria-labelledby="adm-confirm-msg">
+  <div class="adm-confirm-card">
+    <p class="adm-confirm-msg" id="adm-confirm-msg"></p>
+    <div class="adm-confirm-actions">
+      <button type="button" class="btn btn-ghost" id="adm-confirm-cancel">Cancel</button>
+      <button type="button" class="btn" id="adm-confirm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ================= i18n: English / 日本語, ONE language at a time =========
@@ -1334,6 +1427,10 @@ const ADM_DICT_JA = {
   "Fixed meeting link (Zoom / Google Meet)": "固定ミーティングリンク（Zoom / Google Meet）",
   "Calendar feed key": "カレンダー購読キー", "Copy feed URL": "購読 URL をコピー", "Generate calendar key": "カレンダーキーを生成",
   "Save settings": "設定を保存",
+  "Admin background": "管理画面の背景",
+  "A photo behind the whole admin, veiled so text stays readable. The default is Yumi's photo; you can upload your own (JPG, PNG or WebP, up to 5 MB) or turn the background off entirely.": "管理画面全体の背景に写真を敷きます（文字が読みやすいようベールがかかります）。既定は Yumi の写真です。自分の画像（JPG・PNG・WebP、5 MB まで）をアップロードするか、背景をオフにできます。",
+  "Upload image…": "画像をアップロード…", "Use Yumi's photo": "Yumi の写真に戻す",
+  "No background": "背景なし", "Image strength": "画像の濃さ",
   "Date & time (JST)": "日時（JST）", "Student": "生徒", "Course": "コース", "Status": "ステータス",
   "Amount": "金額", "Actions": "操作", "Starts": "開始", "Ends": "終了", "Lessons": "レッスン数",
   "Remaining": "残り", "Created": "作成日", "Email": "メール", "Package": "パッケージ",
@@ -1498,6 +1595,166 @@ function toast(text) {
     setTimeout(() => t.classList.add("hidden"), 260);
   }, 2600);
 }
+
+/* ---------- custom confirm / alert (uiConfirm / uiAlert) ----------
+ * Promise-based replacements for native confirm()/alert(), styled
+ * like the rest of the admin. uiConfirm resolves true only when the
+ * OK button is used; Esc, backdrop click and Cancel all resolve
+ * false — the exact semantics the old `if (!confirm(...)) return;`
+ * call sites relied on. Destructive actions pass { danger: true }:
+ * the OK button turns danger-red and focus starts on Cancel. */
+
+let admDialogResolve = null;
+let admDialogAlert = false;
+function admDialogKey(e) {
+  if (e.key === "Escape") { e.preventDefault(); admDialogClose(false); }
+}
+function admDialogClose(result) {
+  const box = $("#adm-confirm");
+  box.classList.remove("show");
+  setTimeout(() => box.classList.add("hidden"), 190);
+  document.removeEventListener("keydown", admDialogKey, true);
+  if (admDialogResolve) { const r = admDialogResolve; admDialogResolve = null; r(result); }
+}
+function admDialogOpen(message, { danger = false, alertMode = false } = {}) {
+  return new Promise((resolve) => {
+    if (admDialogResolve) admDialogClose(false);
+    admDialogResolve = resolve;
+    admDialogAlert = alertMode;
+    const box = $("#adm-confirm");
+    $("#adm-confirm-msg").textContent = message;
+    const ok = $("#adm-confirm-ok"), cancel = $("#adm-confirm-cancel");
+    ok.textContent = "OK";
+    cancel.textContent = A("Cancel", "キャンセル");
+    ok.className = "btn" + (danger ? " btn-danger" : "");
+    cancel.style.display = alertMode ? "none" : "";
+    box.classList.remove("hidden");
+    requestAnimationFrame(() => box.classList.add("show"));
+    document.addEventListener("keydown", admDialogKey, true);
+    (danger && !alertMode ? cancel : ok).focus();
+  });
+}
+function uiConfirm(message, opts = {}) { return admDialogOpen(message, opts); }
+function uiAlert(message) { return admDialogOpen(message, { alertMode: true }); }
+$("#adm-confirm-ok").addEventListener("click", () => admDialogClose(true));
+$("#adm-confirm-cancel").addEventListener("click", () => admDialogClose(false));
+$("#adm-confirm").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) admDialogClose(admDialogAlert);
+});
+
+/* ---------- admin fullscreen background ----------
+ * Three modes (settings.adminBg): "default" = Yumi's portrait (the
+ * static asset below — applied immediately at boot, so even the
+ * sign-in screen and a never-configured admin show it), "custom" =
+ * an uploaded image whose bytes live in KV and are served by
+ * /api/admin/background (rides the session cookie / admin key, so it
+ * can only appear after sign-in), "off" = the plain canvas. The
+ * strength slider sets how much of the image shows through the veil
+ * (5–40%, default 20) and previews live before it is saved. */
+
+const ADM_BG_DEFAULT_SRC = "images/yumi-avatar.jpg";
+let admBg = { mode: "default", strength: 20, custom: null };
+
+function admBgSrc() {
+  if (admBg.mode === "custom" && admBg.custom) {
+    return `/api/admin/background?v=${encodeURIComponent(admBg.custom.uploadedAt || "")}`;
+  }
+  return ADM_BG_DEFAULT_SRC;
+}
+function applyAdminBg() {
+  const layer = $("#adm-bg"), img = $("#adm-bg-img");
+  if (admBg.mode === "off") { layer.classList.add("hidden"); return; }
+  const src = admBgSrc();
+  if (img.getAttribute("src") !== src) img.src = src;
+  layer.style.setProperty("--adm-bg-veil", String(1 - admBg.strength / 100));
+  layer.classList.remove("hidden");
+}
+$("#adm-bg-img").addEventListener("error", () => $("#adm-bg").classList.add("hidden"));
+
+function syncBgControls() {
+  const st = $("#adm-bg-strength"), val = $("#adm-bg-strength-val");
+  if (st) st.value = admBg.strength;
+  if (val) val.textContent = `${admBg.strength}%`;
+  const state = $("#adm-bg-state");
+  if (state) {
+    state.textContent = admBg.mode === "off"
+      ? A("Background is off — plain canvas.", "背景はオフです（無地）。")
+      : admBg.mode === "custom"
+        ? A(`Custom image${admBg.custom && admBg.custom.uploadedAt ? ` · uploaded ${admBg.custom.uploadedAt.slice(0, 10)}` : ""}.`,
+            `カスタム画像${admBg.custom && admBg.custom.uploadedAt ? ` · ${admBg.custom.uploadedAt.slice(0, 10)} アップロード` : ""}。`)
+        : A("Default — Yumi's photo.", "既定 — Yumi の写真。");
+  }
+  const prev = $("#adm-bg-preview");
+  if (prev) {
+    if (admBg.mode === "off") { prev.removeAttribute("src"); prev.style.visibility = "hidden"; }
+    else {
+      prev.style.visibility = "";
+      if (prev.getAttribute("src") !== admBgSrc()) prev.src = admBgSrc();
+    }
+  }
+}
+function admBgAdopt(data) {
+  if (data && data.settings && data.settings.adminBg) {
+    admBg = data.settings.adminBg;
+    if (savedSettings) savedSettings.adminBg = admBg;
+  }
+  applyAdminBg();
+  syncBgControls();
+}
+async function bgPrefs(patch) {
+  admBgAdopt(await api("/api/admin/background/prefs", { method: "POST", body: JSON.stringify(patch) }));
+}
+
+$("#adm-bg-upload-btn").addEventListener("click", () => $("#adm-bg-file").click());
+$("#adm-bg-file").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    await uiAlert(A("Only JPG, PNG or WebP images are allowed.", "JPG・PNG・WebP の画像のみ使えます。"));
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    await uiAlert(A("Image is larger than 5 MB.", "画像が 5 MB を超えています。"));
+    return;
+  }
+  try {
+    admBgAdopt(await api("/api/admin/background", {
+      method: "POST", headers: { "Content-Type": file.type }, body: file,
+    }));
+    toast(A("Background updated", "背景を更新しました"));
+  } catch (err) { uiAlert(err.message); }
+});
+$("#adm-bg-default-btn").addEventListener("click", async () => {
+  try {
+    if (admBg.custom) {
+      if (!(await uiConfirm(A("Remove the uploaded image and go back to Yumi's photo?", "アップロードした画像を削除して、Yumi の写真に戻しますか？")))) return;
+      admBgAdopt(await api("/api/admin/background", { method: "DELETE" }));
+    } else if (admBg.mode !== "default") {
+      await bgPrefs({ mode: "default" });
+    }
+    toast(A("Background updated", "背景を更新しました"));
+  } catch (err) { uiAlert(err.message); }
+});
+$("#adm-bg-off-btn").addEventListener("click", async () => {
+  try {
+    await bgPrefs({ mode: "off" });
+    toast(A("Background off", "背景をオフにしました"));
+  } catch (err) { uiAlert(err.message); }
+});
+let bgStrengthTimer = null;
+$("#adm-bg-strength").addEventListener("input", (e) => {
+  admBg.strength = Number(e.target.value);
+  $("#adm-bg-strength-val").textContent = `${admBg.strength}%`;
+  applyAdminBg();
+  clearTimeout(bgStrengthTimer);
+  bgStrengthTimer = setTimeout(() => {
+    bgPrefs({ strength: admBg.strength }).catch((err) => uiAlert(err.message));
+  }, 400);
+});
+
+applyAdminBg();
+syncBgControls();
 
 /* ==== ADM-DD-BEGIN: custom dropdown component ====
  * admDropdown(sel) upgrades a native <select> into the admin's
@@ -2027,6 +2284,7 @@ function buildWeekly() {
 
 function fillForm(s) {
   savedSettings = JSON.parse(JSON.stringify(s));
+  if (s.adminBg) { admBg = s.adminBg; applyAdminBg(); syncBgControls(); }
   draft = JSON.parse(JSON.stringify({
     weekly: s.weekly || {},
     dateOverrides: s.dateOverrides || {},
@@ -2390,7 +2648,7 @@ function wireRemarkBoxes(root) {
       } catch (e) {
         btn.textContent = A("Save failed — retry", "保存に失敗しました。再試行してください");
         btn.disabled = false;
-        alert(e.message);
+        uiAlert(e.message);
       }
     };
   });
@@ -2642,7 +2900,7 @@ async function loadBookings() {
   tbody.querySelectorAll("[data-cancel]").forEach((btn) => {
     btn.onclick = async () => {
       const b = allBookings.find((x) => x.id === btn.dataset.cancel);
-      if (!confirm(`Cancel ${b.id} (${b.date} ${b.time}, ${b.name})? A paid lesson is refunded in full.`)) return;
+      if (!(await uiConfirm(`Cancel ${b.id} (${b.date} ${b.time}, ${b.name})? A paid lesson is refunded in full.`, { danger: true }))) return;
       btn.disabled = true;
       try {
         await api(`/api/admin/bookings/${b.id}/cancel`, { method: "POST", body: "{}" });
@@ -2651,7 +2909,7 @@ async function loadBookings() {
         await loadMonthBookings();
         await loadScheduleMonth();
         loadDashboard(true);
-      } catch (e) { alert(e.message); btn.disabled = false; }
+      } catch (e) { uiAlert(e.message); btn.disabled = false; }
     };
   });
   } catch (e) {
@@ -2661,11 +2919,11 @@ async function loadBookings() {
     if (rb) rb.onclick = () => loadBookings().catch(() => {});
   }
 }
-$("#adm-bk-refresh").addEventListener("click", () => loadBookings().catch((e) => alert(e.message)));
+$("#adm-bk-refresh").addEventListener("click", () => loadBookings().catch((e) => uiAlert(e.message)));
 $("#adm-bk-status").addEventListener("change", () => loadBookings().catch(() => {}));
 $("#adm-bk-date").addEventListener("change", () => loadBookings().catch(() => {}));
 $("#adm-bk-q").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); loadBookings().catch((err) => alert(err.message)); }
+  if (e.key === "Enter") { e.preventDefault(); loadBookings().catch((err) => uiAlert(err.message)); }
 });
 
 /* ---------- subscriptions （课时包） ---------- */
@@ -2697,7 +2955,7 @@ async function loadSubs() {
       const inside = s.insideWindowLessons || 0;
       const text = A(`Stop ${s.name}'s package? This cancels the remaining ${s.remainingLessons} lessons and refunds ${money(s.refundableTotal || 0)}` + (inside > 0 ? `; ${inside} of them start within 12 hours and are not refunded` : "") + ".",
         `${s.name} のパッケージを停止しますか？残り ${s.remainingLessons} レッスンをキャンセルし、${money(s.refundableTotal || 0)} を返金します` + (inside > 0 ? `。うち ${inside} 件は開始まで 12 時間以内のため返金されません` : "") + "。");
-      if (!confirm(text)) return;
+      if (!(await uiConfirm(text, { danger: true }))) return;
       btn.disabled = true;
       try {
         await api(`/api/admin/subscriptions/${s.id}/stop`, { method: "POST", body: "{}" });
@@ -2706,7 +2964,7 @@ async function loadSubs() {
         await loadMonthBookings();
         await loadScheduleMonth();
         loadDashboard(true);
-      } catch (e) { alert(e.message); btn.disabled = false; }
+      } catch (e) { uiAlert(e.message); btn.disabled = false; }
     };
   });
   } catch (e) {
@@ -3392,7 +3650,7 @@ async function loadMessages() {
     });
     list.querySelectorAll("[data-msg-del]").forEach((btn) => {
       btn.onclick = async () => {
-        if (!confirm(A("Delete this message?", "このメッセージを削除しますか？"))) return;
+        if (!(await uiConfirm(A("Delete this message?", "このメッセージを削除しますか？"), { danger: true }))) return;
         btn.disabled = true;
         try {
           await api(`/api/admin/messages/${btn.dataset.msgDel}/delete`,
