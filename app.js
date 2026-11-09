@@ -2515,3 +2515,57 @@ document.addEventListener("DOMContentLoaded", () => {
   mq.addEventListener("change", setup);
   setup();
 });
+
+/* ---------- Homepage reveal (motion pass) ----------
+ * Content used to teleport in while scrolling; now it bridges in:
+ * opacity + a small rise (cards scale from 0.97), the shared
+ * --ease-out curve, 300ms, siblings staggered 60ms. All styling
+ * lives in styles.css (.rv [data-reveal]); this only observes and
+ * flips .rv-in. Every failure path reveals everything — content
+ * must never stay hidden because of an animation. */
+(function initReveal() {
+  var els;
+  try {
+    els = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
+  } catch (err) {
+    document.documentElement.classList.remove("rv");
+    return;
+  }
+  if (!els.length) { window.__rvReady = true; return; }
+  // Stagger siblings: 60ms steps within the same parent, capped.
+  var counts = new Map();
+  els.forEach(function (el) {
+    var p = el.parentElement || document.body;
+    var i = counts.get(p) || 0;
+    counts.set(p, i + 1);
+    el.style.setProperty("--rvd", Math.min(i * 60, 300) + "ms");
+  });
+  function revealAll() {
+    els.forEach(function (el) { el.classList.add("rv-in"); });
+  }
+  if (!("IntersectionObserver" in window)) {
+    revealAll();
+    window.__rvReady = true;
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        e.target.classList.add("rv-in");
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+  els.forEach(function (el) { io.observe(el); });
+  window.__rvReady = true;
+  // Safety net: anything already in the viewport that IO somehow
+  // missed still appears; below-fold items keep their animation.
+  setTimeout(function () {
+    var vh = window.innerHeight || 0;
+    els.forEach(function (el) {
+      if (el.classList.contains("rv-in")) return;
+      var r = el.getBoundingClientRect();
+      if (r.top < vh && r.bottom > 0) el.classList.add("rv-in");
+    });
+  }, 2600);
+})();
