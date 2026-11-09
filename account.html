@@ -57,7 +57,18 @@
           <span id="acct-avatar"></span>
           <div class="acct-head-text">
             <p class="eyebrow">MY ACCOUNT</p>
-            <h1 class="acct-title" id="acct-greeting">Hello.</h1>
+            <div class="acct-name-row">
+              <h1 class="acct-title" id="acct-greeting">Hello.</h1>
+              <!-- Subscriber badge (motion-prompt #022 Light sweep):
+                   account.js unhides it only when the student has at
+                   least one active package. -->
+              <span class="sub-badge" id="acct-sub-badge" hidden>
+                <svg class="sub-badge-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 14.3 9.7 22.5 12 14.3 14.3 12 22.5 9.7 14.3 1.5 12 9.7 9.7Z"/></svg>
+                <span class="sub-badge-label">Subscriber</span>
+                <span class="sub-badge-clip" aria-hidden="true"><span class="sub-badge-sweep"><span class="sb-band sb-band-main"></span><span class="sb-band sb-band-thin"></span></span></span>
+                <svg class="sub-badge-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 14.3 9.7 22.5 12 14.3 14.3 12 22.5 9.7 14.3 1.5 12 9.7 9.7Z"/></svg>
+              </span>
+            </div>
             <p class="note">Manage your lessons and packages here. Times
             are shown in your timezone, with Japan time (JST) shown
             alongside.</p>

@@ -99,6 +99,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("#acct-stat-pkg").textContent = list
       .filter((s) => s.status === "active")
       .reduce((n, s) => n + (s.remainingLessons || 0), 0);
+    /* Subscriber badge (Light sweep): shown only while the student
+     * has at least one package actually running. */
+    if (list.some((s) => s.status === "active")) {
+      const badge = $("#acct-sub-badge");
+      if (badge) badge.hidden = false;
+    }
     if (!list.some((s) => s.status !== "pending_payment")) {
       $("#acct-subs-empty").classList.remove("hidden");
     }

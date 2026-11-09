@@ -1429,6 +1429,64 @@ button { font-family: inherit; }
 .acct-head-text { flex: 1; min-width: 0; }
 .acct-head-text .eyebrow { margin: 6px 0 8px; }
 .acct-head-text .note { margin: 0; }
+.acct-name-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 8px; }
+.acct-name-row .acct-title { margin: 0; }
+/* Subscriber badge — motion-prompt #022 Light sweep, mapped from the
+ * official spec (demo badge 400px wide, cycle 2.35s): main band 29% of
+ * badge width (116/400), peak white .72; thin band 3% (12/400) at .5,
+ * offset +21% of width from band centre (78px in demo, leading side);
+ * both rotated .42rad (~24deg); sweep travels band centre from -32.5%
+ * to +132.5% of badge width (130px margins) during 19.15%-63.83% of
+ * the cycle (0.45-1.5s) with quadratic ease-in-out; sparkle at the
+ * top-right corner during 58.72%-84.26% (1.38-1.98s), scale following
+ * sin(pi*q)*(1+0.2(1-q)), rotating .9rad. Colours are the site's own:
+ * a deep plum-rose derived from the accent rose, NOT the demo blue. */
+.sub-badge {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px; flex: none;
+  background: linear-gradient(135deg, #843550, #552037);
+  color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .1em;
+  line-height: 1.5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 2px 10px rgba(85, 32, 55, .35);
+}
+.sub-badge[hidden] { display: none; }
+.sub-badge-ico { width: 10px; height: 10px; fill: #ffd98a; flex: none; }
+.sub-badge-clip {
+  position: absolute; inset: 0; border-radius: inherit;
+  overflow: hidden; pointer-events: none;
+}
+.sub-badge-sweep {
+  position: absolute; top: -100%; left: 0; width: 100%; height: 300%;
+  transform-origin: 0 50%;
+  animation: sub-sweep 2.35s linear infinite;
+}
+.sb-band { position: absolute; top: 0; height: 100%; }
+.sb-band-main {
+  left: -14.5%; width: 29%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, .72) 50%, rgba(255, 255, 255, 0));
+}
+.sb-band-thin { left: 19.5%; width: 3%; background: rgba(255, 255, 255, .5); }
+@keyframes sub-sweep {
+  0% { transform: translateX(-32.5%) rotate(.42rad); animation-timing-function: cubic-bezier(.42, 0, .58, 1); }
+  19.15% { transform: translateX(-32.5%) rotate(.42rad); animation-timing-function: cubic-bezier(.42, 0, .58, 1); }
+  63.83% { transform: translateX(132.5%) rotate(.42rad); }
+  100% { transform: translateX(132.5%) rotate(.42rad); }
+}
+.sub-badge-star {
+  position: absolute; top: -6px; right: -6px; width: 13px; height: 13px;
+  fill: #fff; opacity: 0; pointer-events: none;
+  animation: sub-sparkle 2.35s linear infinite;
+}
+@keyframes sub-sparkle {
+  0%, 58.72% { opacity: 0; transform: scale(0) rotate(0deg); animation-timing-function: ease-out; }
+  71.49% { opacity: 1; transform: scale(1.08) rotate(25.8deg); animation-timing-function: ease-in; }
+  84.26%, 100% { opacity: 0; transform: scale(0) rotate(51.6deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sub-badge-sweep, .sub-badge-star { animation: none; }
+  .sub-badge-star { opacity: 0; }
+}
 .acct-head .btn { flex-shrink: 0; margin-top: 6px; }
 .acct-avatar-img {
   width: 64px; height: 64px; border-radius: 50%;
