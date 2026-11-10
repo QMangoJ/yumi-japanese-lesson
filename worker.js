@@ -694,7 +694,11 @@ var DEFAULT_SETTINGS = {
   // ki-toko.com, already on Cloudflare; verify it in Resend). The API
   // key stays empty until he provides it — until then the outbox only queues.
   resend: { apiKey: "", from: "yumi-lesson@ki-toko.com" },
-  teacherEmail: "",
+  // Teacher notification recipient (booking/subscription/contact
+  // copies). Daniel's decision 2026-11-10: Yumi's own project inbox,
+  // matching the live KV value — notifications no longer go to his
+  // personal Gmail. KV `meta:settings` still wins when present.
+  teacherEmail: "yumi.japan2026@gmail.com",
   // Where student replies to outgoing mail should land (the From address
   // itself cannot receive — Resend is send-only). Set by Daniel to his
   // own inbox for now.
