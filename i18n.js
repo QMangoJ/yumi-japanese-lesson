@@ -748,3 +748,23 @@ Object.assign(window.YUMI_I18N.fr, {
 /* Inline <strong> fragment inside the gate sentence. */
 Object.assign(window.YUMI_I18N.zh, { "your": "你的" });
 Object.assign(window.YUMI_I18N.fr, { "your": "votre" });
+
+/* Static copy that used to live only in the HTML (2026-11 content
+ * pass): these strings had no dictionary entry, so they rendered
+ * identically in every language. The zh/fr values below are the
+ * source strings themselves ON PURPOSE — rendering stays exactly
+ * as it was, but the strings are now first-class dictionary keys,
+ * so the admin Site Content overrides can replace them per
+ * language like everything else. */
+const _STATIC_COPY_KEYS = [
+  "BOOK A LESSON →",
+  "New bookings are taken at least 72 hours in advance. I'm available Monday to Friday, 8:00–22:00 JST. Times are shown in your own timezone when you book.",
+  "at any time before it starts. Cancel 12 hours or more before the lesson starts and you get a full refund — the amount paid goes back to your original payment method, no matter whether you rescheduled the lesson before. Cancellations within 12 hours of the start are not refunded, and the lesson counts as used. 开课前 12 小时以上取消可全额退款；12 小时内取消不退款。 Rescheduling is possible up to 24 hours before the lesson starts, at most twice per booking. New bookings and new rescheduled times must be selected at least 72 hours in advance.",
+  "13 years of teaching English to beginners",
+  "Subscriber",
+  "🌸 YUMI Japanese Lessons — Online Japanese lessons with Yumi N., certified Japanese tutor in Tokyo, Japan.",
+];
+Object.assign(window.YUMI_I18N.zh,
+  Object.fromEntries(_STATIC_COPY_KEYS.map((k) => [k, k])));
+Object.assign(window.YUMI_I18N.fr,
+  Object.fromEntries(_STATIC_COPY_KEYS.map((k) => [k, k])));

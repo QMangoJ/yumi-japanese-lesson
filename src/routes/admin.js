@@ -5,6 +5,7 @@ import { addDaysStr, effectiveStatus, json, mapParallel, minutesOfBooking, publi
 import { checkEndingReminder, notifyBookingEvent, publicSubscription, remainingOf, stopSubscription } from "../lib/packages.js";
 import { PROFILE_LEVELS } from "../lib/profiles.js";
 import { getSettings, normalizeSettings, publicSettings, validatePricing } from "../lib/settings.js";
+import { CONTENT_KV_KEY, getContentOverrides, validateContentOverrides } from "../lib/content.js";
 import { deleteMessage, getBooking, getMessage, getSubscription, lessonsOfSub, listAllBookings, listAllMessages, listAllSubscriptions, nextLessonFrom, refundableFrom, remainingFrom, resolveRemarks, saveBooking, saveMessage } from "../lib/store.js";
 
 export async function handleAdmin(c) {
@@ -36,6 +37,31 @@ export async function handleAdmin(c) {
         const merged = normalizeSettings({ ...current, ...incoming });
         await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
         return json({ settings: publicSettings(merged) });
+      }
+      return json({ error: "Method not allowed" }, 405);
+    }
+
+    /* ----- Admin: front-page copy overrides -----
+     * Full-state replace, same shape as the settings flow: the
+     * Site Content view loads the whole overrides object, edits it
+     * per language, and PUTs it back. Validation lives in
+     * lib/content.js (unknown language / non-string / oversize are
+     * 400s; empty strings drop the key = restore built-in default).
+     * The public read side is GET /api/content (routes/public.js). */
+    if (path === "/api/admin/content") {
+      if (!(await adminAuthorized(env, request))) {
+        return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+      }
+      if (request.method === "GET") {
+        return json({ overrides: await getContentOverrides(env) });
+      }
+      if (request.method === "PUT") {
+        let body;
+        try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+        const checked = validateContentOverrides(body);
+        if (checked.error) return json({ error: checked.error }, 400);
+        await env.BOOKINGS.put(CONTENT_KV_KEY, JSON.stringify(checked.overrides));
+        return json({ overrides: checked.overrides });
       }
       return json({ error: "Method not allowed" }, 405);
     }

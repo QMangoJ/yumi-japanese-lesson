@@ -825,6 +825,28 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
 .fchip{font:inherit;font-size:13px;padding:6px 14px;min-height:32px;border:1px solid var(--adm-line-strong);background:#fff;border-radius:999px;cursor:pointer;color:var(--ink)}
 .fchip:hover{background:var(--adm-pill)}
 .fchip.active{background:var(--adm-pill);border-color:var(--adm-line-strong);color:var(--ink);font-weight:700}
+
+/* Site Content view: per-language copy editor. The rows area is
+   .no-i18n — it shows the site's foreign-language copy verbatim,
+   so the admin EN/JA walker must never translate it. */
+.ct-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 4px}
+.ct-langseg{margin-bottom:0;min-width:300px;flex:0 1 340px}
+#ct-q{flex:1 1 180px;font:inherit;font-size:14px;padding:9px 12px;min-height:40px;border:1px solid var(--adm-line-strong);border-radius:10px;background:#fff;color:var(--ink)}
+.ct-list{margin-top:8px}
+.ct-sec{margin-top:22px}
+.ct-sec h3{font-size:15px;margin:0 0 4px;padding-bottom:6px;border-bottom:1px solid var(--adm-line)}
+.ct-sec-count{color:var(--sub);font-weight:500;font-size:12.5px;margin-left:8px}
+.ct-row{padding:10px 0;border-bottom:1px solid var(--adm-line)}
+.ct-row-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ct-label{font-weight:650;font-size:14px}
+.ct-badge{font-size:11px;font-weight:700;color:#8a5a00;background:#fdf0d3;border-radius:999px;padding:2px 8px}
+.ct-key{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--sub);word-break:break-all;margin:2px 0 6px}
+.ct-ta{width:100%;font:inherit;font-size:14px;line-height:1.45;padding:9px 12px;border:1px solid var(--adm-line-strong);border-radius:10px;background:#fff;color:var(--ink);resize:vertical;box-sizing:border-box}
+.ct-ta:focus{outline:2px solid var(--accent);outline-offset:1px}
+.ct-row-foot{display:flex;gap:10px;align-items:baseline;margin-top:5px}
+.ct-default{flex:1;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ct-reset{font:inherit;font-size:12.5px;border:none;background:none;color:var(--accent);cursor:pointer;padding:2px 4px;font-weight:650}
+.ct-empty{padding:18px 0;color:var(--sub)}
 .stu-sort{font-size:11.5px;color:var(--sub);display:flex;align-items:center;gap:6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .stu-sort .adm-dd{text-transform:none;letter-spacing:normal}
 .stu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:14px;margin-top:12px}
@@ -975,6 +997,9 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       <a href="#/settings" data-route="settings">
         <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg>
         <span>Settings</span></a>
+      <a href="#/content" data-route="content">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span>Site Content</span></a>
     </nav>
     <div class="side-teacher">
       <span class="side-teacher-avatar" aria-hidden="true">🌸</span>
@@ -1333,6 +1358,25 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
       </div>
 
       <!-- ===== Messages (website contact form) ===== -->
+      <!-- ===== Site Content (front-page copy overrides) ===== -->
+      <section class="view hidden" data-view="content">
+        <div class="panel">
+          <h2>Site Content</h2>
+          <p class="note">Edit the words on the public site, per language. Changes apply on the next page load — no code, no redeploy. Clear a field completely and save to go back to the built-in text for that string. Text is plain: any HTML you type shows as-is, it never runs.</p>
+          <div class="ct-toolbar">
+            <div class="seg ct-langseg" id="ct-langseg" role="tablist" aria-label="Language">
+              <button type="button" data-clang="en" class="active">English</button>
+              <button type="button" data-clang="zh">中文</button>
+              <button type="button" data-clang="fr">Français</button>
+            </div>
+            <input type="search" id="ct-q" placeholder="Search copy…" />
+            <button type="button" class="btn" id="ct-save">Save copy</button>
+          </div>
+          <p class="msg" id="ct-msg"></p>
+          <div id="ct-list" class="ct-list no-i18n"><p class="note">Loading copy…</p></div>
+        </div>
+      </section>
+
       <div class="panel view hidden" id="adm-messages-card" data-view="messages">
         <h2>Messages</h2>
         <div class="rev-controls">
@@ -1392,6 +1436,8 @@ table.wh-grid{border-collapse:separate;border-spacing:6px;min-width:724px;width:
   </div>
 </div>
 
+<script src="i18n.js"></script>
+<script src="content-catalog.js"></script>
 <script>
 "use strict";
 /* ================= i18n: English / 日本語, ONE language at a time =========
@@ -1423,6 +1469,9 @@ const ADM_DICT_JA = {
   "Teacher workspace · yumi.ki-toko.com": "講師ワークスペース · yumi.ki-toko.com",
   "Dashboard": "ダッシュボード", "Students": "生徒", "Bookings": "予約", "Schedule": "スケジュール",
   "Availability": "予約可能時間", "Packages": "パッケージ", "Revenue": "収益", "Messages": "メッセージ", "Settings": "設定",
+  "Site Content": "サイト文案",
+  "Edit the words on the public site, per language. Changes apply on the next page load — no code, no redeploy. Clear a field completely and save to go back to the built-in text for that string. Text is plain: any HTML you type shows as-is, it never runs.": "公開サイトの文案を言語ごとに編集します。変更は次回のページ読み込みで反映されます（コード変更・再デプロイ不要）。欄を完全に空にして保存すると、その文字列は既定の文案に戻ります。テキストはプレーンです：入力した HTML はそのまま文字として表示され、実行されることはありません。",
+  "Save copy": "文案を保存", "Loading copy…": "文案を読み込み中…",
   "View site ↗": "サイトを見る ↗", "Logout": "ログアウト",
   "Admin sign-in is not configured.": "管理者ログインが設定されていません。",
   "Continue with Google": "Google でログイン",
@@ -1493,6 +1542,7 @@ function admLookup(key) {
 const ADM_PLACEHOLDERS = {
   "Search (name, email, reference)": "検索（名前・メール・予約番号）",
   "Search students…": "生徒を検索…",
+  "Search copy…": "文案を検索…",
 };
 function applyAdmI18n() {
   if (ADM_LANG === "ja") {
@@ -1505,7 +1555,7 @@ function applyAdmI18n() {
     acceptNode(node) {
       if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       const p = node.parentElement;
-      if (!p || p.closest("script, style, .adm-lang-pop")) return NodeFilter.FILTER_REJECT;
+      if (!p || p.closest("script, style, .adm-lang-pop, .no-i18n")) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -3801,9 +3851,185 @@ async function loadMessages() {
 }
 $("#adm-msg-refresh").addEventListener("click", () => loadMessages());
 
+/* ---------- site content: front-page copy overrides ----------
+ * The public pages translate through window.YUMI_I18N (i18n.js —
+ * loaded above just for its data), keyed by the English source
+ * string. window.YUMI_CONTENT_CATALOG (content-catalog.js) lists
+ * every key with its page section and the label an English visitor
+ * sees. This view edits per-language OVERRIDES of those keys
+ * (GET/PUT /api/admin/content, stored as one KV record): a filled
+ * field replaces the built-in text on the site; an empty field
+ * means "use the built-in text". All values are handled as plain
+ * text (textContent / .value only, never innerHTML). */
+const CT_LANGS = ["en", "zh", "fr"];
+let ctLang = "en";
+let ctOverrides = { en: {}, zh: {}, fr: {} };
+let ctLoaded = false;
+
+function ctDefault(lang, key) {
+  const D = window.YUMI_I18N || {};
+  if (lang === "en") return D.en && D.en[key] !== undefined ? D.en[key] : key;
+  const v = D[lang] && D[lang][key];
+  return v !== undefined ? v : key;
+}
+/** Fold the currently rendered textareas back into ctOverrides
+ *  (called before re-rendering for a language switch / search,
+ *  and before saving). Whitespace-only = no override. */
+function ctHarvest() {
+  document.querySelectorAll("#ct-list textarea[data-ctkey]").forEach((ta) => {
+    const key = ta.dataset.ctkey;
+    if (ta.value.trim() === "") delete ctOverrides[ctLang][key];
+    else ctOverrides[ctLang][key] = ta.value;
+  });
+}
+function ctRender() {
+  const list = $("#ct-list");
+  list.textContent = "";
+  const catalog = window.YUMI_CONTENT_CATALOG || [];
+  const q = ($("#ct-q").value || "").trim().toLowerCase();
+  const match = (e) => !q
+    || e.label.toLowerCase().includes(q) || e.key.toLowerCase().includes(q)
+    || ctDefault(ctLang, e.key).toLowerCase().includes(q)
+    || (ctOverrides[ctLang][e.key] || "").toLowerCase().includes(q);
+  const bySection = new Map();
+  for (const e of catalog) {
+    if (!match(e)) continue;
+    if (!bySection.has(e.section)) bySection.set(e.section, []);
+    bySection.get(e.section).push(e);
+  }
+  if (!bySection.size) {
+    const p = document.createElement("p");
+    p.className = "ct-empty";
+    p.textContent = A("No copy matches your search.", "検索に一致する文案がありません。");
+    list.appendChild(p);
+    return;
+  }
+  for (const [section, entries] of bySection) {
+    const sec = document.createElement("div");
+    sec.className = "ct-sec";
+    const h = document.createElement("h3");
+    h.textContent = section;
+    const cnt = document.createElement("span");
+    cnt.className = "ct-sec-count";
+    cnt.textContent = `${entries.length}`;
+    h.appendChild(cnt);
+    sec.appendChild(h);
+    for (const e of entries) {
+      const ov = ctOverrides[ctLang][e.key];
+      const row = document.createElement("div");
+      row.className = "ct-row";
+      const head = document.createElement("div");
+      head.className = "ct-row-head";
+      const lab = document.createElement("span");
+      lab.className = "ct-label";
+      lab.textContent = e.label;
+      head.appendChild(lab);
+      if (ov !== undefined) {
+        const b = document.createElement("span");
+        b.className = "ct-badge";
+        b.textContent = A("Modified", "変更済み");
+        head.appendChild(b);
+      }
+      row.appendChild(head);
+      if (e.key !== e.label) {
+        const k = document.createElement("div");
+        k.className = "ct-key";
+        k.textContent = e.key;
+        row.appendChild(k);
+      }
+      const def = ctDefault(ctLang, e.key);
+      const ta = document.createElement("textarea");
+      ta.className = "ct-ta";
+      ta.dataset.ctkey = e.key;
+      ta.rows = Math.min(5, Math.max(1, Math.ceil((ov !== undefined ? ov : def).length / 90)));
+      ta.value = ov !== undefined ? ov : "";
+      ta.placeholder = def;
+      ta.maxLength = 2000;
+      row.appendChild(ta);
+      const foot = document.createElement("div");
+      foot.className = "ct-row-foot";
+      const hint = document.createElement("span");
+      hint.className = "ct-default";
+      hint.textContent = `${A("Built-in", "既定")}: ${def}`;
+      hint.title = def;
+      foot.appendChild(hint);
+      if (ov !== undefined) {
+        const rst = document.createElement("button");
+        rst.type = "button";
+        rst.className = "ct-reset";
+        rst.textContent = A("Reset to built-in", "既定に戻す");
+        rst.addEventListener("click", () => {
+          ta.value = "";
+          ta.dispatchEvent(new Event("input", { bubbles: true }));
+          ta.focus();
+        });
+        foot.appendChild(rst);
+      }
+      row.appendChild(foot);
+      sec.appendChild(row);
+    }
+    list.appendChild(sec);
+  }
+}
+async function loadContent() {
+  if (ctLoaded) { ctRender(); return; }
+  try {
+    const data = await api("/api/admin/content");
+    const inc = data.overrides || {};
+    ctOverrides = { en: inc.en || {}, zh: inc.zh || {}, fr: inc.fr || {} };
+    ctLoaded = true;
+    ctRender();
+  } catch (e) {
+    const list = $("#ct-list");
+    list.textContent = "";
+    const p = document.createElement("p");
+    p.className = "ct-empty";
+    p.textContent = e.message;
+    list.appendChild(p);
+  }
+}
+document.querySelectorAll("#ct-langseg button").forEach((b) => {
+  b.addEventListener("click", () => {
+    if (b.dataset.clang === ctLang) return;
+    ctHarvest();
+    ctLang = b.dataset.clang;
+    document.querySelectorAll("#ct-langseg button").forEach((x) =>
+      x.classList.toggle("active", x === b));
+    ctRender();
+  });
+});
+$("#ct-q").addEventListener("input", () => { ctHarvest(); ctRender(); });
+$("#ct-list").addEventListener("input", (ev) => {
+  if (ev.target && ev.target.matches("textarea[data-ctkey]")) {
+    $("#ct-msg").textContent = A("Unsaved changes", "未保存の変更があります");
+    $("#ct-msg").className = "msg";
+  }
+});
+$("#ct-save").addEventListener("click", async () => {
+  const btn = $("#ct-save");
+  ctHarvest();
+  btn.disabled = true;
+  try {
+    const data = await api("/api/admin/content", {
+      method: "PUT", body: JSON.stringify({ overrides: ctOverrides }),
+    });
+    const inc = data.overrides || {};
+    ctOverrides = { en: inc.en || {}, zh: inc.zh || {}, fr: inc.fr || {} };
+    ctRender();
+    $("#ct-msg").textContent = A("Copy saved — the site picks it up on the next page load.", "保存しました — 次回のページ読み込みでサイトに反映されます。");
+    $("#ct-msg").className = "msg msg-ok";
+    toast(A("Copy saved ✓", "文案を保存しました ✓"));
+  } catch (e) {
+    $("#ct-msg").textContent = e.message;
+    $("#ct-msg").className = "msg msg-err";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 /* ---------- router / shell ---------- */
 
-const ROUTES = { dashboard: 1, students: 1, bookings: 1, schedule: 1, availability: 1, packages: 1, revenue: 1, messages: 1, settings: 1 };
+const ROUTES = { dashboard: 1, students: 1, bookings: 1, schedule: 1, availability: 1, packages: 1, revenue: 1, messages: 1, settings: 1, content: 1 };
 function routeTitle(r) {
   return {
     dashboard: A("Dashboard", "ダッシュボード"),
@@ -3815,6 +4041,7 @@ function routeTitle(r) {
     revenue: A("Revenue", "収益"),
     messages: A("Messages", "メッセージ"),
     settings: A("Settings", "設定"),
+    content: A("Site Content", "サイト文案"),
   }[r] || "";
 }
 function routeName() {
@@ -3840,6 +4067,7 @@ function applyRoute() {
   if (r === "students") loadStudents(false);
   if (r === "revenue") { loadRevenue(false); admRevPill(); }
   if (r === "messages") loadMessages();
+  if (r === "content") loadContent();
 }
 window.addEventListener("hashchange", applyRoute);
 $("#adm-burger").addEventListener("click", () => {

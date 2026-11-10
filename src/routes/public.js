@@ -2,7 +2,8 @@
  * Returns a Response, or undefined when no block matches. */
 import { EMAIL_RE, googleConfigured } from "../lib/auth.js";
 import { candidateStarts, computeSlots, weeklyHoursFor } from "../lib/availability.js";
-import { CONFIG, DATE_RE, JST, json, lessonEndMs, lessonStartMs, minutesOfBooking, toMin } from "../lib/core.js";
+import { CONFIG, DATE_RE, JST, json, jsonWithHeaders, lessonEndMs, lessonStartMs, minutesOfBooking, toMin } from "../lib/core.js";
+import { getContentOverrides } from "../lib/content.js";
 import { courseNameOf, icsEscape, icsFold, icsUtc, queueEmail } from "../lib/notify.js";
 import { getSettings, priceFor } from "../lib/settings.js";
 import { bookingsOn, listAllBookings, saveMessage } from "../lib/store.js";
@@ -63,6 +64,17 @@ export async function handlePublic(c) {
         currency: CONFIG.currency, policy: CONFIG.policy,
         googleAuth: googleConfigured(settings),
         openDays });
+    }
+
+    /* Admin-edited front-page copy overrides (see lib/content.js).
+     * Public + read-only: the front pages merge this over the
+     * built-in i18n dictionary; an empty/absent payload is a normal
+     * state and simply means "all built-in copy". no-store so an
+     * admin edit shows on the very next page load. */
+    if (path === "/api/content" && request.method === "GET") {
+      const overrides = await getContentOverrides(env);
+      return jsonWithHeaders({ overrides }, 200,
+        { "Cache-Control": "no-store" });
     }
 
     /* Contact form: archive the message (D1 `messages`, KV fallback),

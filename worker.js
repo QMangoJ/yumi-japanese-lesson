@@ -1377,6 +1377,76 @@ ${body}`,
   }
 }
 
+// src/lib/content.js
+var CONTENT_KV_KEY = "content:overrides";
+var CONTENT_LANGS = ["en", "zh", "fr"];
+var CONTENT_MAX_VALUE = 2e3;
+var CONTENT_MAX_KEY = 1500;
+var CONTENT_MAX_ENTRIES = 600;
+function normalizeContentOverrides(raw) {
+  const out = { en: {}, zh: {}, fr: {} };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const lang of CONTENT_LANGS) {
+    const bag = raw[lang];
+    if (!bag || typeof bag !== "object" || Array.isArray(bag)) continue;
+    for (const [k, v] of Object.entries(bag)) {
+      if (typeof v === "string" && v.length > 0) out[lang][k] = v;
+    }
+  }
+  return out;
+}
+async function getContentOverrides(env) {
+  let raw = null;
+  try {
+    const text = await env.BOOKINGS.get(CONTENT_KV_KEY);
+    raw = text ? JSON.parse(text) : null;
+  } catch {
+    raw = null;
+  }
+  return normalizeContentOverrides(raw);
+}
+function validateContentOverrides(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { error: "Payload must be an object" };
+  }
+  const incoming = body.overrides;
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+    return { error: "Payload must carry an overrides object" };
+  }
+  for (const lang of Object.keys(incoming)) {
+    if (!CONTENT_LANGS.includes(lang)) {
+      return { error: `Unknown language: ${lang}` };
+    }
+  }
+  const out = { en: {}, zh: {}, fr: {} };
+  let entries = 0;
+  for (const lang of CONTENT_LANGS) {
+    const bag = incoming[lang];
+    if (bag === void 0) continue;
+    if (!bag || typeof bag !== "object" || Array.isArray(bag)) {
+      return { error: `overrides.${lang} must be an object` };
+    }
+    for (const [k, v] of Object.entries(bag)) {
+      if (typeof v !== "string") {
+        return { error: `Override values must be strings (key: ${k.slice(0, 40)})` };
+      }
+      if (k.length > CONTENT_MAX_KEY) {
+        return { error: `Override key too long (max ${CONTENT_MAX_KEY} characters)` };
+      }
+      if (v.length > CONTENT_MAX_VALUE) {
+        return { error: `Override text too long (max ${CONTENT_MAX_VALUE} characters, key: ${k.slice(0, 40)})` };
+      }
+      if (v.length === 0) continue;
+      out[lang][k] = v;
+      entries++;
+      if (entries > CONTENT_MAX_ENTRIES) {
+        return { error: `Too many overrides (max ${CONTENT_MAX_ENTRIES})` };
+      }
+    }
+  }
+  return { overrides: out };
+}
+
 // src/routes/admin.js
 async function handleAdmin(c) {
   const { request, env, ctx, url, path, defer } = c;
@@ -1409,6 +1479,27 @@ async function handleAdmin(c) {
       const merged = normalizeSettings({ ...current, ...incoming });
       await env.BOOKINGS.put("meta:settings", JSON.stringify(merged));
       return json({ settings: publicSettings(merged) });
+    }
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (path === "/api/admin/content") {
+    if (!await adminAuthorized(env, request)) {
+      return json({ error: "Admin API is disabled or the admin key is wrong" }, 403);
+    }
+    if (request.method === "GET") {
+      return json({ overrides: await getContentOverrides(env) });
+    }
+    if (request.method === "PUT") {
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return json({ error: "Invalid JSON" }, 400);
+      }
+      const checked = validateContentOverrides(body);
+      if (checked.error) return json({ error: checked.error }, 400);
+      await env.BOOKINGS.put(CONTENT_KV_KEY, JSON.stringify(checked.overrides));
+      return json({ overrides: checked.overrides });
     }
     return json({ error: "Method not allowed" }, 405);
   }
@@ -2175,6 +2266,14 @@ Meeting: ${meet}` : "")
       googleAuth: googleConfigured(settings),
       openDays
     });
+  }
+  if (path === "/api/content" && request.method === "GET") {
+    const overrides = await getContentOverrides(env);
+    return jsonWithHeaders(
+      { overrides },
+      200,
+      { "Cache-Control": "no-store" }
+    );
   }
   if (path === "/api/contact" && request.method === "POST") {
     let body;

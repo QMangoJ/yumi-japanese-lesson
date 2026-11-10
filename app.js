@@ -148,11 +148,41 @@ const I18N_PATTERNS = [
   { re: /^Hello, (.+)\.$/,
     en: (m) => `Hello, ${m[1]}.`, zh: (m) => `你好，${m[1]}。`, fr: (m) => `Bonjour, ${m[1]}.` },
 ];
+/* Admin-edited copy overrides (Site Content view in /admin),
+ * fetched from /api/content and merged OVER the built-in
+ * dictionary below. The built-in text is always the fallback:
+ * no override (or a failed fetch) renders exactly what the
+ * dictionary says. Values are plain text — they only ever reach
+ * the page through this walker's text-node assignment and the
+ * placeholder setAttribute path, never as HTML. */
+let I18N_OVERRIDES = { en: {}, zh: {}, fr: {} };
+function _i18nOverride(key) {
+  const bag = I18N_OVERRIDES[LANG];
+  return bag && typeof bag[key] === "string" && bag[key] ? bag[key] : undefined;
+}
 function _i18nLookup(key) {
+  const ov = _i18nOverride(key);
+  if (ov !== undefined) return ov;
   const dict = (window.YUMI_I18N || {})[LANG] || {};
   if (dict[key] !== undefined) return dict[key];
   for (const p of I18N_PATTERNS) { const m = key.match(p.re); if (m) return p[LANG](m); }
   return null;
+}
+function loadContentOverrides() {
+  fetch("/api/content").then((r) => (r.ok ? r.json() : null)).then((data) => {
+    const inc = data && data.overrides;
+    if (!inc || typeof inc !== "object") return;
+    const clean = { en: {}, zh: {}, fr: {} };
+    for (const l of ["en", "zh", "fr"]) {
+      const bag = inc[l];
+      if (!bag || typeof bag !== "object") continue;
+      for (const [k, v] of Object.entries(bag)) {
+        if (typeof v === "string" && v) clean[l][k] = v;
+      }
+    }
+    I18N_OVERRIDES = clean;
+    applyI18n();
+  }).catch(() => { /* built-in copy stays — silent by design */ });
 }
 /* Source (English) text of every translated node / placeholder, so
  * switching between two non-source languages (fr -> zh) restores
@@ -192,8 +222,9 @@ function applyI18n() {
       let src = _i18nPhSrc.get(el);
       if (src === undefined) { src = el.getAttribute("placeholder"); _i18nPhSrc.set(el, src); }
       if (!src) return;
+      const ov = _i18nOverride(src);
       const dict = (window.YUMI_I18N || {})[LANG] || {};
-      const target = dict[src] !== undefined ? dict[src] : src;
+      const target = ov !== undefined ? ov : dict[src] !== undefined ? dict[src] : src;
       if (target !== el.getAttribute("placeholder")) el.setAttribute("placeholder", target);
     });
   } finally { _i18nApplying = false; }
@@ -236,6 +267,7 @@ document.documentElement.lang = I18N_LOCALES[LANG];
 document.addEventListener("DOMContentLoaded", () => {
   buildLangSwitch();
   applyI18n();
+  loadContentOverrides();
   new MutationObserver(() => applyI18n())
     .observe(document.body, { childList: true, subtree: true, characterData: true });
 });
